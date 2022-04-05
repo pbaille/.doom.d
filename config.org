@@ -1,0 +1,63 @@
+#+TITLE: Config
+#+PROPERTY: header-args:emacs-lisp :tangle ./config-test.el
+
+* babel
+** inline block
+src_clojure{(map inc [1 2 3])}
+
+** block
+#+begin_src clojure
+(map inc [1 2 3])
+#+end_src
+
+#+begin_src emacs-lisp :tangle yes
+(print "hello")
+#+end_src
+
+#+RESULTS:
+: hello
+** code blocks shortcuts
+#+begin_src emacs-lisp
+(add-to-list 'org-structure-template-alist '("red" . "src red"))
+#+end_src
+
+[[https://orgmode.org/worg/org-contrib/babel/languages/index.html][languages]]
+
+* config
+** dired
+#+begin_src emacs-lisp
+(use-package dired
+  :ensure nil
+  :commands (dired dired-jump)
+  :bind (("C-d" . dired-jump))
+  :config
+  (progn
+    (add-hook 'dired-mode-hook
+              (lambda ()
+                (dired-hide-details-mode)
+                (dired-sort-toggle-or-edit)))
+    (evil-collection-define-key 'normal 'dired-mode-map
+      "h" 'dired-up-directory
+      "l" 'dired-find-file)))
+#+end_src
+
+** lispy
+#+begin_src emacs-lisp
+(add-hook 'lispy-mode-hook #'lispyville-mode)
+
+(use-package lispyville
+  :init
+  (general-add-hook '(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode)
+  :config
+  (lispyville-set-key-theme '(operators c-w additional)))
+#+end_src
+
+** emacs application framework
+#+begin_src emacs-lisp
+;; not working
+'(add-to-list 'load-path "~/.emacs.d/site-lisp/emacs-application-framework/")
+'(require 'eaf)
+#+end_src
+
+#+RESULTS:
+| require | 'eaf |

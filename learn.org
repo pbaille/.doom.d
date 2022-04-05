@@ -1,0 +1,102 @@
+#+TITLE: Doom emacs basics
+
+* evil snipe
+
+find a character
+
+f , F
+t , T
+
+; , for jumping to next or prev
+
+* Avy
+
+g s SPC then anything
+avy-all-windows to true for multi window action
+
+* multi edit
+
+`alt d` sur un mot puis répète pour select next occ
+
+* org mode
+
+** bindings
+TAB folding
+SHIFT TAB cycle fold
+ALT h,j,k,l move sections
+ALT RET create same level section
+** links
+
+SPC m l l (paste url or type)
+RET to visit a link
+
++ [[five]]
++ [[file:config.el][doom config]]
++ [[https://www.youtube.com/watch?v=BRqjaN4-gGQ][video]]
++ [[elisp:(+ 2 3)][2+3]]
++[[shell:ls][ ls]]
+
+capture link with n l
+[[*three][three-link]]
+** snippets
+
+<s TAB :: code block
+
+#+begin_src elisp
+(defun say-hello ()
+  (print "hello"))
+(say-hello)
+#+end_src
+
+CTRL-C CTRL-C execute and print
+
+#+RESULTS:
+: hello
+
+** todo
+
+*** WAIT some section
+*** LOOP do something
+SHIFT arrows to circle states
+SPC m t to choose
+
+** subsection 3
+*** one
+press ctrl RET pour créer un h au même niveau
+*** two
+
+*** three
+uio
+*** four
+*** five
+1. one
+2. two
+** subsection 2
+* lispy
+** mouvement
+( bw-up
+) up-list
+{ nxt open
+} prev close
+[ prev open
+] nxt close
+L nxt sexpr
+H prev sexpr
+ALT h,l toplevel move
+
+* Evil
+** normal mode
+[[https://devhints.io/vim][vim cheatsheet]]
+s :- snipe
+K :- doc
+= = :- format code
+gs SPC :- search and go
+** browsing
+[[https://github.com/philc/vimium][vimium]]
+* Personal bindings
+** custom lisp mode
+bind h,j,k,l to sexpr moves
+** TODO
+* Org config
+[[https://www.youtube.com/watch?v=kkqVTDbfYp4][video]]
+[[file:config.org][org config]]

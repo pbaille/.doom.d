@@ -1,0 +1,3 @@
+#+TITLE: Test
+* Trying links
+[[file:~/.doom.d/learn.org::*mouvement][mouvement]]
