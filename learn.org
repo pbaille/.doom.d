@@ -59,19 +59,20 @@ CTRL-C CTRL-C execute and print
 *** LOOP do something
 SHIFT arrows to circle states
 SPC m t to choose
+** tags
+*** on an header :t1:
+*** another with several tags :t1:t2:
+**** inheritance :t2:
+this header inherits t1 and t2 tags
+see `org-use-tag-inheritance` and `org-tags-exclude-from-inheritance`
+*** file level tags
+#+FILETAGS: :t3:t4
+*** shortcuts :t1:
+`C-c C-c` to add a tag
+`C-c C-q` if not on a heading
+*** file level tags
+#+TAGS: one(1) two(2)
 
-** subsection 3
-*** one
-press ctrl RET pour créer un h au même niveau
-*** two
-
-*** three
-uio
-*** four
-*** five
-1. one
-2. two
-** subsection 2
 * lispy
 ** mouvement
 ( bw-up
@@ -100,3 +101,12 @@ bind h,j,k,l to sexpr moves
 * Org config
 [[https://www.youtube.com/watch?v=kkqVTDbfYp4][video]]
 [[file:config.org][org config]]
+* themes
+moonlight
+badger
+nova
+ephemeral
+miramar
+xcode
+old_hope
+horizon
