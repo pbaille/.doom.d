@@ -1,11 +1,15 @@
 #+TITLE: Config
 #+PROPERTY: header-args:emacs-lisp :tangle ./config.el
 
+
 * babel
+
 ** inline block
+
 src_clojure{(map inc [1 2 3])}
 
 ** block
+
 #+begin_src clojure
 (map inc [1 2 3])
 #+end_src
@@ -15,19 +19,19 @@ src_clojure{(map inc [1 2 3])}
 #+end_src
 
 ** code blocks shortcuts
-#+begin_src emacs-lisp
-(use-package org
-  :config
-  (add-to-list 'org-structure-template-alist '("red" . "src red")))
-#+end_src
 
-#+RESULTS:
-: t
+#+begin_src emacs-lisp
+
+#+end_src
 
 [[https://orgmode.org/worg/org-contrib/babel/languages/index.html][languages]]
 
+
+
 * config
+
 ** dired
+
 #+begin_src emacs-lisp
 (use-package dired
   :ensure nil
@@ -45,6 +49,7 @@ src_clojure{(map inc [1 2 3])}
 #+end_src
 
 ** lispy
+
 #+begin_src emacs-lisp
 (add-hook 'lispy-mode-hook #'lispyville-mode)
 
@@ -61,6 +66,7 @@ src_clojure{(map inc [1 2 3])}
 #+end_src
 
 ** emacs application framework
+
 #+begin_src emacs-lisp
 ;; not working
 '(add-to-list 'load-path "~/.emacs.d/site-lisp/emacs-application-framework/")
@@ -68,15 +74,30 @@ src_clojure{(map inc [1 2 3])}
 #+end_src
 
 ** org
+
 #+begin_src emacs-lisp
-(setq org-tag-alist '(("emacs" ?e) ("org" . ?o)))
+(use-package org-bullets
+  :config
+  (setq org-bullets-bullet-list '("⁖")) ; "◉" "○"
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
 
-(map! :leader
-      (:prefix-map ("c" . "code")
-       :desc "edit buffer" "o" #'org-edit-src-code))
+(use-package org
+  :commands (org-edit-src-code)
+  :bind
+  (:map evil-normal-state-map
+   ("g e" . org-edit-src-code))
+  :config
+  (add-to-list 'org-structure-template-alist '("red" . "src red"))
+  (setq org-tag-alist '(("emacs" ?e) ("org" . ?o))))
+#+end_src
+
+** theme
+
+#+begin_src emacs-lisp
+(load-theme 'doom-mine)
+(setq doom-font (font-spec :family "Menlo" :size 16))
 
 #+end_src
 
-#+begin_src
-
-#+end_src
+#+RESULTS:
+| doom--customize-themes-h-8 |

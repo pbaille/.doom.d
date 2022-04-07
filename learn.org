@@ -73,6 +73,18 @@ see `org-use-tag-inheritance` and `org-tags-exclude-from-inheritance`
 *** file level tags
 #+TAGS: one(1) two(2)
 
+** todo
+press SPC m t to toggle todo
+and SPC n t to go to main todo page
+- [X] one
+- [-] two
+- [ ] three
+  - [ ] nested
+  - [ ] ___
+
+hello
+
+
 * lispy
 ** mouvement
 ( bw-up
@@ -107,6 +119,6 @@ badger
 nova
 ephemeral
 miramar
-xcode
+mine
 old_hope
 horizon

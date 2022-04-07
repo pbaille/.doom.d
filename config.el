@@ -1,8 +1,6 @@
 (print "hello")
 
-(use-package! org 
-  :config
-  (add-to-list 'org-structure-template-alist '("red" . "src red")))
+
 
 (use-package dired
   :ensure nil
@@ -35,8 +33,19 @@
 '(add-to-list 'load-path "~/.emacs.d/site-lisp/emacs-application-framework/")
 '(require 'eaf)
 
-(setq org-tag-alist '(("emacs" ?e) ("org" . ?o)))
+(use-package org-bullets
+  :config
+  (setq org-bullets-bullet-list '("⁖")) ; "◉" "○"
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
 
-(map! :leader
-      (:prefix-map ("c" . "code")
-       :desc "edit buffer" "o" #'org-edit-src-code))
+(use-package org
+  :commands (org-edit-src-code)
+  :bind
+  (:map evil-normal-state-map
+   ("g e" . org-edit-src-code))
+  :config
+  (add-to-list 'org-structure-template-alist '("red" . "src red"))
+  (setq org-tag-alist '(("emacs" ?e) ("org" . ?o))))
+
+(load-theme 'doom-mine)
+(setq doom-font (font-spec :family "Menlo" :size 16))
