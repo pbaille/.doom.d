@@ -49,3 +49,6 @@
 
 (load-theme 'doom-mine)
 (setq doom-font (font-spec :family "Menlo" :size 16))
+
+'(add-to-list 'desktop-path "~/pierrebaille/.doom.d/")
+'(desktop-read)

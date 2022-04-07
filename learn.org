@@ -1,5 +1,4 @@
 #+TITLE: Doom emacs basics
-
 * evil snipe
 
 find a character
@@ -19,7 +18,7 @@ avy-all-windows to true for multi window action
 `alt d` sur un mot puis répète pour select next occ
 
 * org mode
-
+[[https://www.gnu.org/software/emacs/refcards/pdf/orgcard.pdf][cheat sheet]]
 ** bindings
 TAB folding
 SHIFT TAB cycle fold
@@ -83,7 +82,10 @@ and SPC n t to go to main todo page
   - [ ] ___
 
 hello
-
+** tables
+| Tao | one | oiu |   |   |
+|-----+-----+-----+---+---|
+|     | op  |     |   |   |
 
 * lispy
 ** mouvement
