@@ -1,4 +1,0 @@
-#+TITLE: Test
-#+TAGS: one(1)
-* Trying links
-[[file:~/.doom.d/learn.org::*mouvement][mouvement]]

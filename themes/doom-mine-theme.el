@@ -30,7 +30,7 @@ Can be an integer to determine the exact padding."
    (base7      '("#969896" "#979797" "brightblack"))
    (base8      '("#ffffff" "#ffffff" "white"      ))
    (white      '("#FFFFFF" "#ffffff" "white"))
-   (fg         (doom-darken white 0.1))
+   (fg         (doom-darken white 0.2))
    (fg-alt     (doom-darken white 0.4))
 
    (red        '("#FC6A5D" "#FC6A5D" "red"))
@@ -100,13 +100,13 @@ Can be an integer to determine the exact padding."
    (doom-modeline-buffer-path       :foreground dark-blue :bold bold)
    (doom-modeline-buffer-major-mode :inherit 'doom-modeline-buffer-path)
    ;;;; rainbow-delimiters
-   (rainbow-delimiters-depth-1-face :foreground violet)
-   (rainbow-delimiters-depth-2-face :foreground blue)
-   (rainbow-delimiters-depth-3-face :foreground orange)
-   (rainbow-delimiters-depth-4-face :foreground green)
-   (rainbow-delimiters-depth-5-face :foreground magenta)
-   (rainbow-delimiters-depth-6-face :foreground yellow)
-   (rainbow-delimiters-depth-7-face :foreground teal))
+   (rainbow-delimiters-depth-1-face :foreground base5)
+   (rainbow-delimiters-depth-2-face :foreground base5)
+   (rainbow-delimiters-depth-3-face :foreground base5)
+   (rainbow-delimiters-depth-4-face :foreground base5)
+   (rainbow-delimiters-depth-5-face :foreground base5)
+   (rainbow-delimiters-depth-6-face :foreground base5)
+   (rainbow-delimiters-depth-7-face :foreground base5))
 
   ;; --- variables --------------------------
   ;; ()
