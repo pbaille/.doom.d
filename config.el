@@ -1,16 +1,84 @@
 ;;; reconfig.el -*- lexical-binding: t; -*-
 
 
-(add-to-list 'initial-frame-alist '(fullscreen . maximized))
+(progn :misc
 
-(setq display-line-numbers-type 'relative)
+       (add-to-list 'initial-frame-alist '(fullscreen . maximized))
+
+       (setq display-line-numbers-type 'relative)
+
+       (defadvice! enforce-encoding-a (fn &rest args)
+         :around #'persp-list-persp-names-in-file
+         :around #'persp-load-state-from-file
+         :around #'persp-save-state-to-file
+         (let ((coding-system-for-read 'utf-8)
+               (coding-system-for-write 'utf-8))
+           (apply fn args))))
+
 
 (progn :theme
-       (load-theme 'doom-horizon-tweaked)
+
+       (load-theme 'doom-horizon-tweaked t)
        (setq doom-font (font-spec :family "Menlo" :size 16))
        '(highlight-parentheses-mode nil)
        (turn-off-show-smartparens-mode)
        '(global-highlight-parentheses-mode -1))
+
+
+(progn :lisp
+
+       (defun pb/lisp-escape-insert-mode ()
+         (interactive)
+         (evil-normal-state)
+         (symex-mode-interface))
+
+       (defun pb/insert-open-paren ()
+         (interactive)
+         (execute-kbd-macro (kbd "(")))
+
+       (use-package cider
+         :config
+         (setq cider-use-overlays nil)
+         (setq cider-print-fn 'pprint)
+         (setq cider-print-options '(("length" 50) ("right-margin" 70))))
+
+       (use-package symex
+
+         :custom
+         (symex-modal-backend 'evil)
+
+         :bind
+         (("s-l" . symex-mode-interface))
+
+         :config
+         (symex-initialize)
+         ;; (global-set-key (kbd "s-l") 'symex-mode-interface)
+         (setq evil-symex-state-cursor '("cyan" box))
+         ;; (general-def 'insert emacs-lisp-mode-map
+         ;;   [escape] 'pb/lisp-escape-insert-mode)
+
+         (defun symex-eval-clojure ()
+           (interactive)
+           (cider-pprint-eval-last-sexp))
+
+         (general-define-key
+          :states 'insert
+          :keymaps '(emacs-lisp-mode-map clojure-mode-map)
+          [escape] #'pb/lisp-escape-insert-mode
+          "C-w" #'pb/insert-open-paren)
+
+         ;; do not work
+         (setq symex--user-evil-keyspec
+               '(("K" . +lookup/documentation)
+                 ("s-r" . symex-repl)
+                 ("r" . paredit-raise-sexp)))
+
+         ;; (general-def 'normal emacs-lisp-mode-map
+         ;;   (kbd "C-f") (lambda ()
+         ;;                 (interactive)
+         ;;                 (execute-kbd-macro (kbd "("))))
+         ))
+
 
 (use-package dired
   :ensure nil
@@ -26,67 +94,31 @@
       "h" 'dired-up-directory
       "l" 'dired-find-file)))
 
-;; symex ---------------------------------------------------
 
-(defun pb/lisp-escape-insert-mode ()
-  (interactive)
-  (evil-normal-state)
-  (symex-mode-interface))
-
-(defun pb/insert-paren ()
-  (interactive)
-  (execute-kbd-macro (kbd "(")))
-
-(use-package cider
-  :config
-  (setq cider-use-overlays nil)
-  (setq cider-print-fn 'pprint)
-  (setq cider-print-options '(("length" 50) ("right-margin" 70))))
-
-(use-package symex
-
-  :custom
-  (symex-modal-backend 'evil)
-
+(use-package org-gtd
+  :after org
   :bind
-  (("s-l" . symex-mode-interface))
-
+  ()
   :config
-  (symex-initialize)
-  ;; (global-set-key (kbd "s-l") 'symex-mode-interface)
-  (setq evil-symex-state-cursor '("cyan" box))
-  ;; (general-def 'insert emacs-lisp-mode-map
-  ;;   [escape] 'pb/lisp-escape-insert-mode)
-
-  (defun symex-eval-clojure ()
+  ;; avoid to delete windows when processing inbox
+  (defun org-gtd-process-inbox ()
+    "Process the GTD inbox."
     (interactive)
-    (cider-pprint-eval-last-sexp))
+    (set-buffer (org-gtd--inbox-file))
+    (display-buffer-same-window (org-gtd--inbox-file) '())
+    ;; (delete-other-windows)
 
-  (general-define-key
-   :states 'insert
-   :keymaps '(emacs-lisp-mode-map clojure-mode-map)
-   [escape] #'pb/lisp-escape-insert-mode
-   "C-w" #'pb/insert-open-paren)
+    (org-gtd-process-mode t)
 
-  ;; do not work
-  (setq symex--user-evil-keyspec
-        '(("C-w" . #'pb/insert-open-paren)))
+    (condition-case err
+        (progn
+          (widen)
+          (goto-char (point-min))
+          (org-next-visible-heading 1)
+          (org-back-to-heading)
+          (org-narrow-to-subtree))
+      (user-error (org-gtd--stop-processing)))))
 
-  ;; (general-def 'normal emacs-lisp-mode-map
-  ;;   (kbd "C-f") (lambda ()
-  ;;                 (interactive)
-  ;;                 (execute-kbd-macro (kbd "("))))
-  )
-
-;; load -----------------------------------------------------
 
 (load "~/.doom.d/config/org.el")
 (load "~/.doom.d/bindings.el")
-
-(defadvice! enforce-encoding-a (fn &rest args)
-  :around #'persp-list-persp-names-in-file
-  :around #'persp-load-state-from-file
-  :around #'persp-save-state-to-file
-  (let ((coding-system-for-read 'utf-8)
-        (coding-system-for-write 'utf-8))
-    (apply fn args)))

@@ -12,16 +12,24 @@
 (package! org-superstar)
 (package! org-bullets)
 (package! org-web-tools)
-'(package! emacs-application-framework
-   :recipe (:host github
-            :repo "manateelazycat/emacs-application-framework"
-            :files ("eaf.el" "src/lisp/*.el")))
-(package! evil-lispy)
 (package! org-protocol-capture-html)
 (package! symex)
-(package! rigpa
-  :recipe (:host github :repo "countvajhula/rigpa"))
 (package! org-pomodoro)
+(package! org-gtd)
+
+
+
+
+
+
+'(package! rigpa
+  :recipe (:host github :repo "countvajhula/rigpa"))
+
+'(package! eaf
+  :recipe (:host github
+           :repo "emacs-eaf/emacs-application-framework"
+           :files ("eaf.el" "src/lisp/*.el")))
+
 ;; To install a package directly from a remote git repo, you must specify a
 ;; `:recipe'. You'll find documentation on what `:recipe' accepts here:
 ;; https://github.com/raxod502/straight.el#the-recipe-format
