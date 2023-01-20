@@ -48,7 +48,7 @@
    (base7      '("#fadad1" "#fadad1" "white"        ))
    (base8      '("#fdf0ed" "#fdf0ed" "white"        ))
    (fg-alt     '("#fdf0ed" "#fdf0ed" "brightwhite"  ))
-   (fg         '("#c7c9cb" "#c7c9cb" "white"        ))
+   (fg         '("#B6AEBD" "#c7c9cb" "white"        ))
 
    (grey       base4)
    (red        '("#e95678" "#e95678" "red"          ))
@@ -57,11 +57,12 @@
    (teal       '("#87ceeb" "#87ceeb" "brightgreen"  ))
    (yellow     '("#fab795" "#fab795" "yellow"       ))
    (blue       '("#21bfc2" "#21bfc2" "brightblue"   ))
-   (dark-blue  '("#25b2bc" "#25b2bc" "blue"         ))
-   (magenta    '("#6c6f93" "#6c6f93" "magenta"      ))
-   (violet     '("#b877db" "#b877db" "brightmagenta"))
+   (dark-blue  '("#25b2bc" "#25A5BC" "blue"         ))
+   (magenta    '("#C485C4" "#6c6f93" "magenta"      ))
+   (violet     '("#9D77DB" "#9D77DB" "brightmagenta"))
    (cyan       '("#59e3e3" "#59e3e3" "brightcyan"   ))
    (dark-cyan  '("#27d797" "#27d797" "cyan"   ))
+
 
    ;; additional highlighting colours for horizon
    (hor-highlight  `(,(doom-lighten (car base3) 0.1) ,@(cdr base2)))
@@ -75,7 +76,7 @@
    (selection      violet)
    (builtin        violet)
    (comments       (if doom-horizon-tweaked-brighter-comments magenta hor-highlight-bright))
-   (doc-comments   yellow)
+   (doc-comments   (if doom-horizon-tweaked-brighter-comments magenta hor-highlight-bright))
    (constants      orange)
    (functions      teal)
    (keywords       violet)
@@ -105,7 +106,7 @@
    (modeline-fg-alt `(,(doom-lighten (car bg) 0.2) ,@(cdr base3)))
 
    (modeline-bg (if -modeline-bright base4 base1))
-   (modeline-bg-inactive base1))
+   (modeline-bg-inactive base3))
 
 
   ;;;; Base theme face overrides
@@ -113,12 +114,13 @@
     :slant 'italic
     :background (if doom-horizon-tweaked-comment-bg (doom-lighten bg 0.03)))
    (fringe :background bg)
+   (auto-dim-other-buffers-face :background (doom-darken bg 0.1))
    (link :foreground yellow :inherit 'underline)
    ((line-number &override) :foreground hor-highlight-selected)
    ((line-number-current-line &override) :foreground hor-highlight-brighter)
    (mode-line
     :background modeline-bg :foreground modeline-fg
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg)))
+    :box `(:line-width 10 :color ,modeline-bg))
    (mode-line-inactive
     :background modeline-bg-inactive :foreground modeline-fg-alt
     :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive)))
@@ -182,12 +184,6 @@
    (magit-branch-remote   :foreground orange)
 ;;;; outline <built-in>
    ((outline-1 &override) :foreground blue :background nil)
-;;;; org <built-in>
-   ((org-block &override) :background base1)
-   ((org-block-begin-line &override) :background base1 :foreground comments)
-   (org-hide :foreground hidden)
-   (org-link :inherit 'underline :foreground yellow)
-   (org-agenda-done :foreground cyan)
 ;;;; rjsx-mode
    (rjsx-tag :foreground red)
    (rjsx-tag-bracket-face :foreground red)
@@ -216,6 +212,100 @@
    (rainbow-delimiters-depth-4-face :foreground (doom-lighten base3 0.3))
    (rainbow-delimiters-depth-5-face :foreground (doom-lighten base3 0.3))
    (rainbow-delimiters-depth-6-face :foreground (doom-lighten base3 0.3))
-   (rainbow-delimiters-depth-7-face :foreground (doom-lighten base3 0.3))))
+   (rainbow-delimiters-depth-7-face :foreground (doom-lighten base3 0.3))
+
+   ;;;; org <built-in> <modes:org-mode>
+   (org-archived                 :foreground doc-comments)
+   (org-block                    :background base3    :extend t)
+   (org-block-background         :background base3    :extend t)
+   (org-block-begin-line         :inherit 'org-block  :foreground comments)
+   (org-block-end-line           :inherit 'org-block-begin-line)
+   (org-checkbox                 :inherit 'org-todo)
+   (org-checkbox-statistics-done :inherit 'org-done)
+   (org-checkbox-statistics-todo :inherit 'org-todo)
+   (org-cite                     :foreground (doom-blend teal fg 0.9))
+   (org-cite-key                 :foreground (doom-blend teal fg 0.6) :underline t)
+   (org-code                     :inherit 'org-block :foreground orange)
+   (org-date                     :foreground yellow)
+   (org-default                  :inherit 'variable-pitch)
+   (org-document-info            :foreground builtin)
+   (org-document-title           :foreground builtin         :weight 'bold)
+   (org-done                     :inherit 'org-headline-done :strike-through nil :weight 'bold)
+   (org-drawer                   :foreground comments)
+   (org-ellipsis                 :underline nil              :background nil :foreground comments)
+   (org-footnote                 :foreground orange)
+   (org-formula                  :foreground cyan)
+   (org-headline-done            :foreground base5)
+   (org-hide                     :foreground bg)
+   (org-latex-and-related        :foreground base8           :weight 'bold)
+   (org-link                     :inherit 'link              :foreground highlight)
+   (org-list-dt                  :foreground highlight)
+   (org-meta-line                :foreground comments)
+   (org-priority                 :foreground red)
+   (org-property-value           :foreground doc-comments)
+   (org-quote                    :inherit 'org-block :slant 'italic)
+   (org-special-keyword          :foreground doc-comments    :underline nil)
+   (org-table                    :foreground violet)
+   (org-tag                      :foreground doc-comments    :weight 'normal)
+   (org-todo                     :foreground green           :bold 'inherit)
+   (org-verbatim                 :foreground (doom-blend fg violet 0.5))
+   (org-warning                  :foreground warning)
+   ;; Omitted because we rely on style they inherit from the outline-N faces
+   ;;(org-level-1)
+   ;; (org-level-2 :foreground "#3E958D")
+   ;;(org-level-3)
+   ;;(org-level-4)
+   ;;(org-level-5)
+   ;;(org-level-6)
+   ;;(org-level-7)
+   ;;(org-level-8)
+    ;;;; org-agenda <built-in>
+   (org-agenda-done :inherit 'org-done)
+   (org-agenda-dimmed-todo-face :foreground comments)
+   (org-agenda-date          :foreground violet :weight 'ultra-bold)
+   (org-agenda-date-today    :foreground (doom-lighten violet 0.4)   :weight 'ultra-bold)
+   (org-agenda-date-weekend  :foreground (doom-darken violet 0.4)  :weight 'ultra-bold)
+   (org-agenda-structure     :foreground fg :weight 'ultra-bold)
+   (org-agenda-clocking      :background (doom-blend blue bg 0.2))
+   (org-upcoming-deadline         :foreground (doom-blend fg bg 0.8))
+   (org-upcoming-distant-deadline :foreground (doom-blend fg bg 0.5))
+   (org-scheduled            :foreground fg)
+   (org-scheduled-today      :foreground base7)
+   (org-scheduled-previously :foreground base8)
+   (org-time-grid            :foreground comments)
+   (org-sexp-date            :foreground fg)
+    ;;;; org-habit
+   (org-habit-clear-face          :weight 'bold :background base4)
+   (org-habit-clear-future-face   :weight 'bold :background base3)
+   (org-habit-ready-face          :weight 'bold :background (doom-blend blue bg-alt 0.5))
+   (org-habit-ready-future-face   :weight 'bold :background (doom-blend blue bg-alt 0.3))
+   (org-habit-alert-face          :weight 'bold :background (doom-blend yellow bg-alt 0.5))
+   (org-habit-alert-future-face   :weight 'bold :background (doom-blend yellow bg-alt 0.3))
+   (org-habit-overdue-face        :weight 'bold :background (doom-blend red bg-alt 0.5))
+   (org-habit-overdue-future-face :weight 'bold :background (doom-blend red bg-alt 0.3))
+    ;;;; org-journal <modes:org-journal-mode>
+   (org-journal-highlight :foreground highlight)
+   (org-journal-calendar-entry-face :foreground magenta :slant 'italic)
+   (org-journal-calendar-scheduled-face :foreground red :slant 'italic)
+    ;;;; org-pomodoro
+   (org-pomodoro-mode-line :foreground red)
+   (org-pomodoro-mode-line-overtime :foreground warning :weight 'bold)
+    ;;;; org-ref
+   (org-ref-acronym-face    :foreground violet)
+   (org-ref-cite-face       :foreground yellow :weight 'light :underline t)
+   (org-ref-glossary-face   :foreground magenta)
+   (org-ref-label-face      :foreground blue)
+   (org-ref-ref-face        :inherit 'link :foreground teal)
+
+
+
+
+   ((org-block &override) :background base1)
+   ((org-block-begin-line &override) :background base1 :foreground comments)
+   (org-hide :foreground hidden)
+   (org-link :inherit 'underline :foreground (doom-blend bg yellow 0.2))
+   (org-agenda-done :foreground cyan)
+
+   ))
 
 ;;; doom-horizon-tweaked-theme.el ends here

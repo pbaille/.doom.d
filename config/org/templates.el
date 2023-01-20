@@ -1,7 +1,7 @@
 ;;; org/templates.el -*- lexical-binding: t; -*-
 
 (setq pb/org-inbox-file
-      "~/org/inbox-new.org")
+      "~/org/gtd/inbox.org")
 
 (setq pb/org-capture-simple-properties
       (concat
@@ -9,6 +9,7 @@
        ":CREATED: %U\n"
        ":END:\n"
        "\n"))
+
 
 (setq org-capture-templates
 

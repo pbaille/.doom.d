@@ -16,9 +16,19 @@
 (package! symex)
 (package! org-pomodoro)
 (package! org-gtd)
+(package! org-modern)
+(package! svg-tag-mode)
+(package! webkit-color-picker)
+(package! kurecolor)
+(package! flycheck-clj-kondo)
+'(package! centaur-tabs)
+(package! auto-dim-other-buffers)
 
 
+(package! copilot
+  :recipe (:host github :repo "zerolfx/copilot.el" :files ("*.el" "dist")))
 
+(package! gpt)
 
 
 
@@ -29,6 +39,9 @@
   :recipe (:host github
            :repo "emacs-eaf/emacs-application-framework"
            :files ("eaf.el" "src/lisp/*.el")))
+
+
+
 
 ;; To install a package directly from a remote git repo, you must specify a
 ;; `:recipe'. You'll find documentation on what `:recipe' accepts here:
