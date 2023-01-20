@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: mine
+# uuid:
+# key: mi
+# condition: t
+# --
+($0 $1 $2)

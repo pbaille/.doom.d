@@ -1,0 +1,13 @@
+# -*- mode: snippet -*-
+# name: habit
+# uuid:
+# key: !habit
+# condition: t
+# --
+
+** LOOP $1
+SCHEDULED: `(format-time-string "<%Y-%m-%d +1d>")`
+:PROPERTIES:
+:STYLE:    habit
+:END:
+$0
