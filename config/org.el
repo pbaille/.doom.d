@@ -86,12 +86,16 @@
            :unnarrowed t
            :immediate-finish t))))
 
+;; for some reason putting this into use-package org-gtd :config do not work, trying this...
+(setq org-gtd-update-ack "2.1.0")
+
 (use-package org-gtd
   :after org
   :bind
   ()
   :config
   (setq org-gtd-directory "~/org/gtd")
+  (setq org-gtd-update-ack "2.1.0")
   ;; avoid to delete windows when processing inbox
   (defun org-gtd-process-inbox ()
     "Process the GTD inbox."
