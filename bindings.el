@@ -11,7 +11,18 @@
                 (_ (if (doom-project-p)
                        (treemacs-add-and-display-current-project)
                      (treemacs)))))
-      "C-<tab>" #'company-complete)
+      "C-<tab>" #'company-complete
+      "C-<right>" #'next-buffer
+      "C-<left>" #'previous-buffer
+      "s-<right>" #'next-buffer
+      "s-<left>" #'previous-buffer
+      "s-<up>" #'+workspace/switch-left
+      "s-<down>" #'+workspace/switch-right
+      "S-<right>" #'windmove-right
+      "S-<left>" #'windmove-left
+      "S-<up>" #'windmove-up
+      "S-<down>" #'windmove-down
+      )
 
 
 (map! :leader
@@ -61,33 +72,34 @@
 
 ;; bind all copilot elisp functions in an hydra bound to spc c c
 
-(map! "M-c"
-      #'copilot-hydra/body
-      (:map symex-mode-map
-       :n "C" #'copilot-hydra/body))
+'(progn :copilot
+        (map! "M-c"
+              #'copilot-hydra/body
+              (:map symex-mode-map
+               :n "C" #'copilot-hydra/body))
 
 
-;; define the hydra with all bound copilot-* functions
+        ;; define the hydra with all bound copilot-* functions
 
-(defhydra copilot-hydra (:color pink)
-  "Copilot"
-  ("c" copilot-complete "complete")
-  ("n" copilot-next-completion "next")
-  ("a" copilot-accept-completion "accept")
-  ("w" copilot-accept-completion-by-word "word")
-  ("l" copilot-accept-completion-by-line "line")
-  ("h" copilot-clear-overlay "clear")
-  ("<return>" copilot-accept-completion "OK" :color blue)
-  ("<escape>" copilot-clear-overlay "ABORT" :color blue)
-  ("q" copilot-clear-overlay "quit" :color blue))
+        (defhydra copilot-hydra (:color pink)
+          "Copilot"
+          ("c" copilot-complete "complete")
+          ("n" copilot-next-completion "next")
+          ("a" copilot-accept-completion "accept")
+          ("w" copilot-accept-completion-by-word "word")
+          ("l" copilot-accept-completion-by-line "line")
+          ("h" copilot-clear-overlay "clear")
+          ("<return>" copilot-accept-completion "OK" :color blue)
+          ("<escape>" copilot-clear-overlay "ABORT" :color blue)
+          ("q" copilot-clear-overlay "quit" :color blue))
 
-"an hydra to test red color"
-(defhydra blue-hydra (:color blue)
-  "blue"
-  ("r" (message "red") "red" :color red)
-  ("b" (message "b") "b")
-  ("c" (message "c") "c")
-  ("d" (message "d") "d"))
+        "an hydra to test red color"
+        (defhydra blue-hydra (:color blue)
+          "blue"
+          ("r" (message "red") "red" :color red)
+          ("b" (message "b") "b")
+          ("c" (message "c") "c")
+          ("d" (message "d") "d"))
 
-"bind the hydra to M-b"
-(map! "M-b" #'blue-hydra/body)
+        "bind the hydra to M-b"
+        (map! "M-b" #'blue-hydra/body))
