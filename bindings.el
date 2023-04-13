@@ -5,23 +5,27 @@
       "s-t" #'hs-hide-all
       "s-T" #'hs-show-all
       "s-m" (lambda () (interactive) (evil-window-split) (evil-window-down 1) (switch-to-buffer "*Messages*"))
-      "s-p" (lambda () (interactive)
-              (pcase (treemacs-current-visibility)
-                (`visible (treemacs--select-visible-window))
-                (_ (if (doom-project-p)
-                       (treemacs-add-and-display-current-project)
-                     (treemacs)))))
       "C-<tab>" #'company-complete
-      "C-<right>" #'next-buffer
-      "C-<left>" #'previous-buffer
+
+      ;; buffer move
+      "C-l" #'next-buffer
+      "C-h" #'previous-buffer
       "s-<right>" #'next-buffer
       "s-<left>" #'previous-buffer
+
+      ;; workspace move
       "s-<up>" #'+workspace/switch-left
       "s-<down>" #'+workspace/switch-right
-      "S-<right>" #'windmove-right
-      "S-<left>" #'windmove-left
-      "S-<up>" #'windmove-up
-      "S-<down>" #'windmove-down
+
+      ;; window move
+      "s-S-<right>" #'windmove-right
+      "s-S-<left>" #'windmove-left
+      "s-S-<up>" #'windmove-up
+      "s-S-<down>" #'windmove-down
+      "C-M-l" #'windmove-right
+      "C-M-h" #'windmove-left
+      "C-M-k" #'windmove-up
+      "C-M-j" #'windmove-down
       )
 
 
@@ -43,7 +47,6 @@
             "S" #'org-insert-structure-template))
 
 (map! (:map symex-mode-map
-       :n "ö" (lambda () (interactive) (save-buffer) (cider-load-buffer))
        :n "s-e" (lambda () (interactive) (symex-goto-lowest) (symex-evaluate 1))
        :n "s-i" #'cider-inspect-last-result)
 
@@ -57,7 +60,22 @@
        :n [return] #'cider-stacktrace-jump)
 
       (:map cider-mode-map
-       :n "s-r" (lambda () (interactive) (save-buffer) (cider-ns-refresh))))
+       :n "ö" (lambda () (interactive) (save-buffer) (cider-load-buffer))
+       :n "s-r" (lambda () (interactive) (save-buffer) (cider-ns-refresh)))
+
+      (:map fennel-mode-map
+       :n "ö" (lambda () (interactive) (save-buffer) (fennel-reload nil))
+       :n "s-r" (lambda () (interactive) (fennel-repl "fennel"))
+       :n "s-R" #'pb/reaper-start-repl
+       :n "M-c" #'pb/compile-fennel
+       :n "M-C" #'pb/fennel-print-compile
+       :n "M-i" #'pb/install-fennel-script)
+
+      (:map fennel-repl-mode-map
+        "s-r" (lambda () (interactive) (select-window (previous-window)))
+        "C-k" #'comint-clear-buffer)
+
+      )
 
 'cider-clojuredocs
 'cider-doc

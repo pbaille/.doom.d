@@ -13,7 +13,10 @@
 (package! org-bullets)
 (package! org-web-tools)
 (package! org-protocol-capture-html)
-(package! symex)
+(package! symex
+  :recipe (:host github
+           :repo "pbaille/symex.el"
+           :files ("*.el")))
 (package! org-pomodoro)
 (package! org-gtd)
 (package! org-modern)
@@ -21,24 +24,30 @@
 (package! webkit-color-picker)
 (package! kurecolor)
 (package! flycheck-clj-kondo)
-'(package! centaur-tabs)
 (package! auto-dim-other-buffers)
+(package! osc)
+
+(package! prettier-js)
+(package! bencoding)
+
+(progn :not-used
+
+       '(package! centaur-tabs)
+
+       '(package! copilot
+          :recipe (:host github :repo "zerolfx/copilot.el" :files ("*.el" "dist")))
+
+       '(package! gpt)
 
 
-'(package! copilot
-  :recipe (:host github :repo "zerolfx/copilot.el" :files ("*.el" "dist")))
 
-'(package! gpt)
+       '(package! rigpa
+          :recipe (:host github :repo "countvajhula/rigpa"))
 
-
-
-'(package! rigpa
-  :recipe (:host github :repo "countvajhula/rigpa"))
-
-'(package! eaf
-  :recipe (:host github
-           :repo "emacs-eaf/emacs-application-framework"
-           :files ("eaf.el" "src/lisp/*.el")))
+       '(package! eaf
+          :recipe (:host github
+                   :repo "emacs-eaf/emacs-application-framework"
+                   :files ("eaf.el" "src/lisp/*.el"))))
 
 
 
