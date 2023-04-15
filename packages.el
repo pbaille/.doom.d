@@ -5,6 +5,9 @@
 ;; on the command line, then restart Emacs for the changes to take effect -- or
 ;; use 'M-x doom/reload'.
 
+(package! pbel
+  :recipe (:local-repo "pbel"
+           :files ("*.el")))
 
 ;; To install SOME-PACKAGE from MELPA, ELPA or emacsmirror:
 (package! info-colors)
@@ -29,6 +32,9 @@
 
 (package! prettier-js)
 (package! bencoding)
+(package! treepy)
+
+(package! dired-sidebar)
 
 (progn :not-used
 

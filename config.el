@@ -1,5 +1,6 @@
 ;;; config.el -*- lexical-binding: t; -*-
 
+(load "~/.doom.d/pb.el")
 (progn :misc
 
        (load "~/.doom.d/parts/re-jump.el")
@@ -272,13 +273,14 @@
               (setq pb/lua-5-3-install-path "/usr/local/lib/lua/5.3/")
               (setq pb/lua-5-4-install-path "/usr/local/lib/lua/5.4/")
 
-              (defun pb/spit (string file)
-                "Prints string into file, if files exists, delete it, if not creates it."
-                (with-temp-buffer
-                  (insert string)
-                  (delete-file file)
-                  (make-directory (file-name-parent-directory file) t)
-                  (write-region (point-min) (point-max) file t)))
+              (defun pb/fennel-repl ()
+                (interactive)
+                (fennel-repl "fennel"))
+
+              (defun pb/fennel-reload ()
+                (interactive)
+                (save-buffer)
+                (fennel-reload nil))
 
               (defun pb/fennel-compile (file)
                 (shell-command-to-string (concat "fennel -c " file)))
@@ -310,7 +312,7 @@
               (use-package fennel-mode
 
                 :bind
-                (("s-r" . fennel-repl))
+                (("s-r" . pb/fennel-repl))
                 :config
                 (setq fennel-mode-switch-to-repl-after-reload nil)
                 (set-popup-rules!
@@ -321,10 +323,14 @@
                      (setq pb/reaper-user-script-path "/Users/pierrebaille/Library/Application\ Support/REAPER/Scripts/PB/")
                      (setq pb/lua-script-path "/Users/pierrebaille/Code/Lua/")
 
-                     (define-minor-mode reaper-repl-mode
+                     (define-minor-mode reaper-mode
                        "Get your foos in the right places."
-                       :lighter " reaper-repl"
+                       :lighter " reaper"
                        :keymap (make-sparse-keymap))
+
+                     (defun pb/reaper-mode ()
+                       (interactive)
+                       (reaper-mode t))
 
                      (defun pb/replace-filename-extension (filename ext)
                        (concat (file-name-sans-extension filename) "." ext))
@@ -428,8 +434,9 @@
                               (let ((s (pb/current-s-expression-as-string))
                                     (f (make-temp-file "fnl-code-" nil ".fnl") ))
                                 (with-temp-file f (insert s))
-                                (pb/send-to-reaper-socket-repl (bencode-encode `(:code ,s
-                                                                                 :compiled ,(pb/fennel-compile f))))
+                                (pb/send-to-reaper-socket-repl
+                                 (bencode-encode `(:code ,s
+                                                   :compiled ,(pb/fennel-compile f))))
                                 (delete-file f)))
 
                             '(progn :try
@@ -528,6 +535,13 @@
 
 
        )
+
+(use-package dired-sidebar
+  :ensure t
+  :config
+  (evil-collection-define-key 'normal 'dired-sidebar-mode-map
+    "h" 'dired-sidebar-up-directory
+    "l" 'dired-sidebar-find-file))
 
 (use-package dired
   :ensure nil

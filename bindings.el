@@ -31,6 +31,7 @@
 
 (map! :leader
       "o d" #'dired-jump
+      "SPC" #'dired-sidebar-toggle-with-current-directory
       "o D" #'+debugger/start
       "o g" (lambda () (interactive) (xwidget-webkit-browse-url "https://www.google.com/"))
 
@@ -64,12 +65,18 @@
        :n "s-r" (lambda () (interactive) (save-buffer) (cider-ns-refresh)))
 
       (:map fennel-mode-map
-       :n "ö" (lambda () (interactive) (save-buffer) (fennel-reload nil))
-       :n "s-r" (lambda () (interactive) (fennel-repl "fennel"))
+       :n "SPC m R" #'pb/reaper-mode
+       :n "SPC m r" #'pb/fennel-repl
+       :n "SPC m l" #'pb/fennel-reload
+       :n "ö" #'fennel-reload
+       :n "s-r" #'pb/fennel-repl
        :n "s-R" #'pb/reaper-start-repl
        :n "M-c" #'pb/compile-fennel
        :n "M-C" #'pb/fennel-print-compile
        :n "M-i" #'pb/install-fennel-script)
+
+      (:map reaper-mode-map
+       :n "C-e" #'pb/send-fnl-s-expression-to-reaper-socket-repl)
 
       (:map fennel-repl-mode-map
         "s-r" (lambda () (interactive) (select-window (previous-window)))
