@@ -33,8 +33,7 @@
       "o d" #'dired-jump
       "SPC" #'dired-sidebar-toggle-with-current-directory
       "o D" #'+debugger/start
-      "o g" (lambda () (interactive) (xwidget-webkit-browse-url "https://www.google.com/"))
-
+      "o g" #'pb/open-google
       "d d" #'org-gtd-choose
       "d c" #'org-gtd-capture
       "d e" #'org-gtd-engage

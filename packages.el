@@ -5,36 +5,58 @@
 ;; on the command line, then restart Emacs for the changes to take effect -- or
 ;; use 'M-x doom/reload'.
 
-(package! pbel
-  :recipe (:local-repo "pbel"
+'(package! mine
+  :recipe (:local-repo "packages/mine"))
+
+'(package! my-package
+  :recipe (:local-repo "packages/my-package"
            :files ("*.el")))
 
+(package! pb
+  :recipe (:local-repo "pb"))
+
 ;; To install SOME-PACKAGE from MELPA, ELPA or emacsmirror:
+
+;; colors
 (package! info-colors)
 (package! command-log-mode)
+(package! webkit-color-picker)
+(package! kurecolor)
+
+;; ui
+(package! auto-dim-other-buffers)
+(package! dired-sidebar)
+(package! svg-tag-mode) ;; replace keywords or regular expression with SVG tags.
+
+;; org
 (package! org-superstar)
 (package! org-bullets)
 (package! org-web-tools)
 (package! org-protocol-capture-html)
+(package! org-pomodoro)
+(package! org-gtd)
+(package! org-modern)
+
+;; lisp
 (package! symex
   :recipe (:host github
            :repo "pbaille/symex.el"
            :files ("*.el")))
-(package! org-pomodoro)
-(package! org-gtd)
-(package! org-modern)
-(package! svg-tag-mode)
-(package! webkit-color-picker)
-(package! kurecolor)
 (package! flycheck-clj-kondo)
-(package! auto-dim-other-buffers)
+
+
 (package! osc)
-
 (package! prettier-js)
-(package! bencoding)
-(package! treepy)
 
-(package! dired-sidebar)
+(package! bencode
+  :recipe (:local-repo "packages"
+           :files ("bencode.el")))
+
+(package! re-jump
+  :recipe (:local-repo "packages"
+           :files ("re-jump.el")))
+
+(package! treepy)
 
 (progn :not-used
 
