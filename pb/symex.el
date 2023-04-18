@@ -1,5 +1,11 @@
 ;;; pb/symex.el -*- lexical-binding: t; -*-
 
+(defun pb/symex-escape-insert-mode ()
+  (interactive)
+  (evil-normal-state)
+  (forward-char)
+  (symex-mode-interface))
+
 (defun pb/symex-click ()
   (interactive)
   (evil-normal-state)

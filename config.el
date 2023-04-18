@@ -57,6 +57,9 @@
 
 (progn :lisp
 
+       (defvar pb/lisp-modes
+         '(emacs-lisp-mode-map clojure-mode-map fennel-mode-map))
+
        (progn :clojure
 
               (use-package cider
@@ -104,8 +107,7 @@
                  ("k" . symex-go-down)
                  ("J" . symex-join-lines)
                  ("K" . pb/symex-go-down-folding)
-                 ("M" . pb/symex-cider-macroexpand)
-                                        ;("K" . +lookup/documentation)
+                 ("M" . pb/symex-cider-macroexpand) ;; +lookup/documentation
                  ("s-r" . symex-repl)
                  ("r" . paredit-raise-sexp)
                  ("x" . symex-delete)
@@ -132,7 +134,6 @@
                  ("C-j" . pb/symex-next-line)
                                         ;("C-k" . symex-descend-branch)
                                         ;("C-j" . symex-climb-branch)
-
                                         ;("C" . copilot-hydra/body)
                  ("C->" . pb/shift-expression-right)
                  ("C-<" . pb/shift-expression-left)
@@ -152,25 +153,23 @@
 
          (general-define-key
           :states 'insert
-          :keymaps '(emacs-lisp-mode-map clojure-mode-map fennel-mode-map)
-          [escape] #'pb/lisp-escape-insert-mode
+          :keymaps pb/lisp-modes
+          [escape] #'pb/symex-escape-insert-mode
           ;; [return] #'symex-mode-interface
           [mouse-1] #'pb/symex-click
                                         ;[double-mouse-1] #'pb/toggle-hiding
           ";" (lambda () (interactive) (print "please use  M-;"))
           "M-;" (lambda () (interactive) (insert ";"))
-          "C-w" #'pb/insert-open-paren
-          "C-j" #'symex-mode-interface)
+          "C-w" #'pb/insert-open-paren)
 
          (general-define-key
           :states 'normal
-          :keymaps '(emacs-lisp-mode-map clojure-mode-map fennel-mode-map)
+          :keymaps pb/lisp-modes
           [mouse-1] #'pb/symex-click
                                         ;[double-mouse-1] #'pb/toggle-hiding
           ":" #'re-frame-jump-to-reg
           "C-w" (lambda () (interactive) (evil-insert 1) (pb/insert-open-paren))
-          "C-j" #'symex-mode-interface
-          "RET" #'symex-mode-interface)
+           "RET" #'symex-mode-interface)
 
          (general-define-key
           :states 'normal

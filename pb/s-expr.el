@@ -38,10 +38,4 @@
   (interactive)
   (pb/shift-expressions -1))
 
-(defun pb/lisp-escape-insert-mode ()
-  (interactive)
-  (evil-normal-state)
-  (forward-char)
-  (symex-mode-interface))
-(print "load s-expr")
 (provide 'pb-s-expr)
