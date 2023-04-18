@@ -155,9 +155,8 @@
           :states 'insert
           :keymaps pb/lisp-modes
           [escape] #'pb/symex-escape-insert-mode
-          ;; [return] #'symex-mode-interface
           [mouse-1] #'pb/symex-click
-                                        ;[double-mouse-1] #'pb/toggle-hiding
+          ;;[double-mouse-1] #'pb/toggle-hiding
           ";" (lambda () (interactive) (print "please use  M-;"))
           "M-;" (lambda () (interactive) (insert ";"))
           "C-w" #'pb/insert-open-paren)
@@ -166,14 +165,14 @@
           :states 'normal
           :keymaps pb/lisp-modes
           [mouse-1] #'pb/symex-click
-                                        ;[double-mouse-1] #'pb/toggle-hiding
-          ":" #'re-frame-jump-to-reg
+          ;;[double-mouse-1] #'pb/toggle-hiding
           "C-w" (lambda () (interactive) (evil-insert 1) (pb/insert-open-paren))
            "RET" #'symex-mode-interface)
 
          (general-define-key
           :states 'normal
           :keymaps '(clojure-mode-map)
+          ":" #'re-frame-jump-to-reg
           ";" #'pb/symex-clj-toggle-comment))
 
 
