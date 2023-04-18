@@ -1,6 +1,7 @@
 ;;; bindings.el -*- lexical-binding: t; -*- :emacs: :emacs:
 
-(map! "s-w" #'ace-window
+(map! "s-d" #'dired-sidebar-toggle-with-current-directory
+      "s-w" #'ace-window
       "M-w" #'evil-window-next
       "s-t" #'hs-hide-all
       "s-T" #'hs-show-all
@@ -31,7 +32,7 @@
 
 (map! :leader
       "o d" #'dired-jump
-      "SPC" #'dired-sidebar-toggle-with-current-directory
+      "SPC" #'dired-sidebar-jump-to-sidebar
       "o D" #'+debugger/start
       "o g" #'pb/open-google
       "d d" #'org-gtd-choose
@@ -39,7 +40,8 @@
       "d e" #'org-gtd-engage
 
       "d p" #'org-gtd-process-inbox
-      "t t" #'tab-line-mode)
+      "t t" #'tab-line-mode
+      "t s" #'dired-sidebar-toggle-sidebar)
 
 (map! :localleader
       (:map org-mode-map
@@ -78,10 +80,8 @@
        :n "C-e" #'pb/send-fnl-s-expression-to-reaper-socket-repl)
 
       (:map fennel-repl-mode-map
-        "s-r" (lambda () (interactive) (select-window (previous-window)))
-        "C-k" #'comint-clear-buffer)
-
-      )
+       :n "s-r" #'other-window
+       :n "C-k" #'comint-clear-buffer))
 
 'cider-clojuredocs
 'cider-doc
