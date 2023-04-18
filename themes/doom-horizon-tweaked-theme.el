@@ -127,7 +127,8 @@
    (mode-line-emphasis :foreground (if -modeline-bright base8 highlight))
    (mode-line-highlight :background base1 :foreground fg)
    (tooltip :background base0 :foreground fg)
-
+;;;; symex
+   (symex--current-node-face  :background (doom-lighten bg 0.05))
 ;;;; company
    (company-box-background    :background base0 :foreground fg)
    (company-tooltip-common    :foreground red :weight 'bold)
@@ -142,7 +143,7 @@
    (doom-modeline-project-dir :foreground red :inherit 'bold )
    (doom-modeline-buffer-path :foreground red)
    (doom-modeline-buffer-file :foreground fg)
-   (doom-modeline-buffer-modified :foreground violet)
+   (doom-modeline-buffer-modified :foreground yellow :weight 'ultra-bold)
    (doom-modeline-panel :background base1)
    (doom-modeline-urgent :foreground modeline-fg)
    (doom-modeline-info :foreground cyan)
@@ -176,7 +177,7 @@
 ;;;; orderless
    (orderless-match-face-1 :weight 'bold :foreground (doom-blend red fg 0.6) :background (doom-blend red bg 0.1))
 ;;;; mic-paren
-   (paren-face-match    :foreground green   :background base0 :weight 'ultra-bold)
+   (paren-face-match    :background (doom-lighten bg 0.1) :weight 'ultra-bold :foreground red)
    (paren-face-mismatch :foreground yellow :background base0   :weight 'ultra-bold)
    (paren-face-no-match :inherit 'paren-face-mismatch :weight 'ultra-bold)
 ;;;; magit
@@ -188,6 +189,7 @@
    (rjsx-tag :foreground red)
    (rjsx-tag-bracket-face :foreground red)
    (rjsx-attr :foreground cyan :slant 'italic :weight 'medium)
+   (tide-hl-identifier-face :background hor-highlight)
 ;;;; solaire-mode
    (solaire-mode-line-face
     :inherit 'mode-line
@@ -214,7 +216,8 @@
    (rainbow-delimiters-depth-6-face :foreground (doom-lighten base3 0.3))
    (rainbow-delimiters-depth-7-face :foreground (doom-lighten base3 0.3))
 
-   ;;;; org <built-in> <modes:org-mode>
+
+;;;; org <built-in> <modes:org-mode>
    (org-archived                 :foreground doc-comments)
    (org-block                    :background base3    :extend t)
    (org-block-background         :background base3    :extend t)
