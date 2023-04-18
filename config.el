@@ -189,6 +189,12 @@
   :bind (("C-d" . dired-jump))
   :config
   (progn
+    ;; this fix the 'ls does not supports --dired' error
+    (when (string= system-type "darwin")
+         (setq dired-use-ls-dired t
+               insert-directory-program "/usr/local/bin/gls"
+               dired-listing-switches "-aBhl --group-directories-first"))
+
     (add-hook 'dired-mode-hook
               (lambda ()
                 (dired-hide-details-mode)
