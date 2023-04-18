@@ -216,6 +216,8 @@
    (rainbow-delimiters-depth-6-face :foreground (doom-lighten base3 0.3))
    (rainbow-delimiters-depth-7-face :foreground (doom-lighten base3 0.3))
 
+;; dired
+   (diredfl-dir-name :foreground violet)
 
 ;;;; org <built-in> <modes:org-mode>
    (org-archived                 :foreground doc-comments)
