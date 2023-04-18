@@ -1,12 +1,5 @@
 ;;; config.el -*- lexical-binding: t; -*-
 
-'(load "~/.doom.d/packages/pb/pb-core.el")
-'(load "~/.doom.d/packages/pb/pb-misc.el")
-'(load "~/.doom.d/packages/pb/pb-s-expr.el")
-'(load "~/.doom.d/packages/pb/pb-symex.el")
-'(load "~/.doom.d/packages/pb/pb-fennel.el")
-'(load "~/.doom.d/packages/pb/pb-reaper.el")
-
 (use-package pb)
 
 (progn :misc
@@ -27,6 +20,10 @@
            (apply fn args))))
 
 (progn :theme
+       ;; colors copy pasted from horizon theme
+       (setq evil-normal-state-cursor '(box "#e95678") ;; red
+             evil-insert-state-cursor '(bar "#09f7a0") ;; green
+             evil-visual-state-cursor '(hollow "#f09383")) ;; orange
        (after! org
          (progn
            (set-face-attribute 'org-level-1 nil :height 1.4)
@@ -46,8 +43,7 @@
          (remove-hook 'clojure-mode-hook #'rainbow-delimiters-mode))
        (progn :colors
               (use-package webkit-color-picker
-                :ensure t
-                :bind (("C-c C-p" . webkit-color-picker-show)))
+                 :bind (("C-c C-p" . webkit-color-picker-show)))
 
               (use-package kurecolor)
 
@@ -72,12 +68,12 @@
                 (setq evil-shift-round nil
                       evil-shift-width 1))
 
-              (use-package flycheck-clj-kondo
-                :ensure t)
+              (use-package flycheck-clj-kondo)
+
+              (use-package re-jump)
 
               (use-package clojure-mode
-                :ensure t
-                :config
+                 :config
                 (require 'flycheck-clj-kondo)
                 '(copilot-mode nil)))
 
@@ -94,7 +90,7 @@
 
          :custom
          (symex-modal-backend 'evil)
-         (symex-highlight-p nil)
+         (symex-highlight-p t)
 
          :bind
          (("s-l" . symex-mode-interface))
@@ -148,7 +144,7 @@
          (symex-initialize)
 
          (setq evil-symex-state-cursor
-               '("#B589FE" box))
+               '(box "#2bfafa"))
 
          (defun symex-eval-clojure ()
            (interactive)
@@ -190,15 +186,7 @@
   (set-company-backend! 'org-mode nil)
   (setq company-idle-delay 1))
 
-(use-package dired-sidebar
-  :ensure t
-  :config
-  (evil-collection-define-key 'normal 'dired-sidebar-mode-map
-    "h" 'dired-sidebar-up-directory
-    "l" 'dired-sidebar-find-file))
-
 (use-package dired
-  :ensure nil
   :commands (dired dired-jump)
   :bind (("C-d" . dired-jump))
   :config
@@ -207,9 +195,19 @@
               (lambda ()
                 (dired-hide-details-mode)
                 (dired-sort-toggle-or-edit)))
-    (evil-collection-define-key 'normal 'dired-mode-map
-      "h" 'dired-up-directory
-      "l" 'dired-find-file)))
+    (map! (:map dired-mode-map
+                :n "h" 'dired-up-directory
+                :n "l" 'dired-find-file
+                :n "K" 'dired-subtree-up))))
+
+(use-package dired-sidebar
+  :config
+  (map! (:map  dired-sidebar-mode-map
+         :n "h" 'dired-sidebar-up-directory
+         :n "l" 'dired-sidebar-find-file
+         :n "q" 'dired-sidebar-hide-sidebar
+         :n "Q" 'pb/kill-all-dired-buffers
+         :n "K" 'dired-subtree-up)))
 
 (load "~/.doom.d/config/org.el")
 

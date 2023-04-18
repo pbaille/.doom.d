@@ -1,8 +1,0 @@
-# -*- mode: snippet -*-
-# name: interactive-lambda
-# uuid:
-# key: ifn
-# condition: t
-# --
-
-(lambda ($1) (interactive) ($2))$>

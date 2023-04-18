@@ -5,13 +5,6 @@
 ;; on the command line, then restart Emacs for the changes to take effect -- or
 ;; use 'M-x doom/reload'.
 
-'(package! mine
-  :recipe (:local-repo "packages/mine"))
-
-'(package! my-package
-  :recipe (:local-repo "packages/my-package"
-           :files ("*.el")))
-
 (package! pb
   :recipe (:local-repo "pb"))
 

@@ -45,4 +45,13 @@
   (hs-toggle-hiding)
   (backward-char))
 
+(defun pb/kill-all-dired-buffers ()
+  "Kill all dired buffers."
+  (interactive)
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (or (eq major-mode 'dired-mode)
+                (eq major-mode 'dired-sidebar-mode))
+        (kill-buffer buffer)))))
+
 (provide 'pb-misc)
