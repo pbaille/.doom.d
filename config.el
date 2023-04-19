@@ -55,6 +55,29 @@
                       rainbow-r-colors nil
                       rainbow-ansi-colors nil))))
 
+(use-package ibuffer
+  :ensure t
+  :after (doom-themes)
+  :config
+  (add-hook 'ibuffer-mode-hook (lambda () (setq-local line-spacing 6)))
+  (setq ibuffer-filter-group-name-face (list :foreground (doom-color 'magenta) :weight 'ultra-bold :height 1.1))
+  (setq ibuffer-title-face (list :foreground (doom-blend 'fg 'bg 0.2) :weight 'normal :height 1.1))
+
+  (setq ibuffer-fontification-alist
+        `((10 buffer-read-only font-lock-constant-face)
+          (15 (and buffer-file-name
+                   (string-match ibuffer-compressed-file-name-regexp
+                                 buffer-file-name))
+              font-lock-doc-face)
+          (18 (buffer-modified-p) ((t :foreground ,(doom-color 'yellow) :weight bold)))
+          (20 (string-match "^\\*" (buffer-name)) font-lock-keyword-face)
+          (25 (and (string-match "^ " (buffer-name))
+                   (null buffer-file-name))
+              italic)
+          (30 (memq major-mode ibuffer-help-buffer-modes) font-lock-comment-face)
+          (35 (derived-mode-p 'dired-mode) font-lock-function-name-face)
+          (40 (and (boundp 'emacs-lock-mode) emacs-lock-mode) ibuffer-locked-buffer))))
+
 (progn :lisp
 
        (defvar pb/lisp-modes
