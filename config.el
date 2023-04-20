@@ -4,7 +4,9 @@
 
 (progn :misc
 
-       (add-to-list 'initial-frame-alist '(fullscreen . maximized))
+       (setq initial-frame-alist
+         '((top . 100) (left . 100)
+           (width . 200) (height . 65)))
 
        ;;(setq display-line-numbers-type 'relative)
        (setq display-line-numbers-type t)
@@ -19,28 +21,27 @@
                (coding-system-for-write 'utf-8))
            (apply fn args))))
 
-(progn :theme
+(progn :appearance
+
+       (setq-default line-spacing 3)
+       (setq doom-font (font-spec :family "Fira Code" :size 14))
+
        ;; colors copy pasted from horizon theme
        (setq evil-normal-state-cursor '(box "#e95678") ;; red
              evil-insert-state-cursor '(bar "#09f7a0") ;; green
              evil-visual-state-cursor '(hollow "#f09383")) ;; orange
-       (after! org
-         (progn
-           (set-face-attribute 'org-level-1 nil :height 1.4)
-           (set-face-attribute 'org-level-2 nil :height 1.2)
-           (set-face-attribute 'org-level-3 nil :height 1.1)
-           (setq-default line-spacing 3)))
+
        (load-theme 'doom-horizon-tweaked t)
-                                        ; (load-theme 'doom-ayu-light t)
-       (setq doom-font (font-spec :family "Fira Code" :size 14))
-       '(highlight-parentheses-mode nil)
-       (turn-off-show-smartparens-mode)
-       '(global-highlight-parentheses-mode -1)
-       (setq rainbow-delimiters-mode nil)
-       (after! cc-mode
-         (remove-hook 'c-mode-common-hook #'rainbow-delimiters-mode))
-       (after! clojure-mode
-         (remove-hook 'clojure-mode-hook #'rainbow-delimiters-mode))
+
+       (progn :remove-magic-paren
+              (turn-off-show-smartparens-mode)
+              (remove-hook 'prog-mode-hook
+                           #'rainbow-delimiters-mode)
+              (after! cc-mode
+                (remove-hook 'c-mode-common-hook #'rainbow-delimiters-mode))
+              (after! clojure-mode
+                (remove-hook 'clojure-mode-hook #'rainbow-delimiters-mode)))
+
        (progn :colors
               (use-package webkit-color-picker
                  :bind (("C-c C-p" . webkit-color-picker-show)))
@@ -179,7 +180,7 @@
 (use-package company
   :config
   (set-company-backend! 'org-mode nil)
-  (setq company-idle-delay 1))
+  (setq company-idle-delay 0.5))
 
 (use-package dired
   :commands (dired dired-jump)
