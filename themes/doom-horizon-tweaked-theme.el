@@ -188,8 +188,12 @@
 
 
 ;;;; magit
-   (magit-section-heading :foreground red)
+   (magit-section-heading :foreground violet)
    (magit-branch-remote   :foreground orange)
+   (magit-diff-removed  :foreground (doom-blend red magenta 0.6) :background (doom-blend magenta bg 0.05))
+   (magit-diff-added  :foreground (doom-blend green blue 0.4) :background (doom-blend blue bg 0.05))
+   (magit-diff-removed-highlight :inherit 'magit-diff-removed)
+   (magit-diff-added-highlight :inherit 'magit-diff-added)
 
 
 ;;;; outline <built-in>
