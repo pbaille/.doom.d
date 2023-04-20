@@ -118,6 +118,29 @@
    (link :foreground yellow :inherit 'underline)
    ((line-number &override) :foreground hor-highlight-selected)
    ((line-number-current-line &override) :foreground hor-highlight-brighter)
+   (tooltip :background base0 :foreground fg)
+
+
+;;;; ace window
+   (aw-leading-char-face :foreground red :weight 'bold :height 4.0)
+   (aw-background-face :foreground grey)
+
+
+;;;; dired
+   (diredfl-dir-name :foreground violet)
+
+
+;;;; symex
+   (symex--current-node-face  :background (doom-lighten bg 0.05))
+
+
+;;;; company
+   (company-box-background    :background base0 :foreground fg)
+   (company-tooltip-common    :foreground red :weight 'bold)
+   (company-tooltip-selection :background hor-highlight :foreground fg)
+
+;;;; modeline
+
    (mode-line
     :background modeline-bg :foreground modeline-fg
     :box `(:line-width 10 :color ,modeline-bg))
@@ -126,18 +149,7 @@
     :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive)))
    (mode-line-emphasis :foreground (if -modeline-bright base8 highlight))
    (mode-line-highlight :background base1 :foreground fg)
-   (tooltip :background base0 :foreground fg)
-;;;; symex
-   (symex--current-node-face  :background (doom-lighten bg 0.05))
-;;;; company
-   (company-box-background    :background base0 :foreground fg)
-   (company-tooltip-common    :foreground red :weight 'bold)
-   (company-tooltip-selection :background hor-highlight :foreground fg)
-;;;; css-mode <built-in> / scss-mode
-   (css-proprietary-property :foreground violet)
-   (css-property             :foreground fg)
-   (css-selector             :foreground red)
-;;;; doom-modeline
+
    (doom-modeline-bar :background (if -modeline-bright modeline-bg highlight))
    (doom-modeline-highlight :foreground (doom-lighten bg 0.3))
    (doom-modeline-project-dir :foreground red :inherit 'bold )
@@ -147,49 +159,47 @@
    (doom-modeline-panel :background base1)
    (doom-modeline-urgent :foreground modeline-fg)
    (doom-modeline-info :foreground cyan)
+
+
 ;;;; elscreen
    (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
+
+
 ;;;; evil
    (evil-ex-search          :background hor-highlight-selected :foreground fg)
    (evil-ex-lazy-highlight  :background hor-highlight :foreground fg)
-;;;; haskell-mode
-   (haskell-type-face :foreground violet)
-   (haskell-constructor-face :foreground yellow)
-   (haskell-operator-face :foreground fg)
-   (haskell-literate-comment-face :foreground hor-highlight-selected)
+
+
 ;;;; ivy
    (ivy-current-match       :background hor-highlight :distant-foreground nil)
    (ivy-posframe-cursor     :background red :foreground base0)
    (ivy-minibuffer-match-face-2 :foreground red :weight 'bold)
-;;;; js2-mode
-   (js2-object-property        :foreground red)
-;;;; markdown-mode
-   (markdown-markup-face           :foreground cyan)
-   (markdown-link-face             :foreground orange)
-   (markdown-link-title-face       :foreground yellow)
-   (markdown-header-face           :foreground red :inherit 'bold)
-   (markdown-header-delimiter-face :foreground red :inherit 'bold)
-   (markdown-language-keyword-face :foreground orange)
-   (markdown-markup-face           :foreground fg)
-   (markdown-bold-face             :foreground violet)
-   (markdown-table-face            :foreground fg :background base1)
-   ((markdown-code-face &override) :foreground orange :background base1)
+
+
 ;;;; orderless
    (orderless-match-face-1 :weight 'bold :foreground (doom-blend red fg 0.6) :background (doom-blend red bg 0.1))
+
+
 ;;;; mic-paren
    (paren-face-match    :background (doom-lighten bg 0.1) :weight 'ultra-bold :foreground red)
    (paren-face-mismatch :foreground yellow :background base0   :weight 'ultra-bold)
    (paren-face-no-match :inherit 'paren-face-mismatch :weight 'ultra-bold)
+
+
 ;;;; magit
    (magit-section-heading :foreground red)
    (magit-branch-remote   :foreground orange)
+
+
 ;;;; outline <built-in>
    ((outline-1 &override) :foreground blue :background nil)
-;;;; rjsx-mode
-   (rjsx-tag :foreground red)
-   (rjsx-tag-bracket-face :foreground red)
-   (rjsx-attr :foreground cyan :slant 'italic :weight 'medium)
-   (tide-hl-identifier-face :background hor-highlight)
+
+
+;;;; flycheck
+   (flycheck-fringe-error :foreground (doom-blend red bg 0.8))
+   (flycheck-fringe-warning :foreground (doom-blend dark-blue bg 0.8))
+   (flycheck-warning :underline (list :color (doom-blend fg bg 0.3)))
+
 ;;;; solaire-mode
    (solaire-mode-line-face
     :inherit 'mode-line
@@ -197,17 +207,18 @@
    (solaire-mode-line-inactive-face
     :inherit 'mode-line-inactive
     :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive)))
+
+
 ;;;; treemacs
    (treemacs-root-face :foreground fg :weight 'bold :height 1.2)
    (doom-themes-treemacs-root-face :foreground fg :weight 'ultra-bold :height 1.2)
    (doom-themes-treemacs-file-face :foreground fg)
    (treemacs-directory-face :foreground fg)
    (treemacs-git-modified-face :foreground green)
-;;;; web-mode
-   (web-mode-html-tag-bracket-face :foreground red)
-   (web-mode-html-tag-face         :foreground red)
-   (web-mode-html-attr-name-face   :foreground orange)
 
+
+
+;;;; rainbow parens
    (rainbow-delimiters-depth-1-face :foreground (doom-lighten base3 0.3))
    (rainbow-delimiters-depth-2-face :foreground (doom-lighten base3 0.3))
    (rainbow-delimiters-depth-3-face :foreground (doom-lighten base3 0.3))
@@ -215,9 +226,6 @@
    (rainbow-delimiters-depth-5-face :foreground (doom-lighten base3 0.3))
    (rainbow-delimiters-depth-6-face :foreground (doom-lighten base3 0.3))
    (rainbow-delimiters-depth-7-face :foreground (doom-lighten base3 0.3))
-
-;; dired
-   (diredfl-dir-name :foreground violet)
 
 ;;;; org <built-in> <modes:org-mode>
    (org-archived                 :foreground doc-comments)
@@ -279,7 +287,8 @@
    (org-scheduled-previously :foreground base8)
    (org-time-grid            :foreground comments)
    (org-sexp-date            :foreground fg)
-    ;;;; org-habit
+
+   ;; org-habit
    (org-habit-clear-face          :weight 'bold :background base4)
    (org-habit-clear-future-face   :weight 'bold :background base3)
    (org-habit-ready-face          :weight 'bold :background (doom-blend blue bg-alt 0.5))
@@ -288,28 +297,73 @@
    (org-habit-alert-future-face   :weight 'bold :background (doom-blend yellow bg-alt 0.3))
    (org-habit-overdue-face        :weight 'bold :background (doom-blend red bg-alt 0.5))
    (org-habit-overdue-future-face :weight 'bold :background (doom-blend red bg-alt 0.3))
-    ;;;; org-journal <modes:org-journal-mode>
+
+   ;; org-journal <modes:org-journal-mode>
    (org-journal-highlight :foreground highlight)
    (org-journal-calendar-entry-face :foreground magenta :slant 'italic)
    (org-journal-calendar-scheduled-face :foreground red :slant 'italic)
-    ;;;; org-pomodoro
+
+   ;; org-pomodoro
    (org-pomodoro-mode-line :foreground red)
    (org-pomodoro-mode-line-overtime :foreground warning :weight 'bold)
-    ;;;; org-ref
+
+   ;; org-ref
    (org-ref-acronym-face    :foreground violet)
    (org-ref-cite-face       :foreground yellow :weight 'light :underline t)
    (org-ref-glossary-face   :foreground magenta)
    (org-ref-label-face      :foreground blue)
    (org-ref-ref-face        :inherit 'link :foreground teal)
 
-
-
-
    ((org-block &override) :background base1)
    ((org-block-begin-line &override) :background base1 :foreground comments)
    (org-hide :foreground hidden)
    (org-link :inherit 'underline :foreground (doom-blend bg yellow 0.2))
    (org-agenda-done :foreground cyan)
+
+
+
+
+
+;;;; haskell-mode
+   (haskell-type-face :foreground violet)
+   (haskell-constructor-face :foreground yellow)
+   (haskell-operator-face :foreground fg)
+   (haskell-literate-comment-face :foreground hor-highlight-selected)
+
+;;;; css-mode <built-in> / scss-mode
+   (css-proprietary-property :foreground violet)
+   (css-property             :foreground fg)
+   (css-selector             :foreground red)
+
+;;;; js2-mode
+   (js2-object-property        :foreground red)
+
+;;;; markdown-mode
+   (markdown-markup-face           :foreground cyan)
+   (markdown-link-face             :foreground orange)
+   (markdown-link-title-face       :foreground yellow)
+   (markdown-header-face           :foreground red :inherit 'bold)
+   (markdown-header-delimiter-face :foreground red :inherit 'bold)
+   (markdown-language-keyword-face :foreground orange)
+   (markdown-markup-face           :foreground fg)
+   (markdown-bold-face             :foreground violet)
+   (markdown-table-face            :foreground fg :background base1)
+   ((markdown-code-face &override) :foreground orange :background base1)
+
+;;;; rjsx-mode
+   (rjsx-tag :foreground red)
+   (rjsx-tag-bracket-face :foreground red)
+   (rjsx-attr :foreground cyan :slant 'italic :weight 'medium)
+   (tide-hl-identifier-face :background hor-highlight)
+
+;;;; web-mode
+   (web-mode-html-tag-bracket-face :foreground red)
+   (web-mode-html-tag-face         :foreground red)
+   (web-mode-html-attr-name-face   :foreground orange)
+
+
+
+
 
    ))
 
