@@ -55,29 +55,6 @@
                       rainbow-r-colors nil
                       rainbow-ansi-colors nil))))
 
-(use-package ibuffer
-  :ensure t
-  :after (doom-themes)
-  :config
-  (add-hook 'ibuffer-mode-hook (lambda () (setq-local line-spacing 6)))
-  (setq ibuffer-filter-group-name-face (list :foreground (doom-color 'magenta) :weight 'ultra-bold :height 1.1))
-  (setq ibuffer-title-face (list :foreground (doom-blend 'fg 'bg 0.2) :weight 'normal :height 1.1))
-
-  (setq ibuffer-fontification-alist
-        `((10 buffer-read-only font-lock-constant-face)
-          (15 (and buffer-file-name
-                   (string-match ibuffer-compressed-file-name-regexp
-                                 buffer-file-name))
-              font-lock-doc-face)
-          (18 (buffer-modified-p) ((t :foreground ,(doom-color 'yellow) :weight bold)))
-          (20 (string-match "^\\*" (buffer-name)) font-lock-keyword-face)
-          (25 (and (string-match "^ " (buffer-name))
-                   (null buffer-file-name))
-              italic)
-          (30 (memq major-mode ibuffer-help-buffer-modes) font-lock-comment-face)
-          (35 (derived-mode-p 'dired-mode) font-lock-function-name-face)
-          (40 (and (boundp 'emacs-lock-mode) emacs-lock-mode) ibuffer-locked-buffer))))
-
 (progn :lisp
 
        (defvar pb/lisp-modes
@@ -99,7 +76,7 @@
               (use-package re-jump)
 
               (use-package clojure-mode
-                 :config
+                :config
                 (require 'flycheck-clj-kondo)
                 '(copilot-mode nil)))
 
@@ -190,17 +167,14 @@
           [mouse-1] #'pb/symex-click
           ;;[double-mouse-1] #'pb/toggle-hiding
           "C-w" (lambda () (interactive) (evil-insert 1) (pb/insert-open-paren))
-           "RET" #'symex-mode-interface)
+          "RET" #'symex-mode-interface)
 
          (general-define-key
           :states 'normal
           :keymaps '(clojure-mode-map)
           ":" #'re-frame-jump-to-reg
           ";" #'pb/symex-clj-toggle-comment))
-
-
        )
-
 
 (use-package company
   :config
@@ -236,9 +210,66 @@
          :n "Q" 'pb/kill-all-dired-buffers
          :n "K" 'dired-subtree-up)))
 
+(use-package flycheck
+  :config
+  ;; replace the double arrow of the fringe by a circle
+  (define-fringe-bitmap 'flycheck-fringe-bitmap-ball
+    (vector #b00000000
+            #b00000000
+            #b00000000
+            #b00000000
+            #b00000000
+            #b00111000
+            #b01111100
+            #b11111110
+            #b11111110
+            #b01111100
+            #b00111000
+            #b00000000
+            #b00000000
+            #b00000000
+            #b00000000
+            #b00000000
+            #b00000000))
+
+  (flycheck-define-error-level 'error
+    :overlay-category 'flycheck-error-overlay
+    :fringe-bitmap 'flycheck-fringe-bitmap-ball
+    :fringe-face 'flycheck-fringe-error)
+
+  (flycheck-define-error-level 'warning
+    :overlay-category 'flycheck-warning-overlay
+    :fringe-bitmap 'flycheck-fringe-bitmap-ball
+    :fringe-face 'flycheck-fringe-warning))
+
+(use-package ibuffer
+  :ensure t
+  :after (doom-themes)
+  :config
+  ;; tweak appearance
+  (add-hook 'ibuffer-mode-hook (lambda () (setq-local line-spacing 6)))
+  (setq ibuffer-filter-group-name-face (list :foreground (doom-color 'magenta) :weight 'ultra-bold :height 1.1))
+  (setq ibuffer-title-face (list :foreground (doom-blend 'fg 'bg 0.2) :weight 'normal :height 1.1))
+
+  (setq ibuffer-fontification-alist
+        `((10 buffer-read-only font-lock-constant-face)
+          (15 (and buffer-file-name
+                   (string-match ibuffer-compressed-file-name-regexp
+                                 buffer-file-name))
+              font-lock-doc-face)
+          (18 (buffer-modified-p) ((t :foreground ,(doom-color 'yellow) :weight bold)))
+          (20 (string-match "^\\*" (buffer-name)) font-lock-keyword-face)
+          (25 (and (string-match "^ " (buffer-name))
+                   (null buffer-file-name))
+              italic)
+          (30 (memq major-mode ibuffer-help-buffer-modes) font-lock-comment-face)
+          (35 (derived-mode-p 'dired-mode) font-lock-function-name-face)
+          (40 (and (boundp 'emacs-lock-mode) emacs-lock-mode) ibuffer-locked-buffer))))
+
 (load "~/.doom.d/config/org.el")
 
 (load "~/.doom.d/bindings.el")
+
 
 
 (use-package prettier-js
