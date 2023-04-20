@@ -115,6 +115,7 @@
     :background (if doom-horizon-tweaked-comment-bg (doom-lighten bg 0.03)))
    (fringe :background bg)
    (auto-dim-other-buffers-face :background (doom-darken bg 0.1))
+   (auto-dim-other-buffers-hide-face :background (doom-darken bg 0.1))
    (link :foreground yellow :inherit 'underline)
    ((line-number &override) :foreground hor-highlight-selected)
    ((line-number-current-line &override) :foreground hor-highlight-brighter)
@@ -264,7 +265,9 @@
    (org-verbatim                 :foreground (doom-blend fg violet 0.5))
    (org-warning                  :foreground warning)
    ;; Omitted because we rely on style they inherit from the outline-N faces
-   ;;(org-level-1)
+   (org-level-1 :inherit 'outline-1 :height 1.4)
+   (org-level-2 :inherit 'outline-2 :height 1.2)
+   (org-level-3 :inherit 'outline-3 :height 1.1)
    ;; (org-level-2 :foreground "#3E958D")
    ;;(org-level-3)
    ;;(org-level-4)
