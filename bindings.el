@@ -7,6 +7,7 @@
       "s-T" #'hs-show-all
       "s-m" (lambda () (interactive) (evil-window-split) (evil-window-down 1) (switch-to-buffer "*Messages*"))
       "C-<tab>" #'company-complete
+      "M-v" #'consult-yank-from-kill-ring
 
       ;; buffer move
       "C-l" #'next-buffer
