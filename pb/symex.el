@@ -21,9 +21,10 @@
 
 (defun pb/symex-mark ()
   (interactive)
-  ;(evil-normal-state)
-  (set-mark-command t)
-  (set-mark-command t)
+  (evil-normal-state)
+  (activate-mark)
+  (push-mark-command nil)
+  (deactivate-mark)
   (symex-mode-interface))
 
 (defun pb/symex-cider-macroexpand ()
