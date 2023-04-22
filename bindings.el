@@ -27,22 +27,28 @@
       "C-M-l" #'windmove-right
       "C-M-h" #'windmove-left
       "C-M-k" #'windmove-up
-      "C-M-j" #'windmove-down
-      )
+      "C-M-j" #'windmove-down)
 
 
 (map! :leader
+
+      ;; overide default bookmark binding to the more useful consult-register
+      "r r" #'consult-register
+      "r s" #'consult-register-store
+      "r l" #'consult-register-load
+
       "o d" #'dired-jump
       "SPC" #'dired-sidebar-jump-to-sidebar
+      "t s" #'dired-sidebar-toggle-sidebar
+
       "o D" #'+debugger/start
+
       "o g" #'pb/open-google
       "d d" #'org-gtd-choose
       "d c" #'org-gtd-capture
       "d e" #'org-gtd-engage
-
       "d p" #'org-gtd-process-inbox
-      "t t" #'tab-line-mode
-      "t s" #'dired-sidebar-toggle-sidebar)
+      "t t" #'tab-line-mode)
 
 (map! :localleader
       (:map org-mode-map
