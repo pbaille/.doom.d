@@ -19,6 +19,13 @@
   ;; (symex-mode-interface)
   )
 
+(defun pb/symex-mark ()
+  (interactive)
+  ;(evil-normal-state)
+  (set-mark-command t)
+  (set-mark-command t)
+  (symex-mode-interface))
+
 (defun pb/symex-cider-macroexpand ()
   (interactive)
   (save-excursion
