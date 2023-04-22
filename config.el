@@ -212,8 +212,10 @@
                insert-directory-program "/usr/local/bin/gls"
                dired-listing-switches "-aBhl --group-directories-first"))
 
+    ;; (setq dired-omit-files ...)
     (add-hook 'dired-mode-hook
               (lambda ()
+                (dired-omit-mode)
                 (dired-hide-details-mode)
                 (dired-sort-toggle-or-edit)))
     (map! (:map dired-mode-map
@@ -269,6 +271,16 @@
   (add-hook 'ibuffer-mode-hook (lambda () (setq-local line-spacing 6)))
   (setq ibuffer-filter-group-name-face (list :foreground (doom-color 'magenta) :weight 'ultra-bold :height 1.1))
   (setq ibuffer-title-face (list :foreground (doom-blend 'fg 'bg 0.2) :weight 'normal :height 1.1))
+
+  ;; remove some buffers from ibuffer list
+  (setq ibuffer-never-show-predicates
+        '("^:~/.*" ;; dired sidebar
+          "^magit"
+          (lambda (x) (with-current-buffer x (eq 'dired-mode major-mode)))))
+
+  ;; try to collapse default group by default
+  ;; do not work for now
+  (setq ibuffer-hidden-filter-groups (list "[ Default ]"))
 
   (setq ibuffer-fontification-alist
         `((10 buffer-read-only font-lock-constant-face)
