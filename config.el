@@ -5,7 +5,7 @@
 (progn :misc
 
        (setq initial-frame-alist
-         '((top . 100) (left . 100)
+         '((top . 0) (left . 0)
            (width . 200) (height . 65)))
 
        ;;(setq display-line-numbers-type 'relative)
@@ -101,45 +101,62 @@
 
          :config
          (setq symex--user-evil-keyspec
-               ;; revert k and j in symex
-               '(("M-k" . symex-goto-lowest)
+
+               ;; revert k and j in symex to be more intuitive
+               ;; by default j goes to the root of the tree, but the root of a symex are higher in the buffer...
+
+               '(("s-r" . symex-repl)
+
+                 ;; nav
+                 ("M-k" . symex-goto-lowest)
                  ("M-j" . symex-goto-highest)
                  ("j" . pb/symex-go-up)
                  ("k" . symex-go-down)
                  ("J" . symex-join-lines)
                  ("K" . pb/symex-go-down-folding)
-                 ("M" . pb/symex-cider-macroexpand) ;; +lookup/documentation
-                 ("s-r" . symex-repl)
+
+                 ;; edit
                  ("r" . paredit-raise-sexp)
                  ("x" . symex-delete)
                  ("R" . pb/symex-replace)
-                 ("T" . pb/toggle-level-hiding) ;; hs-toggle-hiding
-                 ("F" . pb/goto-next-opening-delimiter)
-                 ("B" . pb/goto-prev-opening-delimiter)
-                 ("t" . pb/toggle-hiding)
-                 ("E" . pb/symex-eval-pp-clojure)
-                 ("C-e" . pb/reaper-repl-send-expression)
 
                  ("}" . symex-wrap-curly)
                  ("{" . symex-create-curly)
 
-                 ("C-;" . pb/symex-clj-toggle-comment)
+                 ;; non structural nav
+                 ("F" . pb/goto-next-opening-delimiter)
+                 ("B" . pb/goto-prev-opening-delimiter)
+                 ("h" . symex-go-backward)
+                 ("l" . symex-go-forward)
+                 ;; ("h" . pb/symex-bw)
+                 ;; ("l" . pb/symex-fw)
+                 ("C-k" . pb/symex-previous-line) ;; replace symex-descend-branch
+                 ("C-j" . pb/symex-next-line) ;; replace symex-climb-branch
+
+                 ;; indent, tidy
                  ("<tab>" . pb/indent-sexpr)
                  ("<backtab>" . symex-tidy)
 
-                 ("h" . symex-go-backward)
-                 ("l" . symex-go-forward)
-                                        ;("h" . pb/symex-bw)
-                                        ;("l" . pb/symex-fw)
-                 ("C-k" . pb/symex-previous-line)
-                 ("C-j" . pb/symex-next-line)
-                                        ;("C-k" . symex-descend-branch)
-                                        ;("C-j" . symex-climb-branch)
-                                        ;("C" . copilot-hydra/body)
+                 ;; folding
+                 ("T" . pb/toggle-level-hiding) ;; hs-toggle-hiding
+                 ("t" . pb/toggle-hiding)
+
+                 ;; shift symex maintaining indentation
                  ("C->" . pb/shift-expression-right)
                  ("C-<" . pb/shift-expression-left)
                  ("s->" . pb/shift-expressions-right)
                  ("s-<" . pb/shift-expressions-left)
+
+                 ;; mark a symex staying in symex mode
+                 ("C-SPC" . pb/symex-mark)
+
+                 ;; clojure specific TO MOVE
+                 ("M" . pb/symex-cider-macroexpand) ; +lookup/documentation
+                 ("E" . pb/symex-eval-pp-clojure)
+                 ("C-;" . pb/symex-clj-toggle-comment)
+
+                 ;; reaper
+                 ("C-e" . pb/reaper-repl-send-expression)
 
                  ))
 
@@ -188,6 +205,8 @@
   :config
   (progn
     ;; this fix the 'ls does not supports --dired' error
+    ;; TODO this may have been needed due to brutal erasing of .local
+    ;; should have been fixed by running `doom env` ... to check
     (when (string= system-type "darwin")
          (setq dired-use-ls-dired t
                insert-directory-program "/usr/local/bin/gls"
@@ -244,7 +263,6 @@
     :fringe-face 'flycheck-fringe-warning))
 
 (use-package ibuffer
-  :ensure t
   :after (doom-themes)
   :config
   ;; tweak appearance
@@ -270,8 +288,6 @@
 (load "~/.doom.d/config/org.el")
 
 (load "~/.doom.d/bindings.el")
-
-
 
 (use-package prettier-js
   :config
