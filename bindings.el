@@ -37,6 +37,8 @@
       "r s" #'consult-register-store
       "r l" #'consult-register-load
 
+      "s m" #'consult-mark ; previously consult-bookmark
+
       "o d" #'dired-jump
       "SPC" #'dired-sidebar-jump-to-sidebar
       "t s" #'dired-sidebar-toggle-sidebar
