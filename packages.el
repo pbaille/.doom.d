@@ -36,7 +36,7 @@
            :repo "pbaille/symex.el"
            :files ("*.el")))
 (package! flycheck-clj-kondo)
-
+(package! janet-mode)
 
 (package! osc)
 (package! prettier-js)
