@@ -31,10 +31,7 @@
 (package! org-modern)
 
 ;; lisp
-(package! symex
-  :recipe (:host github
-           :repo "pbaille/symex.el"
-           :files ("*.el")))
+(package! symex)
 (package! flycheck-clj-kondo)
 (package! janet-mode)
 
@@ -51,16 +48,16 @@
 
 (package! treepy)
 
+(package! gptel)
+
 (progn :not-used
+
+       '(package! gpt)
 
        '(package! centaur-tabs)
 
        '(package! copilot
           :recipe (:host github :repo "zerolfx/copilot.el" :files ("*.el" "dist")))
-
-       '(package! gpt)
-
-
 
        '(package! rigpa
           :recipe (:host github :repo "countvajhula/rigpa"))

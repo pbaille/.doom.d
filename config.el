@@ -1,7 +1,5 @@
 ;;; config.el -*- lexical-binding: t; -*-
 
-(use-package pb)
-
 (progn :misc
 
        (setq user-script-dir (concat doom-user-dir "pb/"))
@@ -10,15 +8,15 @@
        (add-to-list 'load-path user-script-dir)
 
        ;; add subfolders too (not sure about that...)
-       (let ((default-directory user-script-dir))
-         (normal-top-level-add-subdirs-to-load-path))
+       '(let ((default-directory user-script-dir))
+          (normal-top-level-add-subdirs-to-load-path))
 
        ;; loading secret stuff
        (load "secrets")
 
        (setq initial-frame-alist
-         '((top . 0) (left . 0)
-           (width . 200) (height . 65)))
+             '((top . 0) (left . 0)
+               (width . 200) (height . 150)))
 
        ;;(setq display-line-numbers-type 'relative)
        (setq display-line-numbers-type t)
@@ -70,6 +68,8 @@
                       rainbow-latex-colors nil
                       rainbow-r-colors nil
                       rainbow-ansi-colors nil))))
+
+(use-package pb)
 
 (progn :lisp
 
@@ -321,7 +321,14 @@
   (add-hook 'js2-mode-hook 'prettier-js-mode)
   (add-hook 'web-mode-hook 'prettier-js-mode))
 
-
+(use-package gptel
+  :config
+  ;; this key is set in secrets.el
+  (setq gptel-api-key pb/openai-api-key)
+  ;; bindings
+  (map! :n "g p" #'gptel)
+  (map! (:map gptel-mode-map
+              "C-<return>" #'gptel-send)))
 
 
 
@@ -371,45 +378,45 @@
 
 '(comment :scratch-temp
 
-         '(load "~/.doom.d/parts/color-picker/color-picker.el")
+  '(load "~/.doom.d/parts/color-picker/color-picker.el")
 
-         ;; TOODO
+  ;; TOODO
 
-         '(use-package! copilot
-            ;; :hook (prog-mode . copilot-mode)
-            :bind (("C-TAB" . 'copilot-accept-completion-by-word)
-                   ("<backtab>" . 'copilot-accept-completion-by-word)
-                   :map copilot-completion-map
-                   ("<tab>" . 'copilot-accept-completion)
-                   ("TAB" . 'copilot-accept-completion)))
+  '(use-package! copilot
+     ;; :hook (prog-mode . copilot-mode)
+     :bind (("C-TAB" . 'copilot-accept-completion-by-word)
+            ("<backtab>" . 'copilot-accept-completion-by-word)
+            :map copilot-completion-map
+            ("<tab>" . 'copilot-accept-completion)
+            ("TAB" . 'copilot-accept-completion)))
 
-         ;; a simple repl that just echo the given prompt until receiving exit
-         '(defun pb/echo-repl ()
-            (interactive)
-            (let ((prompt (read-string "prompt: ")))
-              (message prompt)
-              (if (string-equal prompt "exit")
-                  (message "exiting")
-                (pb/echo-repl))))
+  ;; a simple repl that just echo the given prompt until receiving exit
+  '(defun pb/echo-repl ()
+     (interactive)
+     (let ((prompt (read-string "prompt: ")))
+       (message prompt)
+       (if (string-equal prompt "exit")
+           (message "exiting")
+         (pb/echo-repl))))
 
-         ;; setup G binding for gpt/dwim
-         '(use-package! gpt
-            :config
-            (setq gpt-openai-key "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")
-            (setq gpt-openai-engine "text-davinci-003")
-            :bind (:map evil-normal-state-map ("g p" . gpt-dwim)))
+  (use-package! gpt
+    :config
+    (setq gpt-openai-key "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")
+    (setq gpt-openai-engine "text-davinci-003")
+    :bind (:map evil-normal-state-map ("g p" . gpt-dwim)))
 
-         '(use-package centaur-tabs
-            :ensure t
-            :config
-            (centaur-tabs-mode t)
-            (setq centaur-tabs-style "wave")
-            (setq centaur-tabs-set-bar 'left)
-            (setq centaur-tabs-gray-out-icons 'buffer)
-            (setq centaur-tabs-set-icons t)
-            (setq centaur-tabs-close-button "x")
-            (setq centaur-tabs-set-modified-marker t)
-            (setq centaur-tabs-modified-marker "*")
-            :bind
-            ("C-<left>" . centaur-tabs-backward)
-            ("C-<right>" . centaur-tabs-forward)))
+  ;; setup G binding for gpt/dwim
+  '(use-package centaur-tabs
+     :ensure t
+     :config
+     (centaur-tabs-mode t)
+     (setq centaur-tabs-style "wave")
+     (setq centaur-tabs-set-bar 'left)
+     (setq centaur-tabs-gray-out-icons 'buffer)
+     (setq centaur-tabs-set-icons t)
+     (setq centaur-tabs-close-button "x")
+     (setq centaur-tabs-set-modified-marker t)
+     (setq centaur-tabs-modified-marker "*")
+     :bind
+     ("C-<left>" . centaur-tabs-backward)
+     ("C-<right>" . centaur-tabs-forward)))
