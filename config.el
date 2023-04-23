@@ -391,14 +391,6 @@
             ("TAB" . 'copilot-accept-completion)))
 
   ;; a simple repl that just echo the given prompt until receiving exit
-  '(defun pb/echo-repl ()
-     (interactive)
-     (let ((prompt (read-string "prompt: ")))
-       (message prompt)
-       (if (string-equal prompt "exit")
-           (message "exiting")
-         (pb/echo-repl))))
-
   (use-package! gpt
     :config
     (setq gpt-openai-key "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")
