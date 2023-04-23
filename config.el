@@ -4,6 +4,18 @@
 
 (progn :misc
 
+       (setq user-script-dir (concat doom-user-dir "pb/"))
+
+       ;; extend the loading path to include my elisp dir
+       (add-to-list 'load-path user-script-dir)
+
+       ;; add subfolders too (not sure about that...)
+       (let ((default-directory user-script-dir))
+         (normal-top-level-add-subdirs-to-load-path))
+
+       ;; loading secret stuff
+       (load "secrets")
+
        (setq initial-frame-alist
          '((top . 0) (left . 0)
            (width . 200) (height . 65)))
