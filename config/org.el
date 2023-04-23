@@ -91,8 +91,6 @@
 
 (use-package org-gtd
   :after org
-  :bind
-  ()
   :config
   (setq org-gtd-directory "~/org/gtd")
   (setq org-gtd-update-ack "2.1.0")
