@@ -36,10 +36,6 @@
      (hs-hide-block)))
   (backward-char))
 
-(defun pb/gradual-unfold ()
-  (interactive)
-  ())
-
 (defun pb/toggle-hiding ()
   (interactive)
   (hs-toggle-hiding)
