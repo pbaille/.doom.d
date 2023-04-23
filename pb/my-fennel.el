@@ -39,4 +39,4 @@
   (interactive)
   (print (pb/fennel-compile (buffer-file-name-escaped-spaces))))
 
-(provide 'pb-fennel)
+(provide 'my-fennel)

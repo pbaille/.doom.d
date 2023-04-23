@@ -29,8 +29,8 @@
 
 (load "~/.doom.d/pb/misc.el")
 (load "~/.doom.d/pb/s-expr.el")
-(load "~/.doom.d/pb/symex.el")
-(load "~/.doom.d/pb/fennel.el")
+(load "~/.doom.d/pb/my-symex.el")
+(load "~/.doom.d/pb/my-fennel.el")
 (load "~/.doom.d/pb/reaper.el")
 
 (provide 'pb)

@@ -1,5 +1,7 @@
 ;;; pb/symex.el -*- lexical-binding: t; -*-
 
+(require 'symex)
+
 (defun pb/symex-escape-insert-mode ()
   (interactive)
   (evil-normal-state)
@@ -112,4 +114,4 @@
     (progn (insert "#_")
            (backward-char 2))))
 
-(provide 'pb-symex)
+(provide 'my-symex)
