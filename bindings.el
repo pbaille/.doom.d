@@ -2,10 +2,14 @@
 
 (map! "s-d" #'dired-sidebar-toggle-with-current-directory
       "s-w" #'ace-window
-      "M-w" #'evil-window-next
+
+      "s-b" #'ibuffer
+      "s-B" #'projectile-ibuffer
+
       "s-t" #'hs-hide-all
       "s-T" #'hs-show-all
-      "s-m" (lambda () (interactive) (evil-window-split) (evil-window-down 1) (switch-to-buffer "*Messages*"))
+      "s-M" (defun pb/display-messages () (interactive) (display-buffer "*Messages*"))
+
       "C-<tab>" #'company-complete
       "M-v" #'consult-yank-from-kill-ring
 
@@ -42,6 +46,8 @@
       "o d" #'dired-jump
       "SPC" #'dired-sidebar-jump-to-sidebar
       "t s" #'dired-sidebar-toggle-sidebar
+
+      "b D" #'pb/kill-all-dired-buffers
 
       "o D" #'+debugger/start
 
