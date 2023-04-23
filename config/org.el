@@ -38,7 +38,7 @@
 
   (progn :clock-sound
 
-         (setq org-clock-sound "~/.doom.d/bell.wav")
+         (setq org-clock-sound "~/.doom.d/resources/bell.wav")
 
          (defun my/play-sound (orgin-fn sound)
            (cl-destructuring-bind (_ _ file) sound
