@@ -19,7 +19,10 @@
          :around #'persp-save-state-to-file
          (let ((coding-system-for-read 'utf-8)
                (coding-system-for-write 'utf-8))
-           (apply fn args))))
+           (apply fn args)))
+
+       (set-popup-rules!
+         '(("^\\*Messages" :ttl t :quit t))))
 
 (progn :appearance
 
