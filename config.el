@@ -232,20 +232,9 @@
               (lambda ()
                 (dired-omit-mode)
                 (dired-hide-details-mode)
-                (dired-sort-toggle-or-edit)))
-    (map! (:map dired-mode-map
-                :n "h" 'dired-up-directory
-                :n "l" 'dired-find-file
-                :n "K" 'dired-subtree-up))))
+                (dired-sort-toggle-or-edit)))))
 
-(use-package dired-sidebar
-  :config
-  (map! (:map  dired-sidebar-mode-map
-         :n "h" 'dired-sidebar-up-directory
-         :n "l" 'dired-sidebar-find-file
-         :n "q" 'dired-sidebar-hide-sidebar
-         :n "Q" 'pb/kill-all-dired-buffers
-         :n "K" 'dired-subtree-up)))
+(use-package dired-sidebar)
 
 (use-package flycheck
   :config

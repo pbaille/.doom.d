@@ -1,29 +1,13 @@
 ;;; config/org.el -*- lexical-binding: t; -*-
 
-(use-package org-bullets
-  :config
-  (setq org-bullets-bullet-list '("⁖")) ; "◉" "○"
-  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
-  (setq org-modern-star ["◉" "○" "◈" "◇"])) ;; "◉"  "✳"
-
-(map! (:after org
-       :map org-mode-map
-       :n "J" #'outline-next-visible-heading
-       :n "K" #'outline-previous-visible-heading
-       :n "S" #'org-insert-structure-template))
-
 
 (use-package org
 
-  :commands (org-edit-src-code)
-
-  :bind
-  (:map evil-normal-state-map
-   ("g e" . org-edit-src-code)
-   ;; ("g l" . org-down-element)
-   )
-
   :config
+
+  ;; will use .org files to add metadata on my file structure
+  ;; it will help
+  (add-to-list 'auto-mode-alist '("/\\.org\\'" . org-mode))
 
   (require 'org-tempo)
   (require 'org-habit)
@@ -84,10 +68,16 @@
            :target (file+head "inbox/${slug}.org"
                               "#+title: ${title}\n#+filetags: r_ex")
            :unnarrowed t
-           :immediate-finish t))))
+           :immediate-finish t)))) ;; "◉"  "✳"
+
+(use-package org-bullets
+  :config
+  (setq org-bullets-bullet-list '("⁖")) ; "◉" "○"
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
+  (setq org-modern-star ["◉" "○" "◈" "◇"]))
 
 ;; for some reason putting this into use-package org-gtd :config do not work, trying this...
-(setq org-gtd-update-ack "2.1.0")
+'(setq org-gtd-update-ack "2.1.0")
 
 (use-package org-gtd
   :after org

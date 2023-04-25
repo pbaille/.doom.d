@@ -96,7 +96,28 @@
 
       (:map fennel-repl-mode-map
        :n "s-r" #'other-window
-       :n "C-k" #'comint-clear-buffer))
+       :n "C-k" #'comint-clear-buffer)
+
+      (:map org-mode-map
+       :n "C-t" #'org-set-tags-command
+       :n "g e" #'org-edit-src-code
+       :n "J" #'outline-next-visible-heading
+       :n "K" #'outline-previous-visible-heading
+       :n "S" #'org-insert-structure-template)
+
+      (:map dired-mode-map
+       :n "h" #'dired-up-directory
+       :n "l" #'dired-find-file
+       :n "K" #'dired-subtree-up
+       :n "s-k" #'kill-this-buffer
+       :n "C-r" #'pb/dired-create-or-open-dotorg-file)
+
+      (:map  dired-sidebar-mode-map
+       :n "h" #'dired-sidebar-up-directory
+       :n "l" #'dired-sidebar-find-file
+       :n "q" #'dired-sidebar-hide-sidebar
+       :n "Q" #'pb/kill-all-dired-buffers
+       :n "K" #'dired-subtree-up))
 
 'cider-clojuredocs
 'cider-doc
