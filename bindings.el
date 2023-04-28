@@ -1,6 +1,6 @@
 ;;; bindings.el -*- lexical-binding: t; -*- :emacs: :emacs:
 
-(map! "s-d" #'dired-sidebar-toggle-with-current-directory
+(map! "s-d" #'dired-jump
       "s-w" #'ace-window
 
       "s-b" #'ibuffer
@@ -12,6 +12,7 @@
 
       "C-<tab>" #'company-complete
       "M-v" #'consult-yank-from-kill-ring
+      "s-r" #'consult-register-load
 
       ;; buffer move
       "C-l" #'next-buffer
@@ -37,9 +38,9 @@
 (map! :leader
 
       ;; overide default bookmark binding to the more useful consult-register
-      "r r" #'consult-register
+      "r r" #'consult-register-load
+      "r f" #'consult-register
       "r s" #'consult-register-store
-      "r l" #'consult-register-load
 
       "s m" #'consult-mark ; previously consult-bookmark
 
@@ -56,7 +57,9 @@
       "d c" #'org-gtd-capture
       "d e" #'org-gtd-engage
       "d p" #'org-gtd-process-inbox
-      "t t" #'tab-line-mode)
+      "t t" #'tab-line-mode
+
+      "t h" #'hs-toggle-hiding)
 
 (map! :localleader
       (:map org-mode-map
@@ -110,7 +113,7 @@
        :n "l" #'dired-find-file
        :n "K" #'dired-subtree-up
        :n "s-k" #'kill-this-buffer
-       :n "C-r" #'pb/dired-create-or-open-dotorg-file)
+       :n "C-o" #'pb/dired-create-or-open-dotorg-file)
 
       (:map  dired-sidebar-mode-map
        :n "h" #'dired-sidebar-up-directory

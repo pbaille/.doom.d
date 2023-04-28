@@ -189,7 +189,6 @@
           :keymaps pb/lisp-modes
           [escape] #'pb/symex-escape-insert-mode
           [mouse-1] #'pb/symex-click
-          ;;[double-mouse-1] #'pb/toggle-hiding
           ";" (lambda () (interactive) (print "please use  M-;"))
           "M-;" (lambda () (interactive) (insert ";"))
           "C-w" #'pb/insert-open-paren)
@@ -198,7 +197,7 @@
           :states 'normal
           :keymaps pb/lisp-modes
           [mouse-1] #'pb/symex-click
-          ;;[double-mouse-1] #'pb/toggle-hiding
+          [mouse-3] (lambda (event) (interactive "e") (posn-set-point (event-end event)) (evil-insert-state))
           "C-w" (lambda () (interactive) (evil-insert 1) (pb/insert-open-paren))
           "RET" #'symex-mode-interface)
 

@@ -77,9 +77,9 @@
   (setq org-modern-star ["◉" "○" "◈" "◇"]))
 
 ;; for some reason putting this into use-package org-gtd :config do not work, trying this...
-'(setq org-gtd-update-ack "2.1.0")
-
 (use-package org-gtd
+  :init
+  (setq org-gtd-update-ack "2.1.0")
   :after org
   :config
   (setq org-gtd-directory "~/org/gtd")
