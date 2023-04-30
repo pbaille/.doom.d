@@ -1,5 +1,8 @@
 ;;; pb/my-dired.el -*- lexical-binding: t; -*-
 
+(defvar file-renamings-alist nil
+  "An alist of all renamings made in Dired. In an attempt to repair broken links.")
+
 (defun pb/dired-create-or-open-dotorg-file ()
   "Create or open .org in directory of current file or directory under cursor in Dired mode."
   (interactive)
@@ -26,5 +29,11 @@
           (goto-char (match-beginning 0)))
         (unless (looking-at-p (format "^%s" header))
           (insert header))))))
+
+(defun my-dired-rename-file-advice (file destination ignored)
+  "Advice function to save all renamings to `file-renamings-alist`."
+  (push (cons file destination) file-renamings-alist))
+
+(advice-add 'dired-rename-file :after #'my-dired-rename-file-advice)
 
 (provide 'my-dired)
