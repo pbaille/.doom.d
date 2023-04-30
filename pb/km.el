@@ -48,10 +48,16 @@
             (plist-put m p1 (km-put-in (plist-get m p1) (cdr path) v))))
     v))
 
-(defun km-put (m at v)
+(defun km-put1 (m at v)
   (km-put-in (copy-tree m)
              (if (listp at) at (if (keywordp at) (list at)))
              v))
+
+(defun km-put (m &rest xs)
+  (cl-reduce (lambda (m entry)
+               (km-put1 m (car entry) (cadr entry)))
+             (sq-partition 2 2 xs)
+             :initial-value m))
 
 (defun km-upd-in (m path f)
   (if path
@@ -60,18 +66,41 @@
             (plist-put m p1 (km-upd-in (plist-get m p1) (cdr path) f))))
     (funcall f m)))
 
-(defun km-upd (m at f)
+(defun km-upd1 (m at f)
   (km-upd-in (copy-tree m)
              (if (listp at) at (if (keywordp at) (list at)))
              f))
 
-(defmacro km-letks (binding &rest body)
-  (let ((ks (car binding))
-        (seed (cadr binding)))
-    `(let* ((let-keys_seed ,seed)
-            ,@(cl-mapcar (lambda (k) (list k `(plist-get let-keys_seed ,(symbol-to-keyword k))))
-                         ks))
-       ,@body)))
+(defun km-upd (m &rest xs)
+  (cl-reduce (lambda (m entry)
+               (km-upd1 m (car entry) (cadr entry)))
+             (sq-partition 2 2 xs)
+             :initial-value m))
+
+(defmacro km-letk (binding &rest body)
+  (let* ((pat (car binding))
+         (pat (if (equal :as (car pat))
+                   (list (cadr pat) (cddr pat))
+                 (list (gensym) pat)))
+         (seedsym (car pat))
+         (ks (cadr pat))
+         (seed (cadr binding)))
+    `(let* ((,seedsym ,seed)
+           ,@(cl-mapcar (lambda (k) (list k `(plist-get ,seedsym ,(symbol-to-keyword k))))
+                        ks))
+      ,@body)))
+
+(defmacro fnk (ks &rest body)
+  (let ((seed (gensym)))
+    `(lambda (,seed)
+       (km-letk (,ks ,seed)
+                ,@body))))
+
+(defmacro defnk (name ks &rest body)
+  (let ((seed (gensym)))
+    `(defun ,name (,seed)
+       (km-letk (,ks ,seed)
+                ,@body))))
 
 (defun km-test ()
   (cl-assert
@@ -111,10 +140,17 @@
                '(:a 1 :b (:c 1)))
         (equal (km-upd '(:a 1) '(:b :c) (lambda (x) (or x 32)))
                '(:a 1 :b (:c 32)))))
+
   (cl-assert
-   (equal (km-letks ((a b) (km :a 1 :b 2))
-                    (+ a b))
-          3)))
+   (equal (km-letk ((a b) (km :a 1 :b 2))
+                   (+ a b))
+          3)
+   (equal (km-letk ((:as m a b) (km :a 1 :b 2))
+                   (km-put m :ret (+ a b)))
+          (km :a 1 :b 2 :ret 3))
+   (equal (funcall (fnk (a b) (+ a b))
+                   (km :a 1 :b 3))
+          4)))
 
 (km-test)
 
