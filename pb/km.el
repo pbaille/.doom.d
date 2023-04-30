@@ -1,6 +1,9 @@
 ;;; pb/km.el -*- lexical-binding: t; -*-
 
-(require 'cl)
+(require 'cl-lib)
+
+(require 'sequences)
+(require 'names)
 
 (defun km? (m)
   (and (listp m)
@@ -12,6 +15,18 @@
   (if (km? xs)
       xs
     (error "km build bad args")))
+
+(defun km-entries (m)
+  (and (km? m)
+       (sq-partition 2 2 m)))
+
+(defun km-keys (m)
+  (and (km? m)
+       (cl-map (lambda (entry) (car entry)) (entries m))))
+
+(defun km-vals (m)
+  (and (km? m)
+       (cl-map (lambda (entry) (cadr entry)) (entries m))))
 
 (defun km-get-in (m path)
   (if path
@@ -50,7 +65,15 @@
              (if (listp at) at (if (keywordp at) (list at)))
              f))
 
-(defun test ()
+(defmacro km-letks (binding &rest body)
+  (let ((ks (car binding))
+        (seed (cadr binding)))
+    `(let* ((let-keys_seed ,seed)
+            ,@(cl-mapcar (lambda (k) (list k `(plist-get let-keys_seed ,(symbol-to-keyword k))))
+                         ks))
+       ,@body)))
+
+(defun km-test ()
   (cl-assert
    (and (and (km? ())
              (km? (list :e 2 :d 4)))
@@ -87,6 +110,12 @@
         (equal (km-upd '(:a 1 :b (:c 0)) '(:b :c) (lambda (x) (+ x 1)))
                '(:a 1 :b (:c 1)))
         (equal (km-upd '(:a 1) '(:b :c) (lambda (x) (or x 32)))
-               '(:a 1 :b (:c 32))))))
+               '(:a 1 :b (:c 32)))))
+  (cl-assert
+   (equal (km-letks ((a b) (km :a 1 :b 2))
+                    (+ a b))
+          3)))
+
+(km-test)
 
 (provide 'km)
