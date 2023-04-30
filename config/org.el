@@ -9,6 +9,9 @@
   ;; it will help
   (add-to-list 'auto-mode-alist '("/\\.org\\'" . org-mode))
 
+  ;; useful to insert into non existant nodes :)
+  (setq org-refile-allow-creating-parent-nodes t)
+
   (require 'org-tempo)
   (require 'org-habit)
   (require 'ol-info)
@@ -78,12 +81,12 @@
 
 ;; for some reason putting this into use-package org-gtd :config do not work, trying this...
 (use-package org-gtd
-  :init
-  (setq org-gtd-update-ack "2.1.0")
   :after org
+  :custom
+  (org-gtd-directory "~/org/gtd")
+  (org-edna-use-inheritance t)
   :config
-  (setq org-gtd-directory "~/org/gtd")
-  (setq org-gtd-update-ack "2.1.0")
+  (org-edna-mode)
   ;; avoid to delete windows when processing inbox
   (defun org-gtd-process-inbox ()
     "Process the GTD inbox."
