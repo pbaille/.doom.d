@@ -1,4 +1,4 @@
-;;; org/templates.el -*- lexical-binding: t; -*-
+;;; org/templates.el -*- lexical-binding: t; -*- :gtd:
 
 (setq pb/org-inbox-file
       "~/org/gtd/inbox.org")
@@ -10,6 +10,11 @@
        ":END:\n"
        "\n"))
 
+
+(defun my/org-capture-file-info-target ()
+  "Return the capture target for file info."
+  (let ((filename (file-name-nondirectory (buffer-file-name))))
+    (concat "~/org/file-infos.org" "::" filename)))
 
 (setq org-capture-templates
 
@@ -24,6 +29,10 @@
         ("j" "Journal" entry
          (file+olp+datetree +org-capture-journal-file)
          "* %U %?\n%i\n%a" :prepend t)
+
+        ("i" "File info WIP (do not work yet)" entry
+         (function my/org-capture-file-info-target)
+         "* File name: %f\n  File path: %p\n  Created: %U\n  %?\n")
 
         ("l" "links")
 
@@ -53,43 +62,7 @@
            pb/org-capture-simple-properties)
          :immediate-finish t
          :empty-lines 1
-         :prepend nil)
-
-
-
-        ("p" "Templates for projects")
-
-        ("pt" "Project-local todo" entry
-         (file+headline +org-capture-project-todo-file "Inbox")
-         "* TODO %?\n%i\n%a" :prepend t)
-
-        ("pn" "Project-local notes" entry
-         (file+headline +org-capture-project-notes-file "Inbox")
-         "* %U %?\n%i\n%a" :prepend t)
-
-        ("pc" "Project-local changelog" entry
-         (file+headline +org-capture-project-changelog-file "Unreleased")
-         "* %U %?\n%i\n%a" :prepend t)
-
-
-
-        ("o" "Centralized templates for projects")
-
-        ("ot" "Project todo" entry
-         #'+org-capture-central-project-todo-file "* TODO %?\n %i\n %a"
-         :heading "Tasks" :prepend nil)
-
-        ("on" "Project notes" entry
-         #'+org-capture-central-project-notes-file "* %U %?\n %i\n %a"
-         :heading "Notes" :prepend t)
-
-        ("oc" "Project changelog" entry
-         #'+org-capture-central-project-changelog-file "* %U %?\n %i\n %a"
-         :heading "Changelog" :prepend t)
-
-        ("w" "Web site" entry
-         (file "")
-         "* %a :website:\n\n%U %?\n\n%:initial")))
+         :prepend nil)))
 
 
 
@@ -107,11 +80,45 @@
 
 
 
+'(:project-template-unused-fornow
+  ("p" "Templates for projects")
+
+  ("pt" "Project-local todo" entry
+   (file+headline +org-capture-project-todo-file "Inbox")
+   "* TODO %?\n%i\n%a" :prepend t)
+
+  ("pn" "Project-local notes" entry
+   (file+headline +org-capture-project-notes-file "Inbox")
+   "* %U %?\n%i\n%a" :prepend t)
+
+  ("pc" "Project-local changelog" entry
+   (file+headline +org-capture-project-changelog-file "Unreleased")
+   "* %U %?\n%i\n%a" :prepend t)
 
 
 
+  ("o" "Centralized templates for projects")
 
-'(("w" "Website" entry (file ,pb/org-inbox-file)
+  ("ot" "Project todo" entry
+   #'+org-capture-central-project-todo-file "* TODO %?\n %i\n %a"
+   :heading "Tasks" :prepend nil)
+
+  ("on" "Project notes" entry
+   #'+org-capture-central-project-notes-file "* %U %?\n %i\n %a"
+   :heading "Notes" :prepend t)
+
+  ("oc" "Project changelog" entry
+   #'+org-capture-central-project-changelog-file "* %U %?\n %i\n %a"
+   :heading "Changelog" :prepend t)
+
+  ("w" "Web site" entry
+   (file "")
+   "* %a :website:\n\n%U %?\n\n%:initial"))
+
+
+
+'(:found-somewhere-a-long-time-ago :useless?
+  ("w" "Website" entry (file ,pb/org-inbox-file)
 
    ,(concat
      "* %c :website:\n"
