@@ -48,8 +48,7 @@
          (org-set-tags (km-get content :tags))
          (evil-open-below 1) (insert (km-get content :text)))))
 
-
-'(progn
+'(:org-put-tries
   (my-org-find-or-create-olp "~/org/scratch.org" (list "top" "tao"))
   (my-org-find-or-create-olp "~/org/scratch.org" (list "top" "tao" "baz" "iop"))
   (my-org-put "~/org/scratch.org" (list "top" "tao" "baz" "iop")
@@ -57,5 +56,15 @@
   (my-org-put "~/org/scratch.org" (list "top" "tao" "baz" "iop")
               (km :tags (list "pouet" "foo")
                   :text "very interesting indeed")))
+
+'(:capture-hook-xp
+  (defun my-after-capture-action ()
+    (print (file-name-parent-directory (org-capture-get :original-file)))
+    (org-refile nil nil (list "a" "file-infos.org" nil nil)))
+
+  (add-hook 'org-capture-before-finalize-hook
+            #'my-after-capture-action)
+  (remove-hook 'org-capture-before-finalize-hook
+               #'my-after-capture-action))
 
 (provide 'my-org)
