@@ -22,6 +22,10 @@ with a step size of STEP. If STEP is not specified, it defaults to 1."
   (cl-loop for i from start below end by (or step 1)
            collect i))
 
+(defun sq-butlast (lst)
+  "Return a new list containing all elements of LST except the last one."
+  (subseq lst 0 (- (length lst) 1)))
+
 (defun test ()
   (cl-assert
    (and (equal (sq-partition 2 2 '(1 2 3 4 5 6 7))
@@ -38,7 +42,11 @@ with a step size of STEP. If STEP is not specified, it defaults to 1."
 
   (cl-assert
    (equal (sq-split 3 '(1 2 3 4 5))
-          '((1 2 3)(4 5)))))
+          '((1 2 3)(4 5))))
+
+  (cl-assert
+   (equal (sq-butlast (sq-range 0 10))
+          (sq-range 0 9))))
 
 (test)
 
