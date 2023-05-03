@@ -48,6 +48,17 @@
          (org-set-tags (km-get content :tags))
          (evil-open-below 1) (insert (km-get content :text)))))
 
+(defvar my-org-file-infos "~/org/file-infos.org"
+  "the main org file to hold file infos")
+
+(defun my-org-insert-file-info ()
+  "Return the capture target for file info."
+  (interactive)
+  (my-org-find-or-create-olp my-org-file-infos
+                             (split-string (buffer-file-name) "/" t))
+  (org-narrow-to-subtree)
+  (org-end-of-subtree))
+
 '(:org-put-tries
   (my-org-find-or-create-olp "~/org/scratch.org" (list "top" "tao"))
   (my-org-find-or-create-olp "~/org/scratch.org" (list "top" "tao" "baz" "iop"))

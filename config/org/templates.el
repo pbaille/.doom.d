@@ -11,11 +11,6 @@
        "\n"))
 
 
-(defun my/org-capture-file-info-target ()
-  "Return the capture target for file info."
-  (let ((filename (file-name-nondirectory (buffer-file-name))))
-    (concat "~/org/file-infos.org" "::" filename)))
-
 (setq org-capture-templates
 
       `(("t" "Personal todo" entry
@@ -29,10 +24,6 @@
         ("j" "Journal" entry
          (file+olp+datetree +org-capture-journal-file)
          "* %U %?\n%i\n%a" :prepend t)
-
-        ("i" "File info WIP (do not work yet)" entry
-         (function my/org-capture-file-info-target)
-         "* File name: %f\n  File path: %p\n  Created: %U\n  %?\n")
 
         ("l" "links")
 
