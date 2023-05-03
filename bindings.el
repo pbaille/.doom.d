@@ -1,5 +1,6 @@
 ;;; bindings.el -*- lexical-binding: t; -*- :emacs: :emacs:
 
+
 (map! "s-d" #'dired-jump
       "s-w" #'ace-window
 
@@ -37,6 +38,8 @@
 
 (map! :leader
 
+      "f e" #'consult-flycheck
+
       ;; overide default bookmark binding to the more useful consult-register
       "r r" #'consult-register-load
       "r f" #'consult-register
@@ -48,7 +51,14 @@
       "SPC" #'dired-sidebar-jump-to-sidebar
       "t s" #'dired-sidebar-toggle-sidebar
 
+      ;; buffers
+      :desc "kill all dired buffers"
       "b D" #'pb/kill-all-dired-buffers
+      ;; exchange default doom bindings 'SPC b b' and 'SPC b B'
+      :desc "consult buffer"
+      "b b" #'consult-buffer
+      :desc "switch worksapce buffer"
+      "b B" #'+vertico/switch-workspace-buffer
 
       "o D" #'+debugger/start
 
@@ -109,6 +119,7 @@
        :n "S" #'org-insert-structure-template)
 
       (:map dired-mode-map
+       :n "i" #'dired-subtree-toggle
        :n "h" #'dired-up-directory
        :n "l" #'dired-find-file
        :n "K" #'dired-subtree-up

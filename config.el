@@ -121,6 +121,7 @@
                ;; by default j goes to the root of the tree, but the root of a symex are higher in the buffer...
 
                '(("s-r" . symex-repl)
+                 ("d" . dired-jump)
 
                  ;; nav
                  ("M-k" . symex-goto-lowest)
@@ -204,7 +205,7 @@
          (general-define-key
           :states 'normal
           :keymaps '(clojure-mode-map)
-          ":" #'re-frame-jump-to-reg
+          "g :" #'re-frame-jump-to-reg
           ";" #'pb/symex-clj-toggle-comment))
        )
 
