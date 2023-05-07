@@ -16,8 +16,8 @@
       "s-r" #'consult-register-load
 
       ;; buffer move
-      "C-l" #'next-buffer
-      "C-h" #'previous-buffer
+      :n "C-l" #'next-buffer
+      :n "C-h" #'previous-buffer
       "s-<right>" #'next-buffer
       "s-<left>" #'previous-buffer
 
@@ -34,6 +34,12 @@
       "C-M-h" #'windmove-left
       "C-M-k" #'windmove-up
       "C-M-j" #'windmove-down)
+
+;; vim motion in insert mode with control key
+(map! :i "C-h" #'evil-backward-char
+      :i "C-j" #'evil-next-line
+      :i "C-k" #'evil-previous-line
+      :i "C-l" #'evil-forward-char)
 
 
 (map! :leader
