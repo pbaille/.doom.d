@@ -16,6 +16,8 @@
 (package! webkit-color-picker)
 (package! kurecolor)
 
+(package! consult-company)
+
 ;; ui
 (package! auto-dim-other-buffers)
 (package! dired-sidebar)
