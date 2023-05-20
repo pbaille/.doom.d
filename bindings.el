@@ -16,30 +16,36 @@
       "s-r" #'consult-register-load
 
       ;; buffer move
-      :n "C-l" #'next-buffer
-      :n "C-h" #'previous-buffer
+      "s-M-l" #'next-buffer
+      "s-M-h" #'previous-buffer
       "s-<right>" #'next-buffer
       "s-<left>" #'previous-buffer
 
       ;; workspace move
+      "s-M-C-h" #'+workspace/switch-left
+      "s-M-C-l" #'+workspace/switch-right
       "s-<up>" #'+workspace/switch-left
       "s-<down>" #'+workspace/switch-right
 
       ;; window move
+      "s-C-l" #'windmove-right
+      "s-C-h" #'windmove-left
+      "s-C-k" #'windmove-up
+      "s-C-j" #'windmove-down
       "s-S-<right>" #'windmove-right
       "s-S-<left>" #'windmove-left
       "s-S-<up>" #'windmove-up
-      "s-S-<down>" #'windmove-down
-      "C-M-l" #'windmove-right
-      "C-M-h" #'windmove-left
-      "C-M-k" #'windmove-up
-      "C-M-j" #'windmove-down)
+      "s-S-<down>" #'windmove-down)
 
-;; vim motion in insert mode with control key
+;; vim motion in insert mode using control key.
 (map! :i "C-h" #'evil-backward-char
       :i "C-j" #'evil-next-line
       :i "C-k" #'evil-previous-line
-      :i "C-l" #'evil-forward-char)
+      :i "C-l" #'evil-forward-char
+      :i "C-S-h" #'paredit-backward-delete
+      :i "C-S-l" #'paredit-forward-delete
+
+      :i "TAB" #'consult-company)
 
 
 (map! :leader
