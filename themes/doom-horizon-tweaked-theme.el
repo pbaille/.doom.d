@@ -121,6 +121,11 @@
    ((line-number-current-line &override) :foreground hor-highlight-brighter)
    (tooltip :background base0 :foreground fg)
 
+;;;; fringe
+   (cider-fringe-good-face :foreground (doom-darken dark-blue 0.3))
+
+;;;; hide-show
+   (+fold-hideshow-folded-face :foreground magenta :weight 'bold :background bg)
 
 ;;;; ace window
    (aw-leading-char-face :foreground red :weight 'bold :height 4.0)
