@@ -33,6 +33,7 @@
 (load "~/.doom.d/pb/my-fennel.el")
 (load "~/.doom.d/pb/my-dired.el")
 (load "~/.doom.d/pb/reaper.el")
+(load "~/.doom.d/pb/my-fold.el")
 
 (provide 'pb)
 ;;; pb.el ends here
