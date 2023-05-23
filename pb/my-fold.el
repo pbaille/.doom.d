@@ -25,11 +25,23 @@
              (pb/symex-fw-forced))
     (pb/symex-fw-forced)))
 
+(defvar my-fold-semi-folded nil)
+
 (defun pb/semi-fold ()
   (interactive)
-  (hs-hide-all)
-  (symex-goto-lowest)
-  (symex-goto-first)
-  (while (pb/semi-fold-step)))
+  (let ((p (point)))
+    (hs-hide-all)
+    (symex-goto-lowest)
+    (symex-goto-first)
+    (while (pb/semi-fold-step))
+    (setq-local my-fold-semi-folded t)
+    (goto-char p)))
+
+(defun pb/toggle-semi-fold ()
+  (interactive)
+  (if my-fold-semi-folded
+      (progn (hs-show-all)
+             (setq-local my-fold-semi-folded nil))
+    (pb/semi-fold)))
 
 (provide 'my-fold)
