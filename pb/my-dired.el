@@ -11,19 +11,24 @@
                     path
                   (file-name-directory path))) ;; get directory of current file
          (readme-file (expand-file-name ".org" focus)))
-    (print (list readme-file (file-exists-p readme-file) (directory-file-name focus) (file-name-base (directory-file-name focus))))
+
     (unless (file-exists-p readme-file)
       (with-temp-file readme-file
-        (insert (format "* %s\n\n" (file-name-base (directory-file-name focus)))))) ;; Add secondary header if path is a file
+        (insert (format "* %s\n\n" (file-name-base (directory-file-name focus))))))
+
+    ;; Add secondary header if path is a file
 
     (with-current-buffer (find-file readme-file)
       (goto-char (point-max))
-      '(insert (if (file-directory-p path)
-                   ""
-                 (format "** %s " (file-name-nondirectory path))))
+      (let ((p (point))
+            (beg-of-line (save-excursion (beginning-of-line) (point))))
+        (if (not (equal p beg-of-line))
+            (evil-insert-newline-above)))
       (let ((header (if (file-directory-p path)
                         ""
-                      (format "** %s " (file-name-nondirectory path)))))
+                      (format "** [[%s][%s]]"
+                              path
+                              (file-name-nondirectory path)))))
 
         (when (re-search-backward (format "^%s.*" header) nil t)
           (goto-char (match-beginning 0)))
