@@ -118,7 +118,7 @@
        :n "M-i" #'pb/install-fennel-script)
 
       (:map reaper-mode-map
-       :n "C-e" #'pb/send-fnl-s-expression-to-reaper-socket-repl)
+       :n "s-e" #'pb/send-fnl-s-expression-to-reaper-socket-repl)
 
       (:map fennel-repl-mode-map
        :n "s-r" #'other-window

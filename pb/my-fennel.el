@@ -30,10 +30,11 @@
 
 (defun pb/install-fennel-script ()
   (interactive)
-  (let ((s (pb/fennel-compile pb/lua-5-3-install-path))
+  (let ((s (pb/fennel-compile (pb/buffer-file-name-escaped-spaces)))
         (lua-filename (concat (file-name-base) ".lua")))
     (pb/spit s (concat pb/lua-5-3-install-path lua-filename))
-    (pb/spit s (concat pb/lua-5-4-install-path lua-filename))))
+    ;;(pb/spit s (concat pb/lua-5-4-install-path lua-filename))
+    ))
 
 (defun pb/show-fennel-compilation ()
   (interactive)
