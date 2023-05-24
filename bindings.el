@@ -1,7 +1,8 @@
 ;;; bindings.el -*- lexical-binding: t; -*- :emacs: :emacs:
 
 
-(map! "s-d" #'dired-jump
+(map! "s-f" #'find-file
+      "s-d" #'dired-jump
       "s-w" #'ace-window
 
       "s-b" #'ibuffer
