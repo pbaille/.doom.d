@@ -129,7 +129,13 @@
        :n "g e" #'org-edit-src-code
        :n "J" #'outline-next-visible-heading
        :n "K" #'outline-previous-visible-heading
-       :n "S" #'org-insert-structure-template)
+       :n "S" #'org-insert-structure-template
+       :i "C-h" #'evil-backward-char
+       :i "C-j" #'evil-next-line
+       :i "C-k" #'evil-previous-line
+       :i "C-l" #'evil-forward-char
+       :i "C-S-h" #'paredit-backward-delete
+       :i "C-S-l" #'paredit-forward-delete)
 
       (:map dired-mode-map
        :n "i" #'dired-subtree-toggle
