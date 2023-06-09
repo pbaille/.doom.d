@@ -24,8 +24,9 @@
 (defun pb/compile-fennel (&optional target-dir)
   (interactive)
   (let* ((filename (pb/buffer-file-name-escaped-spaces))
-         (out-file (concat (or target-dir (file-name-parent-directory filename))
-                           (file-name-base filename))))
+         (out-file (concat (or target-dir (concat (file-name-parent-directory filename) "/compiled/"))
+                           (file-name-base filename)
+                           ".lua")))
     (pb/fennel-compile-file filename out-file)))
 
 (defun pb/install-fennel-script ()
