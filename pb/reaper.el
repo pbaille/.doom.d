@@ -29,8 +29,12 @@
                          (pb/replace-filename-extension subpath "lua"))))))
 
 (progn :osc
+
+       (defun pb/get-local-ip ()
+           (string-trim-right (shell-command-to-string "ipconfig getifaddr en0")))
+
        (setq pb/reaper-osc-client nil)
-       (setq pb/reaper-osc-host "192.168.1.60" )
+       (setq pb/reaper-osc-host (pb/get-local-ip))
        (setq pb/reaper-osc-port 8001)
 
        (defun pb/make-reaper-osc-client ()

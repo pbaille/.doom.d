@@ -61,8 +61,9 @@
       "s m" #'consult-mark ; previously consult-bookmark
 
       "o d" #'dired-jump
-      "SPC" #'dired-sidebar-jump-to-sidebar
+      "SPC" #'consult-buffer
       "t s" #'dired-sidebar-toggle-sidebar
+      "t t" #'ibuffer-sidebar-toggle-sidebar
 
       ;; buffers
       :desc "kill all dired buffers"
@@ -80,7 +81,7 @@
       "d c" #'org-gtd-capture
       "d e" #'org-gtd-engage
       "d p" #'org-gtd-process-inbox
-      "t t" #'tab-line-mode
+      ;"t t" #'tab-line-mode
 
       "t h" #'hs-toggle-hiding)
 

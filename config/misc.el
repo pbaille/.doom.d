@@ -32,3 +32,5 @@
 
 (add-hook 'prog-mode-hook
           (lambda () (reveal-mode 1)))
+
+(setq ns-function-modifier 'hyper)

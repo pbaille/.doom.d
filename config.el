@@ -14,3 +14,7 @@
 (load "~/.doom.d/config/lisp.el")
 
 (load "~/.doom.d/bindings.el")
+
+;; extras
+
+(load "~/Code/WIP/noon/emacs/noon-modes.el")

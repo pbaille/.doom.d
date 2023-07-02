@@ -50,4 +50,12 @@
                 (eq major-mode 'dired-sidebar-mode))
         (kill-buffer buffer)))))
 
+(defun pb/thing-at-point ()
+  (interactive)
+  (if (eq (char-syntax (char-after)) ?w)
+      (thing-at-point 'symbol)
+    (buffer-substring-no-properties
+     (point)
+     (+ 1 (save-excursion (evil-jump-item) (point))))))
+
 (provide 'pb-misc)

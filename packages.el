@@ -21,6 +21,9 @@
 ;; ui
 (package! auto-dim-other-buffers)
 (package! dired-sidebar)
+(package! ibuffer-sidebar
+  :recipe (:local-repo "packages"
+           :files ("ibuffer-sidebar.el")))
 (package! svg-tag-mode) ;; replace keywords or regular expression with SVG tags.
 
 ;; org
