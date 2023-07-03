@@ -35,6 +35,7 @@
 (load "~/.doom.d/pb/my-dired.el")
 (load "~/.doom.d/pb/reaper.el")
 (load "~/.doom.d/pb/my-fold.el")
+(load "~/.doom.d/pb/my-ibuffer.el")
 
 (provide 'pb)
 ;;; pb.el ends here

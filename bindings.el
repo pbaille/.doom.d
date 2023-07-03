@@ -151,7 +151,10 @@
        :n "l" #'dired-sidebar-find-file
        :n "q" #'dired-sidebar-hide-sidebar
        :n "Q" #'pb/kill-all-dired-buffers
-       :n "K" #'dired-subtree-up))
+       :n "K" #'dired-subtree-up)
+
+      (:map ibuffer-sidebar-mode-map
+       :n "RET" #'my-ibuffer-sidebar-visit-buffer))
 
 'cider-clojuredocs
 'cider-doc

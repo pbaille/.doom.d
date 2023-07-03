@@ -138,7 +138,7 @@ to disable automatic refresh when a special command is triggered."
   :type 'list
   :group 'ibuffer-sidebar)
 
-(defcustom ibuffer-sidebar-name "*Ibuffer*"
+(defcustom ibuffer-sidebar-name "*:buffers:*"
   "The name of `ibuffer-sidebar' buffer."
   :type 'string
   :group 'ibuffer-sidebar)
@@ -155,7 +155,7 @@ to disable automatic refresh when a special command is triggered."
   :group 'ibuffer-sidebar)
 
 ;; Mode
-
+;;
 (define-derived-mode ibuffer-sidebar-mode ibuffer-mode
   "Ibuffer-sidebar"
   "A major mode that puts `ibuffer' in a sidebar."
@@ -218,7 +218,10 @@ to disable automatic refresh when a special command is triggered."
        ibuffer-sidebar-special-refresh-commands))
 
     (when ibuffer-sidebar-use-custom-modeline
-      (ibuffer-sidebar-set-mode-line))))
+      (ibuffer-sidebar-set-mode-line)))
+
+  :hook (lambda ()
+          (define-key ibuffer-sidebar-mode-map (kbd "<return>") #'my-ibuffer-sidebar-visit-buffer)))
 
 ;; User Interface
 
@@ -240,7 +243,7 @@ to disable automatic refresh when a special command is triggered."
     (display-buffer-in-side-window buffer ibuffer-sidebar-display-alist)
     (let ((window (get-buffer-window buffer)))
       (set-window-dedicated-p window t)
-      (set-window-parameter window 'no-delete-other-windows t)
+      ;; (set-window-parameter window 'no-delete-other-windows t)
       (with-selected-window window
         (let ((window-size-fixed))
           (ibuffer-sidebar-set-width ibuffer-sidebar-width))))
