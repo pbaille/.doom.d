@@ -148,7 +148,7 @@
 
       (:map  dired-sidebar-mode-map
        :n "h" #'dired-sidebar-up-directory
-       :n "l" #'dired-sidebar-find-file
+       :n "l" #'my-dired-sidebar-visit-buffer ;#'dired-sidebar-find-file
        :n "q" #'dired-sidebar-hide-sidebar
        :n "Q" #'pb/kill-all-dired-buffers
        :n "K" #'dired-subtree-up)

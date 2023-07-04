@@ -1,5 +1,19 @@
 ;;; pb/my-dired.el -*- lexical-binding: t; -*-
 
+(defun my-dired-sidebar-visit-buffer ()
+  "Visit the buffer on this line.
+If optional argument SINGLE is non-nil, then also ensure there is only
+one window."
+  (interactive)
+  (let ((file (dired-get-file-for-visit)))
+    (when file
+      (let ((buffer (or (find-buffer-visiting file)
+                        (find-file-noselect file))))
+        (if buffer
+            (progn
+              (windmove-right)
+              (switch-to-buffer buffer)))))))
+
 (defvar file-renamings-alist nil
   "An alist of all renamings made in Dired. In an attempt to repair broken links.")
 
