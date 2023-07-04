@@ -48,6 +48,8 @@
 
       :i "TAB" #'consult-company)
 
+(map! :n "g f" #'dired-sidebar-jump-to-sidebar
+      :n "g b" #'my-ibuffer-sidebar-focus)
 
 (map! :leader
 
@@ -154,7 +156,8 @@
        :n "K" #'dired-subtree-up)
 
       (:map ibuffer-sidebar-mode-map
-       :n "RET" #'my-ibuffer-sidebar-visit-buffer))
+       :n "RET" #'my-ibuffer-sidebar-visit-buffer
+       :n "l" #'my-ibuffer-sidebar-visit-buffer))
 
 'cider-clojuredocs
 'cider-doc
