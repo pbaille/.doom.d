@@ -102,7 +102,8 @@
   :config
   ;; this key is set in secrets.el
   (setq gptel-api-key pb/openai-api-key)
+  (setq gptel-default-mode 'org-mode)
   ;; bindings
   (map! :n "g p" #'gptel)
   (map! (:map gptel-mode-map
-              "C-<return>" #'gptel-send)))
+              :i "C-e" #'gptel-send)))
