@@ -7,12 +7,13 @@ one window."
   (interactive)
   (let ((file (dired-get-file-for-visit)))
     (when file
-      (let ((buffer (or (find-buffer-visiting file)
-                        (find-file-noselect file))))
-        (if buffer
-            (progn
-              (windmove-right)
-              (switch-to-buffer buffer)))))))
+      (if (file-directory-p file)
+          (dired-subtree-toggle)
+        (let ((buffer (or (find-buffer-visiting file)
+                                   (find-file-noselect file))))
+                   (when buffer
+                     (windmove-right)
+                     (switch-to-buffer buffer)))))))
 
 (defvar file-renamings-alist nil
   "An alist of all renamings made in Dired. In an attempt to repair broken links.")
