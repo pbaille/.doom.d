@@ -1,6 +1,6 @@
 ;;; pb/my-dired.el -*- lexical-binding: t; -*-
 
-(defun my-dired-sidebar-visit-buffer ()
+(defun my-dired-sidebar-dwim ()
   "Visit the buffer on this line.
 If optional argument SINGLE is non-nil, then also ensure there is only
 one window."

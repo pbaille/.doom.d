@@ -150,10 +150,11 @@
 
       (:map  dired-sidebar-mode-map
        :n "h" #'dired-sidebar-up-directory
-       :n "l" #'my-dired-sidebar-visit-buffer ;#'dired-sidebar-find-file
+       :n "l" #'my-dired-sidebar-dwim ;#'dired-sidebar-find-file
        :n "q" #'dired-sidebar-hide-sidebar
        :n "Q" #'pb/kill-all-dired-buffers
-       :n "K" #'dired-subtree-up)
+       :n "K" #'dired-subtree-up
+       [mouse-1] #'my-dired-sidebar-dwim)
 
       (:map ibuffer-sidebar-mode-map
        :n "RET" #'my-ibuffer-sidebar-visit-buffer

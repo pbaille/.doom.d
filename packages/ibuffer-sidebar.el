@@ -38,6 +38,7 @@
 
 ;;; Code:
 (require 'ibuffer)
+(require 'ibuffer-projectile)
 (require 'face-remap)
 (eval-when-compile (require 'subr-x))
 
@@ -154,12 +155,15 @@ to disable automatic refresh when a special command is triggered."
   :type 'list
   :group 'ibuffer-sidebar)
 
+(defvar ibuffer-sidebar-more-hook nil)
+
 ;; Mode
 ;;
 (define-derived-mode ibuffer-sidebar-mode ibuffer-mode
   "Ibuffer-sidebar"
   "A major mode that puts `ibuffer' in a sidebar."
   :group 'ibuffer-sidebar
+  (setq ibuffer-sidebar-mode-map (make-sparse-keymap))
   (let ((inhibit-read-only t))
     (setq window-size-fixed 'width)
 
@@ -218,10 +222,7 @@ to disable automatic refresh when a special command is triggered."
        ibuffer-sidebar-special-refresh-commands))
 
     (when ibuffer-sidebar-use-custom-modeline
-      (ibuffer-sidebar-set-mode-line)))
-
-  :hook (lambda ()
-          (define-key ibuffer-sidebar-mode-map (kbd "<return>") #'my-ibuffer-sidebar-visit-buffer)))
+      (ibuffer-sidebar-set-mode-line))))
 
 ;; User Interface
 
@@ -272,12 +273,10 @@ buffer if buffer has a window attached to it."
   (let ((name ibuffer-sidebar-name))
     (ibuffer-sidebar-if-let* ((existing-buffer (get-buffer name)))
          existing-buffer
-       (let ((new-buffer (generate-new-buffer name)))
-         (with-current-buffer new-buffer
-           (ibuffer-sidebar-setup))
-         new-buffer))
-     )
-  )
+      (let ((new-buffer (generate-new-buffer name)))
+        (with-current-buffer new-buffer
+          (ibuffer-sidebar-setup))
+        new-buffer))))
 
 (defun ibuffer-sidebar-setup ()
   "Bootstrap `ibuffer-sidebar'.
@@ -285,9 +284,8 @@ buffer if buffer has a window attached to it."
 Sets up both `ibuffer' and `ibuffer-sidebar'."
   (ibuffer-mode)
   (ibuffer-update nil)
-  (ibuffer-sidebar-mode)
-  (run-hooks 'ibuffer-hook) ;; NOTE this expression was before the preceding one.
-  )
+  (run-hooks 'ibuffer-hook)
+  (ibuffer-sidebar-mode))
 
 (defun ibuffer-sidebar-buffer (&optional f)
   "Return the current sidebar buffer in F or selected frame.

@@ -1,5 +1,7 @@
 ;;; pb/my-ibuffer.el -*- lexical-binding: t; -*-
 
+(require 'ibuffer-sidebar)
+
 (defun my-ibuffer-sidebar-visit-buffer ()
   "Visit the buffer associated with the currently selected line in Ibuffer sidebar.
 
@@ -34,5 +36,21 @@ to quickly switch to buffers."
       (goto-char (point-min)))
     (beginning-of-line-text)
     (recenter)))
+
+(defun my-ibuffer-projectile-hook-fn ()
+  (setq ibuffer-filter-groups (ibuffer-projectile-generate-filter-groups)))
+
+(defun my-ibuffer-sidebar-keybinding-fn ()
+  (print "sidebar hook"))
+
+(add-hook 'ibuffer-mode-hook #'my-ibuffer-projectile-hook-fn)
+
+;; trying to bind click1 to visit buffer for sidebar...
+'(:map ibuffer-mode-filter-group-map
+        :n "<mouse-1>" #'my-ibuffer-sidebar-visit-buffer)
+;; should not be obliged to advice...
+(advice-add #'ibuffer-mouse-toggle-mark :override #'my-ibuffer-sidebar-visit-buffer)
+
+(add-hook 'ibuffer-sidebar-mode-hook #'my-ibuffer-sidebar-keybinding-fn)
 
 (provide 'my-ibuffer)
