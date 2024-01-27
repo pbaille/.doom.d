@@ -135,7 +135,10 @@
 ;;;; dired
    (diredfl-dir-name :foreground violet)
 
+   (lsp-details-face :foreground hor-highlight-bright)
 
+   (lsp-headerline-breadcrumb-path-error-face :underline nil)
+   (lsp-headerline-breadcrumb-path-warning-face :underline nil)
 ;;;; symex
    (symex--current-node-face  :background (doom-lighten bg 0.05))
 

@@ -17,4 +17,4 @@
 
 ;; extras
 
-(load "~/Code/WIP/noon/emacs/noon-modes.el")
+;; (load "~/Code/WIP/noon/emacs/noon-modes.el")

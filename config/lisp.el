@@ -9,6 +9,7 @@
 
        (use-package cider
          :config
+         (setq cider-show-error-buffer nil)
          (setq cider-use-overlays t)
          (setq cider-print-fn 'pprint)
          (setq cider-print-options '(("length" 50) ("right-margin" 70)))
@@ -23,6 +24,8 @@
        (use-package clojure-mode
          :config
          (require 'flycheck-clj-kondo)
+         (add-hook 'clojure-mode-hook 'lsp)
+         (setq lsp-headerline-breadcrumb-enable nil)
          '(copilot-mode nil)))
 
 (use-package fennel-mode
@@ -85,6 +88,7 @@
           ;; folding
           ("T" . pb/toggle-semi-fold) ;; hs-toggle-hiding
           ("t" . pb/toggle-hiding)
+          ("C-t" . hs-hide-level)
 
           ;; shift symex maintaining indentation
           ("C->" . pb/shift-expression-right)
@@ -98,12 +102,7 @@
           ;; clojure specific TO MOVE
           ("M" . pb/symex-cider-macroexpand) ; +lookup/documentation
           ("E" . pb/symex-eval-pp-clojure)
-          ("C-;" . pb/symex-clj-toggle-comment)
-
-          ;; reaper
-          ("C-e" . pb/reaper-repl-send-expression)
-
-          ))
+          ("C-;" . pb/symex-clj-toggle-comment)))
 
   (symex-initialize)
 

@@ -16,7 +16,7 @@
 ;;(setq display-line-numbers-type 'relative)
 (setq display-line-numbers-type t)
 (auto-dim-other-buffers-mode nil)
-
+(setq max-lisp-eval-depth 6400)
 ;; hack given by doom creator for a workspace loading issue if i remember well
 (defadvice! enforce-encoding-a
   (fn &rest args)
@@ -34,3 +34,8 @@
           (lambda () (reveal-mode 1)))
 
 (setq ns-function-modifier 'hyper)
+
+(setq mouse-wheel-scroll-amount
+      '(1
+       ((shift)
+        . hscroll)))

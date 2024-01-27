@@ -4,7 +4,7 @@
 (use-package company
   :config
   (set-company-backend! 'org-mode nil)
-  (setq company-idle-delay 0.5))
+  (setq company-idle-delay 0.3))
 
 (use-package dired
   :commands (dired dired-jump)
@@ -95,8 +95,9 @@
 
 (use-package prettier-js
   :config
-  (add-hook 'js2-mode-hook 'prettier-js-mode)
-  (add-hook 'web-mode-hook 'prettier-js-mode))
+  (add-hook 'js2-mode-hook #'prettier-js-mode)
+  (add-hook 'typescript-mode-hook #'prettier-js-mode)
+  (add-hook 'web-mode-hook #'prettier-js-mode))
 
 (use-package gptel
   :config
@@ -104,6 +105,28 @@
   (setq gptel-api-key pb/openai-api-key)
   (setq gptel-default-mode 'org-mode)
   ;; bindings
+  (setq-default gptel-model "gpt-3.5-turbo")
   (map! :n "g p" #'gptel)
   (map! (:map gptel-mode-map
               :i "C-e" #'gptel-send)))
+
+(use-package tide
+  :config
+  (setq tide-server-max-response-length 1000000))
+
+
+
+(progn :edi-prolog
+
+                                        ;(load-file "/Users/pierrebaille/.doom.d/packages/prolog.el")
+       (load-file "/Users/pierrebaille/.doom.d/packages/ediprolog.el")
+
+       (add-to-list 'auto-mode-alist '("\\.pl\\'" . prolog-mode))
+
+       (setq ediprolog-system 'swi)
+
+       (setq ediprolog-program "/opt/local/bin/swipl")
+
+       (map! (:map prolog-mode-map
+              :n "e" #'ediprolog-dwim
+              :n "SPC m k" #'ediprolog-remove-interactions)))

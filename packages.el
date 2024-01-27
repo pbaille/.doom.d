@@ -32,7 +32,7 @@
 (package! org-web-tools)
 (package! org-protocol-capture-html)
 (package! org-pomodoro)
-(package! org-gtd)
+'(package! org-gtd)
 (package! org-modern)
 
 ;; lisp
@@ -56,6 +56,8 @@
 (package! gptel)
 
 (progn :not-used
+
+       '(package! codeium :recipe (:host github :repo "Exafunction/codeium.el"))
 
        '(package! gpt)
 

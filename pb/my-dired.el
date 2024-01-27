@@ -1,5 +1,9 @@
 ;;; pb/my-dired.el -*- lexical-binding: t; -*-
 
+(require 'evil)
+(require 'dired)
+(require 'dired-subtree)
+
 (defun my-dired-sidebar-dwim ()
   "Visit the buffer on this line.
 If optional argument SINGLE is non-nil, then also ensure there is only
@@ -10,10 +14,29 @@ one window."
       (if (file-directory-p file)
           (dired-subtree-toggle)
         (let ((buffer (or (find-buffer-visiting file)
-                                   (find-file-noselect file))))
-                   (when buffer
-                     (windmove-right)
-                     (switch-to-buffer buffer)))))))
+                          (find-file-noselect file))))
+          (when buffer
+            (windmove-right)
+            (switch-to-buffer buffer)))))))
+
+(defun my-dired-sidebar-mouse-dwim (event)
+  "Perform an action on mouse click in dired-sidebar."
+  (interactive "e")
+  ;; Perform your desired action here, such as opening the file or executing a command.
+  ;; For example, you can use `(dired-sidebar-goto-file-other-window)` to open the file in another window.
+
+  ;; Preserve the cursor position
+  (mouse-set-point event)
+  (print "my-dired-mouse")
+  (my-dired-sidebar-dwim)
+  )
+
+(defun my-dired-sidebar-reset ()
+  (interactive)
+  (pb/kill-all-dired-buffers)
+  (dired-sidebar-toggle-sidebar))
+
+(advice-add #'dired-sidebar-mouse-subtree-cycle-or-find-file :override #'my-dired-sidebar-mouse-dwim)
 
 (defvar file-renamings-alist nil
   "An alist of all renamings made in Dired. In an attempt to repair broken links.")

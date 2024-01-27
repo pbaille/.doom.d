@@ -1,7 +1,7 @@
 ;;; org/templates.el -*- lexical-binding: t; -*- :gtd:
 
 (setq pb/org-inbox-file
-      "~/org/gtd/inbox.org")
+      "~/org/inbox.org")
 
 (setq pb/org-capture-simple-properties
       (concat

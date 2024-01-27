@@ -80,7 +80,7 @@
   (setq org-modern-star ["◉" "○" "◈" "◇"]))
 
 ;; for some reason putting this into use-package org-gtd :config do not work, trying this...
-(use-package org-gtd
+'(use-package org-gtd
   :after org
   :custom
   (org-gtd-directory "~/org/gtd")

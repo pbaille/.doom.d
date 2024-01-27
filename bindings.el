@@ -1,7 +1,8 @@
 ;;; bindings.el -*- lexical-binding: t; -*- :emacs: :emacs:
 
 
-(map! "s-f" #'find-file
+(map! "H-C-`" #'+popup/toggle
+      "s-f" #'find-file
       "s-d" #'dired-jump
       "s-w" #'ace-window
 
@@ -43,10 +44,18 @@
       :i "C-j" #'evil-next-line
       :i "C-k" #'evil-previous-line
       :i "C-l" #'evil-forward-char
+
+      ;; some extras
       :i "C-S-h" #'paredit-backward-delete
       :i "C-S-l" #'paredit-forward-delete
-
+      :i "C-w" #'pb/insert-open-paren
       :i "TAB" #'consult-company)
+
+(map! :i "s-1" #'+workspace/switch-to-0
+      :i "s-2" #'+workspace/switch-to-1
+      :i "s-3" #'+workspace/switch-to-2
+      :i "s-4" #'+workspace/switch-to-3
+      :i "s-5" #'+workspace/switch-to-4)
 
 (map! :n "g f" #'dired-sidebar-jump-to-sidebar
       :n "g b" #'my-ibuffer-sidebar-focus)
@@ -65,6 +74,7 @@
       "o d" #'dired-jump
       "SPC" #'consult-buffer
       "t s" #'dired-sidebar-toggle-sidebar
+      "t S" #'my-dired-sidebar-reset
       "t t" #'ibuffer-sidebar-toggle-sidebar
 
       ;; buffers
@@ -78,12 +88,16 @@
 
       "o D" #'+debugger/start
 
-      "o g" #'pb/open-google
-      "d d" #'org-gtd-choose
-      "d c" #'org-gtd-capture
-      "d e" #'org-gtd-engage
-      "d p" #'org-gtd-process-inbox
-      ;"t t" #'tab-line-mode
+      :desc "pop google search"
+      "o g" (lambda () (interactive) (browse-url "https://google.com"))
+      :desc "open ChatGPT 4"
+      "o G" (lambda () (interactive) (browse-url "https://chat.openai.com/?model=gpt-4"))
+
+                                        ;"d d" #'org-gtd-choose
+                                        ;"d c" #'org-gtd-capture
+                                        ;"d e" #'org-gtd-engage
+                                        ;"d p" #'org-gtd-process-inbox
+                                        ;"t t" #'tab-line-mode
 
       "t h" #'hs-toggle-hiding)
 
@@ -154,11 +168,18 @@
        :n "q" #'dired-sidebar-hide-sidebar
        :n "Q" #'pb/kill-all-dired-buffers
        :n "K" #'dired-subtree-up
-       [mouse-1] #'my-dired-sidebar-dwim)
+       :n "<mouse-1>" #'my-dired-sidebar-mouse-dwim)
 
       (:map ibuffer-sidebar-mode-map
        :n "RET" #'my-ibuffer-sidebar-visit-buffer
-       :n "l" #'my-ibuffer-sidebar-visit-buffer))
+       :n "l" #'my-ibuffer-sidebar-visit-buffer)
+
+      (:map typescript-mode-map
+       :ni "C-S-p" #'prettier-js
+       :ni "C-S-e" #'tide-project-errors
+       :ni "C-S-j" #'+lookup/definition
+       :ni "C-S-k" #'+lookup/references
+       :ni "C-S-h" #'tide-jump-back))
 
 'cider-clojuredocs
 'cider-doc
