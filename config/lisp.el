@@ -3,8 +3,26 @@
 (require 'my-fold)
 
 (defvar pb/lisp-modes
-  '(emacs-lisp-mode-map clojure-mode-map fennel-mode-map))
+  '(emacs-lisp-mode-map clojure-mode-map fennel-mode-map scheme-mode-map racket-mode-map))
 
+(use-package geiser
+  :config
+  (setq geiser-active-implementations '(chez guile chicken mit chibi gambit))
+  (add-hook 'scheme-mode-hook 'geiser-mode)
+  (setq geiser-default-implementation 'chez)
+  (setq geiser-chez-binary "chez")
+                                        ;(setq geiser-racket-binary "/usr/local/bin/racket")
+                                        ;(setq geiser-racket-minimum-version "8.12")
+  )
+
+(progn :racket
+       (setq racket-program "/usr/local/bin/racket")
+       (use-package racket-mode
+         :config
+         (add-to-list 'auto-mode-alist '("\\.rkt$" . racket-mode))
+         (add-hook 'racket-mode-hook
+                   (lambda ()
+                     (racket-xp-mode)))))
 (progn :clojure
 
        (use-package cider
@@ -19,12 +37,12 @@
 
        (use-package flycheck-clj-kondo)
 
-       (use-package re-jump)
+       '(use-package re-jump)
 
        (use-package clojure-mode
          :config
          (require 'flycheck-clj-kondo)
-         (add-hook 'clojure-mode-hook 'lsp)
+         '(add-hook 'clojure-mode-hook 'lsp)
          (setq lsp-headerline-breadcrumb-enable nil)
          '(copilot-mode nil)))
 
@@ -67,6 +85,7 @@
           ("r" . paredit-raise-sexp)
           ("x" . symex-delete)
           ("R" . pb/symex-replace)
+          ("-" . sp-unwrap-sexp)
 
           ("}" . symex-wrap-curly)
           ("{" . symex-create-curly)
@@ -118,8 +137,9 @@
    :keymaps pb/lisp-modes
    [escape] #'pb/symex-escape-insert-mode
    [mouse-1] #'pb/symex-click
-   ";" (lambda () (interactive) (print "please use  M-;"))
-   "M-;" (lambda () (interactive) (insert ";"))
+   ; ";" (lambda () (interactive) (print "please use  M-;"))
+   ; "M-;" (lambda () (interactive) (insert ";"))
+   "C-y" #'racket-insert-lambda
    "C-w" #'pb/insert-open-paren)
 
   (general-define-key

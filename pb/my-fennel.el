@@ -1,11 +1,13 @@
 ;;; pb/fennel.el -*- lexical-binding: t; -*-
 
-(setq pb/lua-5-3-install-path "/usr/local/lib/lua/5.3/")
-(setq pb/lua-5-4-install-path "/usr/local/lib/lua/5.4/")
+(require 'fennel-mode)
+
+(setq pb/lua-5-3-install-path "/usr/local/lib/lua/5.3")
+(setq pb/lua-5-4-install-path "/usr/local/lib/lua/5.4")
 
 (defun pb/fennel-repl ()
   (interactive)
-  (fennel-repl "fennel"))
+  (fennel-repl fennel-program))
 
 (defun pb/fennel-reload ()
   (interactive)
@@ -13,10 +15,10 @@
   (fennel-reload nil))
 
 (defun pb/fennel-compile (file)
-  (shell-command-to-string (concat "fennel -c " file)))
+  (shell-command-to-string (concat fennel-program " -c " file)))
 
 (defun pb/fennel-compile-file (from to)
-  (shell-command (concat "fennel -c " from  " > " to)))
+  (shell-command (concat fennel-program " -c " from  " > " to)))
 
 (defun pb/buffer-file-name-escaped-spaces ()
   (replace-regexp-in-string " " "\\\\ " (buffer-file-name)))
@@ -29,13 +31,11 @@
                            ".lua")))
     (pb/fennel-compile-file filename out-file)))
 
-(defun pb/install-fennel-script ()
+(defun pb/install-fennel-script (&optional dir)
   (interactive)
   (let ((s (pb/fennel-compile (pb/buffer-file-name-escaped-spaces)))
         (lua-filename (concat (file-name-base) ".lua")))
-    (pb/spit s (concat pb/lua-5-3-install-path lua-filename))
-    ;;(pb/spit s (concat pb/lua-5-4-install-path lua-filename))
-    ))
+    (pb/spit s (concat (or dir pb/lua-5-4-install-path) "/" lua-filename))))
 
 (defun pb/show-fennel-compilation ()
   (interactive)
