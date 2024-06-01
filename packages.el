@@ -5,6 +5,9 @@
 ;; on the command line, then restart Emacs for the changes to take effect -- or
 ;; use 'M-x doom/reload'.
 
+(package! cider :pin "9f7e55b")
+(package! clojure-mode :pin "25d713a")
+
 (package! pb
   :recipe (:local-repo "pb"))
 
@@ -34,9 +37,14 @@
 (package! org-pomodoro)
 '(package! org-gtd)
 (package! org-modern)
+(package! org-download)
 
 ;; lisp
-(package! symex)
+(package! symex
+  :pin "0902197"
+  :recipe (:host github
+           :repo "pbaille/symex.el"
+           :files ("*.el")))
 (package! flycheck-clj-kondo)
 (package! janet-mode)
 
@@ -47,15 +55,17 @@
   :recipe (:local-repo "packages"
            :files ("bencode.el")))
 
-(package! re-jump
-  :recipe (:local-repo "packages"
-           :files ("re-jump.el")))
-
 (package! treepy)
 
 (package! gptel)
+(package! pdf-tools :built-in 'prefer)
 
+(package! mindstream)
 (progn :not-used
+
+       '(package! re-jump
+          :recipe (:local-repo "packages"
+                   :files ("re-jump.el")))
 
        '(package! codeium :recipe (:host github :repo "Exafunction/codeium.el"))
 
@@ -73,6 +83,8 @@
           :recipe (:host github
                    :repo "emacs-eaf/emacs-application-framework"
                    :files ("eaf.el" "src/lisp/*.el"))))
+
+
 
 
 

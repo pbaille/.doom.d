@@ -112,6 +112,9 @@
   (add-hook 'org-mode-hook #'org-modern-mode)
   (add-hook 'org-agenda-finalize-hook #'org-modern-agenda))
 
+(use-package org-download
+  :after org
+  :config (add-hook 'dired-mode-hook 'org-download-enable))
 ;; (use-package svg-tag-mode)
 ;; (setq svg-tag-tags
 ;;       '(("TOODO" . ((lambda (tag) (svg-tag-make "TODO" :radius 5 :foreground "#3CB371"))))))

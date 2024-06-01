@@ -105,16 +105,21 @@
   (setq gptel-api-key pb/openai-api-key)
   (setq gptel-default-mode 'org-mode)
   ;; bindings
-  (setq-default gptel-model "gpt-3.5-turbo")
+  (setq-default gptel-model "gpt-4")
   (map! :n "g p" #'gptel)
   (map! (:map gptel-mode-map
-              :i "C-e" #'gptel-send)))
+              :i "C-e" #'gptel-send
+              :ni "C-m" #'gptel-menu)))
 
 (use-package tide
   :config
   (setq tide-server-max-response-length 1000000))
 
-
+(use-package mindstream
+  :config
+  (mindstream-mode)
+  (setq mindstream-path "/Users/pierrebaille/.mindstream/anon")
+  (setq mindstream-template-path "/Users/pierrebaille/.mindstream/templates"))
 
 (progn :edi-prolog
 
