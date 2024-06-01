@@ -40,10 +40,10 @@
       "s-S-<down>" #'windmove-down)
 
 ;; vim motion in insert mode using control key.
-(map! :i "C-h" #'evil-backward-char
+(map! :i "C-h" #'backward-char
       :i "C-j" #'evil-next-line
       :i "C-k" #'evil-previous-line
-      :i "C-l" #'evil-forward-char
+      :i "C-l" #'forward-char
 
       ;; some extras
       :i "C-S-h" #'paredit-backward-delete
