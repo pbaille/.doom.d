@@ -1,0 +1,3 @@
+* config
+sub-config files
+Intended to be loaded from the main config.el

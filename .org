@@ -1,0 +1,5 @@
+* .doom.d
+
+** doom files of interest
+
+[[file:~/.emacs.d/modules/config/default/+evil-bindings.el::;;; config/default/+bindings.el -*- lexical-binding: t; -*-][builtin evil bindings]]
