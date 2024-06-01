@@ -46,43 +46,6 @@
              (pb/make-reaper-osc-client))
          (osc-send-message pb/reaper-osc-client s)))
 
-(progn :repl
-
-       (setq pb/reaper-repl-lua-path (concat pb/reaper-user-script-path "repl/DYN.lua"))
-       (setq pb/reaper-repl-fnl-path (concat pb/reaper-user-script-path "repl/DYN.fnl"))
-       (setq pb/reaper-repl-fnl-prelude-path (concat pb/reaper-user-script-path "repl/prelude.fnl"))
-
-       (setq pb/reaper-repl-tic-message "/repltic") ;; this osc message should be setup as a shortcut on the repl action in reaper
-       (setq pb/reaper-repl-action-id "_RS7d3c_6c93635782a844bfe298cb4e2bffb7256a223058")
-       (setq pb/reaper-repl-start-osc-message (concat "/midiaction/" pb/reaper-repl-action-id))
-
-       (defun pb/reaper-tic! ()
-         (pb/send-reaper pb/reaper-repl-tic-message))
-
-       (defun pb/reaper-repl-compile-expression ()
-         (let ((beg (point))
-               (end (save-excursion (evil-jump-item) (+ 1 (point)))))
-           (delete-file pb/reaper-repl-fnl-path)
-           (write-region beg end pb/reaper-repl-fnl-path t)))
-
-       (defun pb/reaper-repl-sync (in)
-         (interactive)
-         (pb/fennel-compile-file in pb/reaper-repl-lua-path)
-         (sleep-for 0.2)
-         (pb/reaper-tic!))
-
-       (defun pb/reaper-repl-send-expression ()
-         (interactive)
-         (pb/reaper-repl-compile-expression)
-         (sleep-for 0.2)
-         (pb/reaper-repl-sync pb/reaper-repl-fnl-path))
-
-       (defun pb/reaper-start-repl ()
-         (interactive)
-         (pb/send-reaper pb/reaper-repl-start-osc-message)
-         (pb/reaper-repl-sync pb/reaper-repl-fnl-prelude-path)))
-
-
 (progn :socket
 
        (defun pb/mk-udp-socket (ip port)
@@ -97,7 +60,8 @@
            (delete-process sk)))
 
        '(progn "reaper-ping"
-               (pb/udp-send-str "127.0.0.1" 9999 "3 + 3")))
+               (pb/udp-send-str "127.0.0.1" 9999 "3 + 3")
+               (pb/udp-send-str "127.0.0.1" 9999 (bencode-encode '(:code "(+ 1 2)")))))
 
 (progn :socket-repl
 
