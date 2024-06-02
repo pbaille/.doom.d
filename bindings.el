@@ -8,6 +8,9 @@
 
       "s-b" #'ibuffer
       "s-B" #'projectile-ibuffer
+      "s-j" #'consult-buffer
+
+      "s-C-s" #'pb/toggle-sidebars
 
       "s-t" #'hs-hide-all
       "s-T" #'hs-show-all
@@ -127,6 +130,7 @@
        :n "SPC m R" #'pb/reaper-mode
        :n "SPC m r" #'pb/fennel-repl
        :n "SPC m l" #'pb/fennel-reload
+       :n "SPC m e b" #'pb/fennel-eval-buffer
        :n "ö" #'fennel-reload
        :n "s-r" #'pb/fennel-repl
        :n "s-R" #'pb/reaper-start-repl

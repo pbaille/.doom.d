@@ -14,6 +14,10 @@
   (save-buffer)
   (fennel-reload nil))
 
+(defun pb/fennel-eval-buffer ()
+  (interactive)
+  (fennel-eval-region (point-min) (point-max)))
+
 (defun pb/fennel-compile (file)
   (shell-command-to-string (concat fennel-program " -c " file)))
 
