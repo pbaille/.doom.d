@@ -53,7 +53,8 @@
   :config
   (setq fennel-mode-switch-to-repl-after-reload nil)
   (set-popup-rules!
-    '(("^\\*Fennel REPL" :quit nil :ttl nil))))
+    '(("^\\*Fennel REPL" :quit nil :ttl nil)
+      ("^\\*reapl" :quit nil :ttl nil))))
 
 (use-package symex
 

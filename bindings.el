@@ -9,6 +9,7 @@
       "s-b" #'ibuffer
       "s-B" #'projectile-ibuffer
       "s-j" #'consult-buffer
+      "s-k" #'ibuffer
 
       "s-C-s" #'pb/toggle-sidebars
 
@@ -79,6 +80,7 @@
       "t s" #'dired-sidebar-toggle-sidebar
       "t S" #'my-dired-sidebar-reset
       "t t" #'ibuffer-sidebar-toggle-sidebar
+      "t h" #'hs-toggle-hiding
 
       ;; buffers
       :desc "kill all dired buffers"
@@ -102,12 +104,23 @@
                                         ;"d p" #'org-gtd-process-inbox
                                         ;"t t" #'tab-line-mode
 
-      "t h" #'hs-toggle-hiding)
+      )
 
 (map! :localleader
       (:map org-mode-map
             "c p" #'org-pomodoro
-            "S" #'org-insert-structure-template))
+            "S" #'org-insert-structure-template)
+      (:map fennel-mode-map
+            "r" #'fennel-repl
+            "L" #'fennel-reload
+            "l" #'pb/fennel-eval-buffer
+            "m" #'fennel-macroexpand
+            "d" #'fennel-show-documentation
+            "g" #'fennel-find-definition
+            "G" #'fennel-find-module-definition
+            "c" #'pb/compile-fennel
+            "R" #'pb/reaper-mode
+            "I" #'pb/install-fennel-script))
 
 (map! (:map symex-mode-map
        :n "s-e" (lambda () (interactive) (symex-goto-lowest) (symex-evaluate 1))
@@ -126,18 +139,6 @@
        :n "ö" (lambda () (interactive) (save-buffer) (cider-load-buffer))
        :n "s-r" (lambda () (interactive) (save-buffer) (cider-ns-refresh)))
 
-      (:map fennel-mode-map
-       :n "SPC m R" #'pb/reaper-mode
-       :n "SPC m r" #'pb/fennel-repl
-       :n "SPC m l" #'pb/fennel-reload
-       :n "SPC m e b" #'pb/fennel-eval-buffer
-       :n "ö" #'fennel-reload
-       :n "s-r" #'pb/fennel-repl
-       :n "s-R" #'pb/reaper-start-repl
-       :n "M-c" #'pb/compile-fennel
-       :n "M-C" #'pb/fennel-print-compile
-       :n "M-i" #'pb/install-fennel-script)
-
       (:map reaper-mode-map
        :n "s-e" #'pb/send-fnl-s-expression-to-reaper-socket-repl)
 
@@ -151,10 +152,10 @@
        :n "J" #'outline-next-visible-heading
        :n "K" #'outline-previous-visible-heading
        :n "S" #'org-insert-structure-template
-       :i "C-h" #'evil-backward-char
+       :i "C-h" #'backward-char
        :i "C-j" #'evil-next-line
        :i "C-k" #'evil-previous-line
-       :i "C-l" #'evil-forward-char
+       :i "C-l" #'forward-char
        :i "C-S-h" #'paredit-backward-delete
        :i "C-S-l" #'paredit-forward-delete)
 
