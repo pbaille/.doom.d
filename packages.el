@@ -41,10 +41,11 @@
 
 ;; lisp
 (package! symex
-  :pin "0902197"
+  :pin "8902b7c"
   :recipe (:host github
            :repo "pbaille/symex.el"
            :files ("*.el")))
+
 (package! flycheck-clj-kondo)
 (package! janet-mode)
 
@@ -61,6 +62,11 @@
 (package! pdf-tools :built-in 'prefer)
 
 (package! mindstream)
+
+(package! reapl-mode
+  :recipe (:local-repo "/Users/pierrebaille/Code/WIP/reapl/src/elisp"
+           :files ("*.el")))
+
 (progn :not-used
 
        '(package! re-jump

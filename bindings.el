@@ -119,7 +119,7 @@
             "g" #'fennel-find-definition
             "G" #'fennel-find-module-definition
             "c" #'pb/compile-fennel
-            "R" #'pb/reaper-mode
+            "R" #'pb/reapl-mode
             "I" #'pb/install-fennel-script))
 
 (map! (:map symex-mode-map
