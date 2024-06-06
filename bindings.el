@@ -119,8 +119,14 @@
             "g" #'fennel-find-definition
             "G" #'fennel-find-module-definition
             "c" #'pb/compile-fennel
-            "R" #'pb/reapl-mode
-            "I" #'pb/install-fennel-script))
+            "R" #'reapl-mode
+            "I" #'pb/install-fennel-script)
+      (:map reapl-mode-map
+            "'" #'reapl-mode_connect
+            "r" #'reapl-mode_repl
+            "q" #'reapl-mode_repl-quit
+            "e b" #'reapl-mode_send-buffer
+            "c" #'reapl-mode_complete-symbol-at-point))
 
 (map! (:map symex-mode-map
        :n "s-e" (lambda () (interactive) (symex-goto-lowest) (symex-evaluate 1))
@@ -141,6 +147,9 @@
 
       (:map reaper-mode-map
        :n "s-e" #'pb/send-fnl-s-expression-to-reaper-socket-repl)
+
+      (:map reapl-mode-map
+       :i "TAB" #'reapl-mode_complete-symbol-at-point)
 
       (:map fennel-repl-mode-map
        :n "s-r" #'other-window

@@ -41,7 +41,7 @@
 
 ;; lisp
 (package! symex
-  :pin "8902b7c"
+  :pin "1bf10c0"
   :recipe (:host github
            :repo "pbaille/symex.el"
            :files ("*.el")))

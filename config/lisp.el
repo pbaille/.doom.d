@@ -57,8 +57,9 @@
 
 (use-package reapl-mode
   :config
+  (require 'reapl-symex)
   (set-popup-rules!
-    '(("^\\*reapl\\*" :quit nil :ttl nil))))
+    '(("^\\*reapl-evaluation\\*" :quit nil :ttl nil))))
 
 (use-package symex
 
