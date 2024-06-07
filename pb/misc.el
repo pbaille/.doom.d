@@ -67,4 +67,19 @@
          (package-prefix (concat base-name "_")))
     (insert package-prefix)))
 
+(defun pb/count-indentation (line)
+  "Count leading spaces in a LINE."
+  (if (string-match "^\\s-+" line)
+      (length (match-string 0 line))
+    0))
+
+(defun pb/remove-leading-spaces (str n)
+  "Remove the first N space characters from the beginning of STR."
+  (let ((result str)
+        (count n))
+    (while (and (> count 0) (string-prefix-p " " result))
+      (setq result (substring result 1))
+      (setq count (1- count)))
+    result))
+
 (provide 'pb-misc)
