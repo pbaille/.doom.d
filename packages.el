@@ -40,10 +40,10 @@
 (package! org-download)
 
 ;; lisp
+
+(unpin! symex)
 (package! symex
-  :pin "1bf10c0"
-  :recipe (:host github
-           :repo "pbaille/symex.el"
+  :recipe (:local-repo "/Users/pierrebaille/Code/forks/symex.el"
            :files ("*.el")))
 
 (package! flycheck-clj-kondo)
@@ -66,6 +66,10 @@
 (package! reapl-mode
   :recipe (:local-repo "/Users/pierrebaille/Code/WIP/reapl/src/elisp"
            :files ("*.el")))
+
+'(package! codeium
+  :pin "b1fc085"
+  :recipe (:host github :repo "Exafunction/codeium.el"))
 
 (progn :not-used
 

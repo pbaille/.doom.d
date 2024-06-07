@@ -132,6 +132,9 @@
        :n "s-e" (lambda () (interactive) (symex-goto-lowest) (symex-evaluate 1))
        :n "s-i" #'cider-inspect-last-result)
 
+      (:map emacs-lisp-mode-map
+       :i "C-p" #'pb/insert-package-prefix)
+
       (:map cider-inspector-mode-map
        :n "j" #'cider-inspector-next-inspectable-object
        :n "k" #'cider-inspector-previous-inspectable-object

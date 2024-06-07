@@ -58,4 +58,13 @@
      (point)
      (+ 1 (save-excursion (evil-jump-item) (point))))))
 
+(defun pb/insert-package-prefix ()
+  "Insert the package prefix at point based on the current file name."
+  (interactive)
+  (let* ((file-name (buffer-file-name))
+         (base-name (file-name-base file-name))
+         ;; Extract the package name (you may need to adjust this based on your file naming convention)
+         (package-prefix (concat base-name "_")))
+    (insert package-prefix)))
+
 (provide 'pb-misc)
