@@ -126,7 +126,9 @@
             "r" #'reapl-mode_repl
             "q" #'reapl-mode_repl-quit
             "e b" #'reapl-mode_send-buffer
-            "c" #'reapl-mode_complete-symbol-at-point))
+            "c" #'reapl-mode_complete-symbol-at-point)
+      (:map company-active-map
+            "C-h" #'reapl-mode_request-doc-for-completion-candidate))
 
 (map! (:map symex-mode-map
        :n "s-e" (lambda () (interactive) (symex-goto-lowest) (symex-evaluate 1))
