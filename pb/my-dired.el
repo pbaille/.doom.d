@@ -43,6 +43,7 @@ one window."
     (when (string-match-p "^:~/" (buffer-name buf))
       (kill-buffer buf))))
 
+(advice-add #'doom/quicksave-session :before #'my-dired-sidebar-close-all)
 (add-hook 'kill-emacs-hook #'my-dired-sidebar-close-all)
 
 (defun my-dired-sidebar-reset ()
