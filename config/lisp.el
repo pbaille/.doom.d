@@ -59,7 +59,11 @@
   :config
   (require 'reapl-symex)
   (set-popup-rules!
-    '(("^\\*reapl-evaluation\\*" :quit nil :ttl nil))))
+    '(("^\\*reapl-evaluation\\*" :quit nil :ttl nil)))
+  (set-lookup-handlers! '(reapl-mode)
+    :documentation #'reapl-mode_doc-symbol-at-point)
+  (map! (:map company-active-map
+              "C-h" #'reapl-mode_request-doc-for-completion-candidate)))
 
 (use-package symex
 
@@ -78,6 +82,7 @@
 
         '(("s-r" . symex-repl)
           ("d" . dired-jump)
+          ("C-d" . +lookup/documentation )
 
           ;; nav
           ("M-k" . symex-goto-lowest)
