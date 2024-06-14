@@ -41,7 +41,6 @@
 
 ;; lisp
 
-(unpin! symex)
 (package! symex
   :recipe (:local-repo "/Users/pierrebaille/Code/forks/symex.el"
            :files ("*.el")))
@@ -69,11 +68,10 @@
 
 (package! ligature)
 
-'(package! codeium
-  :pin "b1fc085"
-  :recipe (:host github :repo "Exafunction/codeium.el"))
-
 (progn :not-used
+       '(package! codeium
+          :pin "b1fc085"
+          :recipe (:host github :repo "Exafunction/codeium.el"))
 
        '(package! re-jump
           :recipe (:local-repo "packages"
