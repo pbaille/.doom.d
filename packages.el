@@ -67,6 +67,8 @@
   :recipe (:local-repo "/Users/pierrebaille/Code/WIP/reapl/src/elisp"
            :files ("*.el")))
 
+(package! ligature)
+
 '(package! codeium
   :pin "b1fc085"
   :recipe (:host github :repo "Exafunction/codeium.el"))
