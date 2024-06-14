@@ -135,7 +135,8 @@
        :n "s-i" #'cider-inspect-last-result)
 
       (:map emacs-lisp-mode-map
-       :i "C-p" #'pb/insert-package-prefix)
+       :i "C-p" #'pb/insert-package-prefix
+       :n "C-e" #'my-elisp_send-expression-to-ielm)
 
       (:map cider-inspector-mode-map
        :n "j" #'cider-inspector-next-inspectable-object
