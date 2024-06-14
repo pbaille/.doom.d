@@ -31,6 +31,20 @@ one window."
   (my-dired-sidebar-dwim)
   )
 
+(defun my-dired-sidebar-close-all ()
+  "Close all dired-sidebar buffers before exiting Emacs."
+  (interactive)
+  (walk-windows
+   (lambda (win)
+     (when (and (window-dedicated-p win)
+                (string-match-p "^:~/" (buffer-name (window-buffer win))))
+       (delete-window win))))
+  (dolist (buf (buffer-list))
+    (when (string-match-p "^:~/" (buffer-name buf))
+      (kill-buffer buf))))
+
+(add-hook 'kill-emacs-hook #'my-dired-sidebar-close-all)
+
 (defun my-dired-sidebar-reset ()
   (interactive)
   (pb/kill-all-dired-buffers)
