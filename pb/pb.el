@@ -30,6 +30,7 @@
 (load "~/.doom.d/pb/misc.el")
 (load "~/.doom.d/pb/s-expr.el")
 (load "~/.doom.d/pb/my-walk.el")
+(load "~/.doom.d/pb/pb-udp.el")
 (load "~/.doom.d/pb/sidebars.el")
 (load "~/.doom.d/pb/my-symex.el")
 (load "~/.doom.d/pb/my-cider.el")
