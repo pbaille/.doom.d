@@ -1,72 +1,69 @@
 ;;; pb/pb-udp.el -*- lexical-binding: t; -*-
 
-(defconst pb-udp_BEG_DEL "<UDP|")
-(defconst pb-udp_END_DEL "|UDP>")
+(require 'json)
 
-(defun pb-udp_last-chunk-p (s)
-  (string= pb-udp_END_DEL (substring s (- (length s) (length pb-udp_END_DEL)))))
+(defvar pb-udp_default-state (list :id nil :data ""))
 
-(defun pb-udp_first-chunk-p (s)
-  (string= pb-udp_BEG_DEL (substring s 0 (length pb-udp_BEG_DEL))))
+(defun pb-udp_mk-proc-filter (ops)
+  "Build a process filter function given an OPS plist."
+  (let ((state pb-udp_default-state))
+    (lambda (_ string)
+      (let ((json-object-type 'plist)
+            (json-array-type 'list)
+            (json-message (json-read-from-string string)))
+        (let ((id (plist-get json-message :id))
+              (op (plist-get json-message :op))
+              (data (plist-get json-message :data)))
+          (when id
+            (unless (equal (plist-get state :id) id)
+              (setq state pb-udp_default-state))
+            (if (and data (not op))
+                (setq state
+                      (list :id id
+                            :data (concat (plist-get state :data) data)))
+              (let* ((f (plist-get ops (intern (concat ":" op))))
+                     (ret (funcall f (if (equal (plist-get state :id) id)
+                                         (plist-get state :data)
+                                       data))))
+                (setq state pb-udp_default-state)
+                ret))))))))
 
-(defun pb-udp_chunks-to-string (xs)
-  (let ((ret ""))
-    (dolist (v xs)
-      (setf ret (concat ret v)))
-    (substring ret (length pb-udp_BEG_DEL) (- (length ret) (length pb-udp_END_DEL)))))
+(defun pb-udp_start-listening (host port ops)
+  (let ((proc (make-network-process
+               :name "my-udp-proc"
+               :buffer "*my-udp-proc*"
+               :host host
+               :service port
+               :server t
+               :family 'ipv4
+               :type 'datagram)))
+    (set-process-filter proc (pb-udp_mk-proc-filter ops))
+    proc))
 
-(defun pb-udp_decode-chunks (xs on-success on-error)
-  (let ((str (pb-udp_chunks-to-string xs)))
-    (condition-case err
-        (let* ((json-object-type 'plist)
-               (json-array-type 'list)
-               (decoded (json-read-from-string str)))
-          (funcall on-success decoded))
-      (error
-       (funcall on-error `(:type :encode :error ,(error-message-string err) :message ,str))))))
+'(:tries
 
-(defvar pb-udp_input-data nil)
+  (defvar pb-udp_receive-proc
+    (pb-udp_start-listening 'local
+                            "8088"
+                            (list :print #'print)))
 
-(defun pb-udp_listen-filter (proc string)
-  (print (format "Received string: %s" string))
-  (cond ((pb-udp_first-chunk-p string)
-         (setq pb-udp_input-data (list string)))
-        (pb-udp_input-data
-         (setq pb-udp_input-data (append pb-udp_input-data (list string)))))
-  (when (and pb-udp_input-data (pb-udp_last-chunk-p string))
-    ;; on-success and on-error are placeholder functions to be replaced
-    (pb-udp_decode-chunks pb-udp_input-data
-                          (lambda (x) (print (cons 'success x)))
-                          (lambda (x) (print (cons 'error x))))
-    (setq pb-udp_input-data nil)))
+  (delete-process pb-udp_receive-proc)
 
-(defun pb-udp_listen-sentinel (proc string)
-  (print (format "Process: %s had the event -- %s" proc string)))
-
-(defun pb-udp_start-listening (host port)
-  (make-network-process
-   :name "my-udp-proc"
-   :buffer "*my-udp-proc*"
-   :host host
-   :service port
-   :server t
-   :family 'ipv4
-   :type 'datagram
-   :filter #'pb-udp_listen-filter
-   :sentinel #'pb-udp_listen-sentinel))
-
-'(tries
-  (pb-udp_start-listening 'local "8083")
   (defvar pb-udp_send-proc
-    nil)
-  (setq pb-udp_send-proc
-        (make-network-process
-         :name "*pb-udp_out*"
-         :host 'local
-         :service "55551"
-         :type 'datagram
-         :family 'ipv4))
+    (make-network-process
+     :name "*pb-udp_out*"
+     :host 'local
+     :service "8088"
+     :type 'datagram
+     :family 'ipv4))
+
+  (delete-process pb-udp_send-proc)
+
   (process-send-string pb-udp_send-proc
-                       "<UDP|{\"io\"")
+                       (json-encode-plist '(:id 1 :op :print :data "yo")))
   (process-send-string pb-udp_send-proc
-                       ": 2}|UDP>"))
+                       (json-encode-plist '(:id 2 :data "yo")))
+  (process-send-string pb-udp_send-proc
+                       (json-encode-plist '(:id 2 :op :print))))
+
+(provide 'pb-udp)
