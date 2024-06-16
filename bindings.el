@@ -117,7 +117,8 @@
             "c p" #'org-pomodoro
             "S" #'org-insert-structure-template)
       (:map fennel-mode-map
-            "r" #'fennel-repl
+            "r" #'pb-fennel_repl
+            "q" #'pb-fennel_quit
             "L" #'fennel-reload
             "l" #'pb-fennel_eval-buffer
             "m" #'fennel-macroexpand
@@ -129,7 +130,7 @@
             "I" #'pb-fennel_install-fennel-script)
       (:map reapl-mode-map
             "'" #'reapl-mode_connect
-            "r" #'reapl-mode_repl
+            "r" #'pb-reapl_repl
             "q" #'reapl-mode_repl-quit
             "e b" #'reapl-mode_send-buffer
             "c" #'reapl-mode_complete-symbol-at-point))
@@ -164,8 +165,9 @@
        :i "TAB" #'reapl-mode_complete-symbol-at-point)
 
       (:map fennel-repl-mode-map
-       :n "s-r" #'other-window
-       :n "C-k" #'comint-clear-buffer)
+       "s-r" #'other-window
+       "C-k" #'comint-clear-buffer
+       "C-c C-k" #'kill-buffer-and-window)
 
       (:map org-mode-map
        :n "C-t" #'org-set-tags-command
