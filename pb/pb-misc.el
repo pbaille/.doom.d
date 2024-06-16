@@ -11,12 +11,14 @@
 
 ;;; Code:
 
+(require 'evil)
+
 (defun pb-misc_open-google ()
   (interactive)
   (xwidget-webkit-browse-url "https://www.google.com/"))
 
 (defun pb-misc_spit (string file)
-  "Prints string into file, if files exists, delete it, if not creates it."
+  "Print STRING into FILE, if files exists, delete it, if not create it."
   (with-temp-buffer
     (insert string)
     (delete-file file)
@@ -75,6 +77,15 @@
       (setq result (substring result 1))
       (setq count (1- count)))
     result))
+
+(defun pb-misc_window-split (buffer)
+  "Split the current window vertically, displaying BUFFER."
+  (let* ((b1 (current-buffer))
+         (b2 (or (get-buffer buffer)
+                 b1)))
+    (switch-to-buffer b2)
+    (evil-window-split (* 2 (/ (window-body-height) 3)) nil)
+    (switch-to-buffer b1)))
 
 (provide 'pb-misc)
 ;;; pb-misc.el ends here.
