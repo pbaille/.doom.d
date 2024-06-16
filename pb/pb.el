@@ -36,6 +36,7 @@
 (load "~/.doom.d/pb/pb-elisp.el")
 (load "~/.doom.d/pb/pb-fennel.el")
 (load "~/.doom.d/pb/pb-fold.el")
+(load "~/.doom.d/pb/pb-gptel.el")
 (load "~/.doom.d/pb/pb-ibuffer.el")
 (load "~/.doom.d/pb/pb-misc.el")
 (load "~/.doom.d/pb/pb-sidebars.el")

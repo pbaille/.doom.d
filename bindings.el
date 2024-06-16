@@ -63,6 +63,11 @@
 (map! :n "g f" #'dired-sidebar-jump-to-sidebar
       :n "g b" #'pb-ibuffer_sidebar-focus)
 
+;; gptel
+(map! :ni "s-g b" #'gptel
+      :ni "s-g n" #'pb-gptel_new-session-above
+      :ni "s-g g" #'gptel-menu)
+
 (map! :leader
 
       "f e" #'consult-flycheck
@@ -129,7 +134,12 @@
             "e b" #'reapl-mode_send-buffer
             "c" #'reapl-mode_complete-symbol-at-point))
 
-(map! (:map symex-mode-map
+(map! (:map gptel-mode-map
+       :i "C-e" #'gptel-send
+       :ni "C-m" #'gptel-menu
+       "C-c C-k" #'kill-buffer-and-window)
+
+      (:map symex-mode-map
        :n "s-e" (lambda () (interactive) (symex-goto-lowest) (symex-evaluate 1))
        :n "s-i" #'cider-inspect-last-result)
 
