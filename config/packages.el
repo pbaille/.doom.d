@@ -28,6 +28,22 @@
 
 (use-package dired-sidebar)
 
+(use-package consult
+  :config
+  (setq consult--source-buffer
+        `(:name     "Buffer"
+          :narrow   (?b . "Buffer")
+          ;;:hidden   t
+          :history  buffer-name-history
+          :category buffer
+          :state    ,#'consult--buffer-state
+          ;; The buffer source must come first, because the `consult--multi' completion
+          ;; system gives the candidates from the first source which returns non-nil
+          ;; as the "initial input". For `consult-buffer' this should be the `consult--source-buffer'.
+          :default  (lambda () (buffer-name (consult--buffer-query)))
+          :items
+          ,(lambda () (consult--buffer-query :sort 'file-first :as #'buffer-name)))))
+
 (use-package flycheck
   :config
   ;; replace the double arrow of the fringe by a circle

@@ -1,14 +1,25 @@
-;;; pb/symex.el -*- lexical-binding: t; -*-
+;;; pb-symex.el --- symex utils -*- lexical-binding: t; -*-
+
+;; Author: Pierre Baille
+;; URL: https://github.com/pbaille
+;; Version: 0.0.1
+;; Package-Requires: ((emacs "29.1") (symex))
+
+;;; Commentary:
+
+;; symex helpers.
+
+;;; Code:
 
 (require 'symex)
 
-(defun pb/symex-escape-insert-mode ()
+(defun pb-symex_escape-insert-mode ()
   (interactive)
   (evil-normal-state)
   (forward-char)
   (symex-mode-interface))
 
-(defun pb/symex-click ()
+(defun pb-symex_click ()
   (interactive)
   (evil-normal-state)
   (backward-char)
@@ -21,7 +32,7 @@
   ;; (symex-mode-interface)
   )
 
-(defun pb/symex-mark ()
+(defun pb-symex_mark ()
   (interactive)
   (evil-normal-state)
   (activate-mark)
@@ -29,7 +40,7 @@
   (deactivate-mark)
   (symex-mode-interface))
 
-(defun pb/symex-cider-macroexpand ()
+(defun pb-symex_cider-macroexpand ()
   (interactive)
   (save-excursion
     (evil-normal-state)
@@ -37,13 +48,13 @@
     (forward-char)
     (cider-macroexpand-1)))
 
-(defun pb/symex-replace ()
+(defun pb-symex_replace ()
   (interactive)
   (symex-paste-before 1)
   (symex-go-forward 1)
   (symex-delete 1))
 
-(defun pb/symex-go-up ()
+(defun pb-symex_go-up ()
   (interactive)
   (let ((p (point)))
     (if (hs-already-hidden-p)
@@ -52,13 +63,13 @@
     (if (= p (point))
         (symex-go-forward 1))))
 
-(defun pb/symex-go-down-folding ()
+(defun pb-symex_go-down-folding ()
   (interactive)
   (symex-go-down 1)
   (hs-hide-block)
   (backward-char))
 
-(defun pb/symex-fw ()
+(defun pb-symex_fw ()
   (interactive)
   (if (hs-already-hidden-p)
       (progn (print "hidden")
@@ -67,31 +78,31 @@
     (symex-go-forward 1)
     (if (and (= p (point))
              (not (symex--point-at-final-symex-p)))
-        (progn (symex-go-down 1) (pb/symex-fw)))))
+        (progn (symex-go-down 1) (pb-symex_fw)))))
 
-(defun pb/symex-bw ()
+(defun pb-symex_bw ()
   (interactive)
   (let ((p (point)))
     (symex-go-backward 1)
     (if (and (= p (point))
              (not (symex--point-at-initial-symex-p)))
-        (progn (symex-go-down 1) (pb/symex-bw)))))
+        (progn (symex-go-down 1) (pb-symex_bw)))))
 
-(defun pb/symex-next-line (&optional count)
+(defun pb-symex_next-line (&optional count)
   (interactive)
   (let ((p (point)))
     (symex-next-visual-line (or count 1))
     (if (and (<= (point) p) (<= count 10))
-        (pb/symex-next-line (+ 1 (or count 1))))))
+        (pb-symex_next-line (+ 1 (or count 1))))))
 
-(defun pb/symex-previous-line (&optional count)
+(defun pb-symex_previous-line (&optional count)
   (interactive)
   (let ((p (point)))
     (symex-previous-visual-line (or count 1))
     (if (and (>= (point) p) (<= count 10))
-        (pb/symex-previous-line (+ 1 (or count 1))))))
+        (pb-symex_previous-line (+ 1 (or count 1))))))
 
-(defun pb/symex-eval-pp-clojure ()
+(defun pb-symex_eval-pp-clojure ()
   (interactive)
   (save-excursion
     (evil-jump-item)
@@ -99,12 +110,12 @@
     (cider-pprint-eval-last-sexp)
     (evil-jump-item)))
 
-(defun pb/symex-tidy-down ()
+(defun pb-symex_tidy-down ()
   (interactive)
   (symex-tidy)
   (symex-go-down 1))
 
-(defun pb/symex-clj-toggle-comment ()
+(defun pb-symex_clj-toggle-comment ()
   (interactive)
   ;; this is really badly writen, should find a better way to match #_ under cursor
   (if (looking-at "#_")
@@ -115,3 +126,4 @@
            (backward-char 2))))
 
 (provide 'pb-symex)
+;;; pb-symex.el ends here.

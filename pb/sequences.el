@@ -24,7 +24,7 @@ with a step size of STEP. If STEP is not specified, it defaults to 1."
 
 (defun sq-butlast (lst)
   "Return a new list containing all elements of LST except the last one."
-  (subseq lst 0 (- (length lst) 1)))
+  (cl-subseq lst 0 (- (length lst) 1)))
 
 (defun test ()
   (cl-assert

@@ -2,7 +2,7 @@
 
 (require 'pb-fold)
 
-(defvar pb/lisp-modes
+(defvar pb-config_lisp-modes
   '(emacs-lisp-mode-map clojure-mode-map fennel-mode-map scheme-mode-map racket-mode-map))
 
 (use-package geiser
@@ -49,7 +49,7 @@
 (use-package fennel-mode
 
   :bind
-  (("s-r" . pb/fennel-repl))
+  (("s-r" . pb-fennel_fennel-repl))
   :config
   (setq fennel-mode-switch-to-repl-after-reload nil)
   (set-popup-rules!
@@ -87,52 +87,52 @@
           ;; nav
           ("M-k" . symex-goto-lowest)
           ("M-j" . symex-goto-highest)
-          ("j" . pb/symex-go-up)
+          ("j" . pb-symex_go-up)
           ("k" . symex-go-down)
           ("J" . symex-join-lines)
-          ("K" . pb/symex-go-down-folding)
+          ("K" . pb-symex_go-down-folding)
 
           ;; edit
           ("r" . paredit-raise-sexp)
           ("x" . symex-delete)
-          ("R" . pb/symex-replace)
+          ("R" . pb-symex_replace)
           ("-" . sp-unwrap-sexp)
 
           ("}" . symex-wrap-curly)
           ("{" . symex-create-curly)
 
           ;; non structural nav
-          ("F" . pb/goto-next-opening-delimiter)
-          ("B" . pb/goto-prev-opening-delimiter)
+          ("F" . pb-misc_goto-next-opening-delimiter)
+          ("B" . pb-misc_goto-prev-opening-delimiter)
           ("h" . symex-go-backward)
           ("l" . symex-go-forward)
-          ;; ("h" . pb/symex-bw)
-          ;; ("l" . pb/symex-fw)
-          ("C-k" . pb/symex-previous-line) ;; replace symex-descend-branch
-          ("C-j" . pb/symex-next-line) ;; replace symex-climb-branch
+          ;; ("h" . pb-symex_bw)
+          ;; ("l" . pb-symex_fw)
+          ("C-k" . pb-symex_previous-line) ;; replace symex-descend-branch
+          ("C-j" . pb-symex_next-line) ;; replace symex-climb-branch
 
           ;; indent, tidy
-          ("<tab>" . pb/indent-sexpr)
+          ("<tab>" . pb-sexpr_indent)
           ("<backtab>" . symex-tidy)
 
           ;; folding
-          ("T" . pb/toggle-semi-fold) ;; hs-toggle-hiding
-          ("t" . pb/toggle-hiding)
+          ("T" . pb-fold_toggle-semi-fold) ;; hs-toggle-hiding
+          ("t" . pb-misc_toggle-hiding)
           ("C-t" . hs-hide-level)
 
           ;; shift symex maintaining indentation
-          ("C->" . pb/shift-expression-right)
-          ("C-<" . pb/shift-expression-left)
-          ("s->" . pb/shift-expressions-right)
-          ("s-<" . pb/shift-expressions-left)
+          ("C->" . pb-sexpr_shift-expression-right)
+          ("C-<" . pb-sexpr_shift-expression-left)
+          ("s->" . pb-sexpr_shift-expressions-right)
+          ("s-<" . pb-sexpr_shift-expressions-left)
 
           ;; mark a symex staying in symex mode
-          ("C-SPC" . pb/symex-mark)
+          ("C-SPC" . pb-symex_mark)
 
           ;; clojure specific TO MOVE
-          ("M" . pb/symex-cider-macroexpand) ; +lookup/documentation
-          ("E" . pb/symex-eval-pp-clojure)
-          ("C-;" . pb/symex-clj-toggle-comment)))
+          ("M" . pb-symex_cider-macroexpand) ; +lookup/documentation
+          ("E" . pb-symex_eval-pp-clojure)
+          ("C-;" . pb-symex_clj-toggle-comment)))
 
   (symex-initialize)
 
@@ -145,24 +145,24 @@
 
   (general-define-key
    :states 'insert
-   :keymaps pb/lisp-modes
-   [escape] #'pb/symex-escape-insert-mode
-   [mouse-1] #'pb/symex-click
+   :keymaps pb-config_lisp-modes
+   [escape] #'pb-symex_escape-insert-mode
+   [mouse-1] #'pb-symex_click
    ; ";" (lambda () (interactive) (print "please use  M-;"))
    ; "M-;" (lambda () (interactive) (insert ";"))
    "C-y" #'racket-insert-lambda
-   "C-w" #'pb/insert-open-paren)
+   "C-w" #'pb-misc_insert-open-paren)
 
   (general-define-key
    :states 'normal
-   :keymaps pb/lisp-modes
-   [mouse-1] #'pb/symex-click
+   :keymaps pb-config_lisp-modes
+   [mouse-1] #'pb-symex_click
    [mouse-3] (lambda (event) (interactive "e") (posn-set-point (event-end event)) (evil-insert-state))
-   "C-w" (lambda () (interactive) (evil-insert 1) (pb/insert-open-paren))
+   "C-w" (lambda () (interactive) (evil-insert 1) (pb-misc_insert-open-paren))
    "RET" #'symex-mode-interface)
 
   (general-define-key
    :states 'normal
    :keymaps '(clojure-mode-map)
    "g :" #'re-frame-jump-to-reg
-   ";" #'pb/symex-clj-toggle-comment))
+   ";" #'pb-symex_clj-toggle-comment))

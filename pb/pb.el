@@ -27,21 +27,21 @@
 
 ;;; Code:
 
-(load "~/.doom.d/pb/misc.el")
-(load "~/.doom.d/pb/s-expr.el")
-(load "~/.doom.d/pb/pb-walk.el")
-(load "~/.doom.d/pb/pb-udp.el")
-(load "~/.doom.d/pb/sidebars.el")
-(load "~/.doom.d/pb/pb-symex.el")
+(load "~/.doom.d/pb/km.el")
+(load "~/.doom.d/pb/pb-sexpr.el")
+
 (load "~/.doom.d/pb/pb-cider.el")
-(load "~/.doom.d/pb/pb-fennel.el")
+(load "~/.doom.d/pb/pb-symex.el")
 (load "~/.doom.d/pb/pb-dired.el")
 (load "~/.doom.d/pb/pb-elisp.el")
-(load "~/.doom.d/pb/reaper.el")
+(load "~/.doom.d/pb/pb-fennel.el")
 (load "~/.doom.d/pb/pb-fold.el")
 (load "~/.doom.d/pb/pb-ibuffer.el")
-(load "~/.doom.d/pb/pb-consult.el")
-(load "~/.doom.d/pb/pb-tide.el")
+(load "~/.doom.d/pb/pb-misc.el")
+(load "~/.doom.d/pb/pb-sidebars.el")
+(load "~/.doom.d/pb/pb-templates.el")
+(load "~/.doom.d/pb/pb-udp.el")
+(load "~/.doom.d/pb/pb-walk.el")
 
 (provide 'pb)
 ;;; pb.el ends here

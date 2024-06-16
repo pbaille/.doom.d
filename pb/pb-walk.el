@@ -1,4 +1,15 @@
-;;; pb/pb-walk.el -*- lexical-binding: t; -*-
+;;; pb-walk.el --- list walk helpers -*- lexical-binding: t; -*-
+
+;; Author: Pierre Baille
+;; URL: https://github.com/pbaille
+;; Version: 0.0.1
+;; Package-Requires: ((emacs "29.1"))
+
+;;; Commentary:
+
+;; list walk helpers.
+
+;;; Code:
 
 (defun pb-walk (x inner outer)
   (if (proper-list-p x)
@@ -6,21 +17,20 @@
        (mapcar inner x))
     (funcall outer x)))
 
-(defun pb-postwalk (x f)
-  (pb-walk x (lambda (y) (pb-postwalk y f)) f))
+(defun pb-walk_post (x f)
+  (pb-walk x (lambda (y) (pb-walk_post y f)) f))
 
-(defun pb-prewalk (x f)
+(defun pb-walk_pre (x f)
   (pb-walk (funcall f x)
            (lambda (y)
-             (pb-prewalk y f))
+             (pb-walk_pre y f))
            #'identity))
 
-(defun pb-map-indexed (xs f)
-  (cl-loop for val in xs
-           for idx from 0
-           collect (funcall f idx val)))
-
 '(:comment
+  (defun pb-map-indexed (xs f)
+    (cl-loop for val in xs
+             for idx from 0
+             collect (funcall f idx val)))
   "those do not terminate and I don't understand why"
   (defun pb-indexed-walk (x at inner outer)
     (if (listp x)
@@ -48,12 +58,13 @@
       (funcall prewalk x () f))))
 
 '(:comment
-  (pb-postwalk `(a (b c (d e)) b)
+  (pb-walk_post `(a (b c (d e)) b)
                (lambda (x) (print x) x))
   (pb-indexed-prewalk `(a (b c (d e)) b)
                       (lambda (i x) (print (list i x)) x))
   (pb-map-indexed (list 1 2 3) #'cons)
-  (pb-prewalk `(a (b c (d e)) b)
+  (pb-walk_pre `(a (b c (d e)) b)
               (lambda (x) (print x) x)))
 
 (provide 'pb-walk)
+;;; pb-walk.el ends here.

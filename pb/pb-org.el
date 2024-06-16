@@ -1,4 +1,15 @@
-;;; pb/pb-org.el -*- lexical-binding: t; -*-
+;;; pb-org.el --- org utils -*- lexical-binding: t; -*-
+
+;; Author: Pierre Baille
+;; URL: https://github.com/pbaille
+;; Version: 0.0.1
+;; Package-Requires: ((emacs "29.1"))
+
+;;; Commentary:
+
+;; Org helpers.
+
+;;; Description
 
 ;; Utility belt for manipulating org files
 ;; The initial motivation is to build a system for adding metadata to files and dirs
@@ -6,13 +17,15 @@
 ;; olp stands for outline path
 ;; this switches to the scratch org buffer and go to one of its sub header
 
+;;; Code:
+
 (require 'km)
 (require 'org)
 
 '(progn (switch-to-buffer "scratch.org")
         (goto-char (org-find-olp (list "~/org/scratch.org" "top" "three" "3.2"))))
 
-(defnk pb-org-find-or-create-olp-aux
+(defnk pb-org_find-or-create-olp-aux
   (:as opts
        file current-path remaining-path)
   (let* ((next-path (append current-path (list (car remaining-path))))
@@ -24,13 +37,14 @@
                                   :current-path next-path
                                   :remaining-path remaining-next)))
           (if remaining-next
-              (pb-org-find-or-create-olp-aux next-opts)
+              (pb-org_find-or-create-olp-aux next-opts)
             next-opts))
       opts)))
 
-(defun pb-org-find-or-create-olp (file path)
+(defun pb-org_find-or-create-olp (file path)
+  "Find or create outline path PATH in FILE."
   (km-letk ((remaining-path marker)
-            (pb-org-find-or-create-olp-aux
+            (pb-org_find-or-create-olp-aux
              (km :file file
                  :marker 0
                  :current-path ()
@@ -41,30 +55,31 @@
            (cl-loop for i in remaining-path
                     do (org-insert-subheading 0) (insert i))))
 
-(defun pb-org-put (file path content)
-  (pb-org-find-or-create-olp file path)
+(defun pb-org_put (file path content)
+  "Put CONTENT at PATH in FILE."
+  (pb-org_find-or-create-olp file path)
   (cond ((stringp content) (evil-open-below 1) (insert content))
         ((km? content)
          (org-set-tags (km-get content :tags))
          (evil-open-below 1) (insert (km-get content :text)))))
 
-(defvar pb-org-file-infos "~/org/file-infos.org"
-  "the main org file to hold file infos")
+(defvar pb-org_file-infos "~/org/file-infos.org"
+  "The main org file to hold file infos.")
 
-(defun pb-org-insert-file-info ()
+(defun pb-org_insert-file-info ()
   "Return the capture target for file info."
   (interactive)
-  (pb-org-find-or-create-olp pb-org-file-infos
+  (pb-org_find-or-create-olp pb-org_file-infos
                              (split-string (buffer-file-name) "/" t))
   (org-narrow-to-subtree)
   (org-end-of-subtree))
 
 '(:org-put-tries
-  (pb-org-find-or-create-olp "~/org/scratch.org" (list "top" "tao"))
-  (pb-org-find-or-create-olp "~/org/scratch.org" (list "top" "tao" "baz" "iop"))
-  (pb-org-put "~/org/scratch.org" (list "top" "tao" "baz" "iop")
+  (pb-org_find-or-create-olp "~/org/scratch.org" (list "top" "tao"))
+  (pb-org_find-or-create-olp "~/org/scratch.org" (list "top" "tao" "baz" "iop"))
+  (pb-org_put "~/org/scratch.org" (list "top" "tao" "baz" "iop")
               "hello you")
-  (pb-org-put "~/org/scratch.org" (list "top" "tao" "baz" "iop")
+  (pb-org_put "~/org/scratch.org" (list "top" "tao" "baz" "iop")
               (km :tags (list "pouet" "foo")
                   :text "very interesting indeed")))
 
@@ -79,3 +94,4 @@
                #'pb-after-capture-action))
 
 (provide 'pb-org)
+;;; pb-org.el ends here.

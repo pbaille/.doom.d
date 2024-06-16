@@ -1,4 +1,15 @@
-;;; pb/pb-udp.el -*- lexical-binding: t; -*-
+;;; pb/pb-udp.el --- udp helpers -*- lexical-binding: t; -*-
+
+;; Author: Pierre Baille
+;; URL: https://github.com/pbaille
+;; Version: 0.0.1
+;; Package-Requires: ((emacs "29.1") (json))
+
+;;; Commentary:
+
+;; udp helpers.
+
+;;; Code:
 
 (require 'json)
 
@@ -75,3 +86,4 @@
                        (json-encode-plist '(:id 2 :op :print))))
 
 (provide 'pb-udp)
+;;; pb-udp.el ends here.

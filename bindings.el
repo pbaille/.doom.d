@@ -11,11 +11,10 @@
       "s-j" #'consult-buffer
       "s-k" #'ibuffer
 
-      "s-C-s" #'pb/toggle-sidebars
+      "s-C-s" #'pb-sidebars/toggle
 
       "s-t" #'hs-hide-all
       "s-T" #'hs-show-all
-      "s-M" (defun pb/display-messages () (interactive) (display-buffer "*Messages*"))
 
       "C-<tab>" #'company-complete
       "M-v" #'consult-yank-from-kill-ring
@@ -52,7 +51,7 @@
       ;; some extras
       :i "C-S-h" #'paredit-backward-delete
       :i "C-S-l" #'paredit-forward-delete
-      :i "C-w" #'pb/insert-open-paren
+      :i "C-w" #'pb-misc_insert-open-paren
       :i "TAB" #'consult-company)
 
 (map! :i "s-1" #'+workspace/switch-to-0
@@ -62,7 +61,7 @@
       :i "s-5" #'+workspace/switch-to-4)
 
 (map! :n "g f" #'dired-sidebar-jump-to-sidebar
-      :n "g b" #'pb-ibuffer-sidebar-focus)
+      :n "g b" #'pb-ibuffer_sidebar-focus)
 
 (map! :leader
 
@@ -78,13 +77,13 @@
       "o d" #'dired-jump
       "SPC" #'consult-buffer
       "t s" #'dired-sidebar-toggle-sidebar
-      "t S" #'pb-dired-sidebar-reset
+      "t S" #'pb-dired_sidebar-reset
       "t t" #'ibuffer-sidebar-toggle-sidebar
       "t h" #'hs-toggle-hiding
 
       ;; buffers
       :desc "kill all dired buffers"
-      "b D" #'pb/kill-all-dired-buffers
+      "b D" #'pb-misc_kill-all-dired-buffers
       ;; exchange default doom bindings 'SPC b b' and 'SPC b B'
       :desc "consult buffer"
       "b b" #'consult-buffer
@@ -115,14 +114,14 @@
       (:map fennel-mode-map
             "r" #'fennel-repl
             "L" #'fennel-reload
-            "l" #'pb/fennel-eval-buffer
+            "l" #'pb-fennel_eval-buffer
             "m" #'fennel-macroexpand
             "d" #'fennel-show-documentation
             "g" #'fennel-find-definition
             "G" #'fennel-find-module-definition
-            "c" #'pb/compile-fennel
+            "c" #'pb-fennel_compile-fennel
             "R" #'reapl-mode
-            "I" #'pb/install-fennel-script)
+            "I" #'pb-fennel_install-fennel-script)
       (:map reapl-mode-map
             "'" #'reapl-mode_connect
             "r" #'reapl-mode_repl
@@ -135,7 +134,7 @@
        :n "s-i" #'cider-inspect-last-result)
 
       (:map emacs-lisp-mode-map
-       :i "C-p" #'pb/insert-package-prefix
+       :i "C-p" #'pb-elisp_insert-package-prefix
        :n "C-e" #'pb-elisp_send-expression-to-ielm)
 
       (:map cider-inspector-mode-map
@@ -150,9 +149,6 @@
       (:map cider-mode-map
        :n "ö" (lambda () (interactive) (save-buffer) (cider-load-buffer))
        :n "s-r" (lambda () (interactive) (save-buffer) (cider-ns-refresh)))
-
-      (:map reaper-mode-map
-       :n "s-e" #'pb/send-fnl-s-expression-to-reaper-socket-repl)
 
       (:map reapl-mode-map
        :i "TAB" #'reapl-mode_complete-symbol-at-point)
@@ -180,19 +176,19 @@
        :n "l" #'dired-find-file
        :n "K" #'dired-subtree-up
        :n "s-k" #'kill-this-buffer
-       :n "C-o" #'pb/dired-create-or-open-dotorg-file)
+       :n "C-o" #'pb-dired_create-or-open-dotorg-file)
 
       (:map  dired-sidebar-mode-map
        :n "h" #'dired-sidebar-up-directory
-       :n "l" #'pb-dired-sidebar-dwim ;#'dired-sidebar-find-file
+       :n "l" #'pb-dired_sidebar-dwim ;#'dired-sidebar-find-file
        :n "q" #'dired-sidebar-hide-sidebar
-       :n "Q" #'pb/kill-all-dired-buffers
+       :n "Q" #'pb-misc_kill-all-dired-buffers
        :n "K" #'dired-subtree-up
-       :n "<mouse-1>" #'pb-dired-sidebar-mouse-dwim)
+       :n "<mouse-1>" #'pb-dired_sidebar-mouse-dwim)
 
       (:map ibuffer-sidebar-mode-map
-       :n "RET" #'pb-ibuffer-sidebar-visit-buffer
-       :n "l" #'pb-ibuffer-sidebar-visit-buffer)
+       :n "RET" #'pb-ibuffer_sidebar-visit-buffer
+       :n "l" #'pb-ibuffer_sidebar-visit-buffer)
 
       (:map typescript-mode-map
        :ni "C-S-p" #'prettier-js
