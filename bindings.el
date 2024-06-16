@@ -11,7 +11,7 @@
       "s-j" #'consult-buffer
       "s-k" #'ibuffer
 
-      "s-C-s" #'pb-sidebars/toggle
+      "s-C-s" #'pb-sidebars_toggle
 
       "s-t" #'hs-hide-all
       "s-T" #'hs-show-all
