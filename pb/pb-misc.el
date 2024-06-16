@@ -80,12 +80,17 @@
 
 (defun pb-misc_window-split (buffer)
   "Split the current window vertically, displaying BUFFER."
-  (let* ((b1 (current-buffer))
-         (b2 (or (get-buffer buffer)
-                 b1)))
-    (switch-to-buffer b2)
-    (evil-window-split (* 2 (/ (window-body-height) 3)) nil)
-    (switch-to-buffer b1)))
+  (let* ((below-window (window-in-direction 'below))
+         (already-there (when below-window
+                          (eq (window-buffer below-window)
+                              (get-buffer buffer)))))
+    (if (not already-there)
+        (let* ((b1 (current-buffer))
+               (b2 (or (get-buffer buffer)
+                       b1)))
+          (switch-to-buffer b2)
+          (evil-window-split (* 2 (/ (window-body-height) 3)) nil)
+          (switch-to-buffer b1)))))
 
 (provide 'pb-misc)
 ;;; pb-misc.el ends here.
