@@ -39,6 +39,7 @@
 (load "~/.doom.d/pb/pb-gptel.el")
 (load "~/.doom.d/pb/pb-ibuffer.el")
 (load "~/.doom.d/pb/pb-misc.el")
+(load "~/.doom.d/pb/pb-reapl.el")
 (load "~/.doom.d/pb/pb-sidebars.el")
 (load "~/.doom.d/pb/pb-templates.el")
 (load "~/.doom.d/pb/pb-udp.el")
