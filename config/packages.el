@@ -30,6 +30,24 @@
 
 (use-package consult
   :config
+  (defun consult--buffer-sort-file-first (buffers)
+         (sort buffers (lambda (a b)
+                         (let ((file-a (buffer-file-name a))
+                               (file-b (buffer-file-name b)))
+                           (if file-a
+                               (if file-b
+                                   ;; If both buffers visit files, sort alphabetically.
+                                   (< (or (seq-position buffers a) most-positive-fixnum)
+                                      (or (seq-position buffers b) most-positive-fixnum))
+                                 ;; Buffer A visits a file, but buffer B doesn't.
+                                 t)
+                             ;; Buffer A doesn't visit a file.
+                             (if file-b
+                                 ;; Buffer B visits a file, so buffer A goes at the end.
+                                 nil
+                               ;; Neither buffer visits a file, so sort alphabetically.
+                               (string-lessp (buffer-name a) (buffer-name b))))))))
+
   (setq consult--source-buffer
         `(:name     "Buffer"
           :narrow   (?b . "Buffer")
