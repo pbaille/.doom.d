@@ -62,7 +62,7 @@
       :i "s-5" #'+workspace/switch-to-4)
 
 (map! :n "g f" #'dired-sidebar-jump-to-sidebar
-      :n "g b" #'my-ibuffer-sidebar-focus)
+      :n "g b" #'pb-ibuffer-sidebar-focus)
 
 (map! :leader
 
@@ -78,7 +78,7 @@
       "o d" #'dired-jump
       "SPC" #'consult-buffer
       "t s" #'dired-sidebar-toggle-sidebar
-      "t S" #'my-dired-sidebar-reset
+      "t S" #'pb-dired-sidebar-reset
       "t t" #'ibuffer-sidebar-toggle-sidebar
       "t h" #'hs-toggle-hiding
 
@@ -136,7 +136,7 @@
 
       (:map emacs-lisp-mode-map
        :i "C-p" #'pb/insert-package-prefix
-       :n "C-e" #'my-elisp_send-expression-to-ielm)
+       :n "C-e" #'pb-elisp_send-expression-to-ielm)
 
       (:map cider-inspector-mode-map
        :n "j" #'cider-inspector-next-inspectable-object
@@ -184,15 +184,15 @@
 
       (:map  dired-sidebar-mode-map
        :n "h" #'dired-sidebar-up-directory
-       :n "l" #'my-dired-sidebar-dwim ;#'dired-sidebar-find-file
+       :n "l" #'pb-dired-sidebar-dwim ;#'dired-sidebar-find-file
        :n "q" #'dired-sidebar-hide-sidebar
        :n "Q" #'pb/kill-all-dired-buffers
        :n "K" #'dired-subtree-up
-       :n "<mouse-1>" #'my-dired-sidebar-mouse-dwim)
+       :n "<mouse-1>" #'pb-dired-sidebar-mouse-dwim)
 
       (:map ibuffer-sidebar-mode-map
-       :n "RET" #'my-ibuffer-sidebar-visit-buffer
-       :n "l" #'my-ibuffer-sidebar-visit-buffer)
+       :n "RET" #'pb-ibuffer-sidebar-visit-buffer
+       :n "l" #'pb-ibuffer-sidebar-visit-buffer)
 
       (:map typescript-mode-map
        :ni "C-S-p" #'prettier-js

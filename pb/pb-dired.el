@@ -1,10 +1,10 @@
-;;; pb/my-dired.el -*- lexical-binding: t; -*-
+;;; pb/pb-dired.el -*- lexical-binding: t; -*-
 
 (require 'evil)
 (require 'dired)
 (require 'dired-subtree)
 
-(defun my-dired-sidebar-dwim ()
+(defun pb-dired-sidebar-dwim ()
   "Visit the buffer on this line.
 If optional argument SINGLE is non-nil, then also ensure there is only
 one window."
@@ -19,7 +19,7 @@ one window."
             (windmove-right)
             (switch-to-buffer buffer)))))))
 
-(defun my-dired-sidebar-mouse-dwim (event)
+(defun pb-dired-sidebar-mouse-dwim (event)
   "Perform an action on mouse click in dired-sidebar."
   (interactive "e")
   ;; Perform your desired action here, such as opening the file or executing a command.
@@ -27,11 +27,11 @@ one window."
 
   ;; Preserve the cursor position
   (mouse-set-point event)
-  (print "my-dired-mouse")
-  (my-dired-sidebar-dwim)
+  (print "pb-dired-mouse")
+  (pb-dired-sidebar-dwim)
   )
 
-(defun my-dired-sidebar-close-all ()
+(defun pb-dired-sidebar-close-all ()
   "Close all dired-sidebar buffers before exiting Emacs."
   (interactive)
   (walk-windows
@@ -43,15 +43,15 @@ one window."
     (when (string-match-p "^:~/" (buffer-name buf))
       (kill-buffer buf))))
 
-(advice-add #'doom/quicksave-session :before #'my-dired-sidebar-close-all)
-(add-hook 'kill-emacs-hook #'my-dired-sidebar-close-all)
+(advice-add #'doom/quicksave-session :before #'pb-dired-sidebar-close-all)
+(add-hook 'kill-emacs-hook #'pb-dired-sidebar-close-all)
 
-(defun my-dired-sidebar-reset ()
+(defun pb-dired-sidebar-reset ()
   (interactive)
   (pb/kill-all-dired-buffers)
   (dired-sidebar-toggle-sidebar))
 
-(advice-add #'dired-sidebar-mouse-subtree-cycle-or-find-file :override #'my-dired-sidebar-mouse-dwim)
+(advice-add #'dired-sidebar-mouse-subtree-cycle-or-find-file :override #'pb-dired-sidebar-mouse-dwim)
 
 (defvar file-renamings-alist nil
   "An alist of all renamings made in Dired. In an attempt to repair broken links.")
@@ -88,10 +88,10 @@ one window."
         (unless (looking-at-p (format "^%s" header))
           (insert header))))))
 
-(defun my-dired-rename-file-advice (file destination ignored)
+(defun pb-dired-rename-file-advice (file destination ignored)
   "Advice function to save all renamings to `file-renamings-alist`."
   (push (cons file destination) file-renamings-alist))
 
-(advice-add 'dired-rename-file :after #'my-dired-rename-file-advice)
+(advice-add 'dired-rename-file :after #'pb-dired-rename-file-advice)
 
-(provide 'my-dired)
+(provide 'pb-dired)

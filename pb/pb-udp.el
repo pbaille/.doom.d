@@ -34,8 +34,8 @@
 
 (defun pb-udp_start-listening (host port handler)
   (let ((proc (make-network-process
-               :name "my-udp-proc"
-               :buffer "*my-udp-proc*"
+               :name "pb-udp-proc"
+               :buffer "*pb-udp-proc*"
                :host host
                :service port
                :server t

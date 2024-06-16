@@ -1,6 +1,6 @@
 ;;; config/lisp.el -*- lexical-binding: t; -*-
 
-(require 'my-fold)
+(require 'pb-fold)
 
 (defvar pb/lisp-modes
   '(emacs-lisp-mode-map clojure-mode-map fennel-mode-map scheme-mode-map racket-mode-map))

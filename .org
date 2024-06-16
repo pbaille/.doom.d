@@ -3,3 +3,13 @@
 ** doom files of interest
 
 [[file:~/.emacs.d/modules/config/default/+evil-bindings.el::;;; config/default/+bindings.el -*- lexical-binding: t; -*-][builtin evil bindings]]
+
+** todos
+
+*** get rid of popup buffer for repls
+just split the current buffer for the repl
+*** refactor all pb-*.el libs into pb-*.el
+*** gptel integration
+prompt in mini buffer
+send the thing at point
+...

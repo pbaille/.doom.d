@@ -1,6 +1,6 @@
-;;; pb/my-fold.el -*- lexical-binding: t; -*-
+;;; pb/pb-fold.el -*- lexical-binding: t; -*-
 
-(defvar my-fold-top-forms '(do progn))
+(defvar pb-fold-top-forms '(do progn))
 
 (defun pb/symex-fw-forced ()
   (interactive)
@@ -13,19 +13,19 @@
               (pb/symex-fw-forced)))
       :done)))
 
-(defmacro my-fold/top-form-p ()
+(defmacro pb-fold/top-form-p ()
   "Enclose each element of LST in parentheses."
   `(or ,@(mapcar (lambda (elem) `(looking-at-p ,(format "(%s " elem)))
-                 my-fold-top-forms)))
+                 pb-fold-top-forms)))
 
 (defun pb/semi-fold-step ()
-  (if (my-fold/top-form-p)
+  (if (pb-fold/top-form-p)
       (progn (hs-hide-level 1)
              (symex-go-up 1)
              (pb/symex-fw-forced))
     (pb/symex-fw-forced)))
 
-(defvar my-fold-semi-folded nil)
+(defvar pb-fold-semi-folded nil)
 
 (defun pb/semi-fold ()
   (interactive)
@@ -34,14 +34,14 @@
     (symex-goto-lowest)
     (symex-goto-first)
     (while (pb/semi-fold-step))
-    (setq-local my-fold-semi-folded t)
+    (setq-local pb-fold-semi-folded t)
     (goto-char p)))
 
 (defun pb/toggle-semi-fold ()
   (interactive)
-  (if my-fold-semi-folded
+  (if pb-fold-semi-folded
       (progn (hs-show-all)
-             (setq-local my-fold-semi-folded nil))
+             (setq-local pb-fold-semi-folded nil))
     (pb/semi-fold)))
 
-(provide 'my-fold)
+(provide 'pb-fold)

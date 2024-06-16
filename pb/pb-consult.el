@@ -1,4 +1,4 @@
-;;; pb/my-consult.el -*- lexical-binding: t; -*-
+;;; pb/pb-consult.el -*- lexical-binding: t; -*-
 
 (require 'consult)
 

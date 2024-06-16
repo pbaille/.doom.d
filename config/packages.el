@@ -215,12 +215,12 @@
 
   ;; You can overwrite all the codeium configs!
   ;; for example, we recommend limiting the string sent to codeium for better performance
-  (defun my-codeium/document/text ()
+  (defun pb-codeium/document/text ()
     (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (min (+ (point) 1000) (point-max))))
   ;; if you change the text, you should also change the cursor_offset
   ;; warning: this is measured by UTF-8 encoded bytes
-  (defun my-codeium/document/cursor_offset ()
+  (defun pb-codeium/document/cursor_offset ()
     (codeium-utf8-byte-length
      (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (point))))
-  (setq codeium/document/text 'my-codeium/document/text)
-  (setq codeium/document/cursor_offset 'my-codeium/document/cursor_offset))
+  (setq codeium/document/text 'pb-codeium/document/text)
+  (setq codeium/document/cursor_offset 'pb-codeium/document/cursor_offset))

@@ -1,6 +1,6 @@
-;;; pb/my-elisp.el -*- lexical-binding: t; -*-
+;;; pb/pb-elisp.el -*- lexical-binding: t; -*-
 
-(defun my-elisp_send-expression-to-ielm ()
+(defun pb-elisp_send-expression-to-ielm ()
   "Evaluate the expression at point and print the result in the IELM buffer."
   (interactive)
   (if (get-buffer "*ielm*")
@@ -11,4 +11,4 @@
           (insert expr)
           (ielm-send-input)))))
 
-(provide 'my-elisp)
+(provide 'pb-elisp)

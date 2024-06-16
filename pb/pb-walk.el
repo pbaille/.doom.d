@@ -1,4 +1,4 @@
-;;; pb/my-walk.el -*- lexical-binding: t; -*-
+;;; pb/pb-walk.el -*- lexical-binding: t; -*-
 
 (defun pb-walk (x inner outer)
   (if (proper-list-p x)

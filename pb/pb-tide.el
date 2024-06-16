@@ -1,4 +1,4 @@
-;;; pb/my-tide.el -*- lexical-binding: t; -*-
+;;; pb/pb-tide.el -*- lexical-binding: t; -*-
 
 (require 'tide)
 
@@ -8,9 +8,9 @@
                       (string-prefix-p parent-dir f))
                     files))
 
-(setq my-tide-directory-filter "")
+(setq pb-tide-directory-filter "")
 
 (defun tide-filenames-filter (files)
   (files-filter
-   my-tide-directory-filter
+   pb-tide-directory-filter
    files))
