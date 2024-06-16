@@ -12,15 +12,40 @@
 ;;; Code:
 
 (require 'fennel-mode)
+(require 'pb-misc)
 
 ;; Lua installation paths
 (defvar pb-fennel_lua-5-3-install-path "/usr/local/lib/lua/5.3")
 (defvar pb-fennel_lua-5-4-install-path "/usr/local/lib/lua/5.4")
 
+(defun pb-fennel_repl-start ()
+  "Start a fennel repl."
+  (let* ((repl-buffer (make-comint-in-buffer
+                       fennel-repl--buffer-name
+                       fennel-repl--buffer-name
+                       "fennel" nil "--repl")))
+    (setq fennel-repl--last-buffer (current-buffer))
+    (setq fennel-repl--buffer repl-buffer)
+    (setq inferior-lisp-buffer repl-buffer)
+    (with-current-buffer repl-buffer
+      (fennel-repl-mode))
+    repl-buffer))
+
 (defun pb-fennel_repl ()
-  "Start a new Fennel REPL."
+  "Start fennel repl if not existing, splitting window."
   (interactive)
-  (fennel-repl fennel-program))
+  (pb-misc_window-split
+   (or (and (buffer-live-p fennel-repl--buffer)
+            fennel-repl--buffer)
+       (pb-fennel_repl-start))))
+
+(defun pb-fennel_quit ()
+  "Close fennel repl and associated windows."
+  (interactive)
+  (when (buffer-live-p fennel-repl--buffer)
+    (mapc #'delete-window (get-buffer-window-list))
+    (delete-process (get-buffer-process fennel-repl--buffer))
+    (kill-buffer fennel-repl--buffer)))
 
 (defun pb-fennel_reload ()
   "Save the buffer and reload it."
