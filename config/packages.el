@@ -142,10 +142,17 @@
   (setq-default gptel-model "gpt-4o")
   (map! :ni "s-g b" #'gptel)
   (map! :ni "s-g g" #'gptel-menu)
-  ;'(transient-suffix-put 'gptel-menu (kbd "RET") :key "C-<return>")
   (map! (:map gptel-mode-map
-              :i "C-e" #'gptel-send
-              :ni "C-m" #'gptel-menu)))
+         :i "C-e" #'gptel-send
+         :ni "C-m" #'gptel-menu))
+
+  ;; the only way I found for redefining the broken RET key of the menu to C-RET
+  ;; the problem is that gptel-menu is autoloaded,
+  ;; it has to be called once before the rebinding is possible.
+  (defun pb-gptel-change-return-key-in-menu ()
+    (transient-suffix-put 'gptel-menu (kbd "RET") :key "C-<return>")
+    (advice-remove #'gptel-menu #'pb-gptel-change-return-key-in-menu))
+  (advice-add #'gptel-menu :after #'pb-gptel-change-return-key-in-menu))
 
 (use-package tide
   :config
