@@ -140,12 +140,6 @@
   (setq gptel-default-mode 'org-mode)
   ;; bindings
   (setq-default gptel-model "gpt-4o")
-  (map! :ni "s-g b" #'gptel)
-  (map! :ni "s-g g" #'gptel-menu)
-  (map! (:map gptel-mode-map
-         :i "C-e" #'gptel-send
-         :ni "C-m" #'gptel-menu))
-
   ;; the only way I found for redefining the broken RET key of the menu to C-RET
   ;; the problem is that gptel-menu is autoloaded,
   ;; it has to be called once before the rebinding is possible.
