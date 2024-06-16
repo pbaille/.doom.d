@@ -52,13 +52,13 @@
   (("s-r" . pb-fennel_fennel-repl))
   :config
   (setq fennel-mode-switch-to-repl-after-reload nil)
-  (set-popup-rules!
+  '(set-popup-rules!
     '(("^\\*Fennel REPL" :quit nil :ttl nil))))
 
 (use-package reapl-mode
   :config
   (require 'reapl-symex)
-  (set-popup-rules!
+  '(set-popup-rules!
     '(("^\\*reapl-evaluation\\*" :quit nil :ttl nil)))
   (set-lookup-handlers! '(reapl-mode)
     :documentation #'reapl-mode_doc-symbol-at-point)
