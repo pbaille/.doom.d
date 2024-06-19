@@ -1,83 +1,119 @@
-;;; pb/km.el -*- lexical-binding: t; -*-
+;;; km.el --- utils -*- lexical-binding: t; -*-
+
+;; Author: Pierre Baille
+;; URL: https://github.com/pbaille
+;; Version: 0.0.1
+;; Package-Requires: ((emacs "29.1"))
+
+;;; Commentary:
+
+;; Utils.
+
+;;; Code:
 
 (require 'cl-lib)
-
-(require 'sequences)
-(require 'names)
+(require 'sq)
 
 (defun km? (m)
+  "Check if M is a keyword map."
   (and (listp m)
        (or (eq nil m)
            (and (keywordp (car m))
                 (km? (cddr m))))))
 
 (defun km (&rest xs)
+  "Build a keyword map from XS.
+Throws an error if XS does not form a valid keyword map."
   (if (km? xs)
       xs
-    (error "km build bad args")))
+    (error (format "Bad argument to km: %s" xs))))
 
-(defun km-entries (m)
+(defun km_entries (m)
+  "Return the entries of the keyword map M as pairs (key . value)."
+  (if (consp m)
+      (cons (cons (car m) (cadr m))
+            (km_entries (cddr m)))))
+
+(defun km_into (m entries)
+  "Add some ENTRIES to M (plist/keyword-map)."
+  (cl-reduce (lambda (m entry)
+               (plist-put m (car entry) (cdr entry)))
+             entries
+             :initial-value m))
+
+(defun km_keys (m)
+  "Return the keys of the keyword map M."
   (and (km? m)
-       (sq-partition 2 2 m)))
+       (mapcar #'car (km_entries m))))
 
-(defun km-keys (m)
+(defun km_vals (m)
+  "Return the values of the keyword map M."
   (and (km? m)
-       (cl-map (lambda (entry) (car entry)) (entries m))))
+       (mapcar #'cdr (km_entries m))))
 
-(defun km-vals (m)
-  (and (km? m)
-       (cl-map (lambda (entry) (cadr entry)) (entries m))))
-
-(defun km-get-in (m path)
-  (if path
-      (let ((found (if (km? m) (plist-get m (car path)))))
-        (if found
-            (km-get-in found (cdr path))))
+(defun km_get-in (m path)
+  "Get the value at PATH in the nested keyword map M."
+  (if (and m path)
+      (km_get-in (plist-get m (car path)) (cdr path))
     m))
 
-(defun km-get (m at)
-  (if (listp at)
-      (km-get-in m at)
-    (if (keywordp at)
-        (plist-get m at))))
+(defun km_get (m at)
+  "Get the value at AT in the keyword map M.
+If AT is a list, get the value in a nested map."
+  (cond ((listp at) (km_get-in m at))
+        ((keywordp at) (plist-get m at))))
 
-(defun km-put-in (m path v)
+(defun km_put-in (m path v)
+  "Associate PATH in the nested keyword map M with value V."
   (if path
       (let ((p1 (car path)))
         (if (km? m)
-            (plist-put m p1 (km-put-in (plist-get m p1) (cdr path) v))))
+            (plist-put m p1 (km_put-in (plist-get m p1) (cdr path) v))))
     v))
 
-(defun km-put1 (m at v)
-  (km-put-in (copy-tree m)
-             (if (listp at) at (if (keywordp at) (list at)))
+(defun km_put1 (m at v)
+  "Put value V at AT in a copy of keyword map M.
+If AT is a list, put the value in a nested map."
+  (km_put-in m
+             (cond ((listp at) at)
+                   ((keywordp at) (list at)))
              v))
 
-(defun km-put (m &rest xs)
+(defun km_put (m &rest xs)
+  "Associates keys with values in keyword map M using XS."
   (cl-reduce (lambda (m entry)
-               (km-put1 m (car entry) (cadr entry)))
-             (sq-partition 2 2 xs)
+               (km_put1 m (car entry) (cadr entry)))
+             (sq_partition 2 2 xs)
              :initial-value m))
 
-(defun km-upd-in (m path f)
+(defun km_upd-in (m path f)
+  "Update the value at PATH in the nested keyword map M by applying function F."
   (if path
       (let ((p1 (car path)))
         (if (km? m)
-            (plist-put m p1 (km-upd-in (plist-get m p1) (cdr path) f))))
+            (plist-put m p1 (km_upd-in (plist-get m p1) (cdr path) f))))
     (funcall f m)))
 
-(defun km-upd1 (m at f)
-  (km-upd-in (copy-tree m)
-             (if (listp at) at (if (keywordp at) (list at)))
+(defun km_upd1 (m at f)
+  "Update value at AT in a copy of keyword map M by applying function F.
+If AT is a list, update the value in a nested map."
+  (km_upd-in m
+             (cond ((listp at) at)
+                   ((keywordp at) (list at)))
              f))
 
-(defun km-upd (m &rest xs)
+(defun km_upd (m &rest xs)
+  "Update the keyword map M using XS.
+XS is a list alternating paths and update-fns."
   (cl-reduce (lambda (m entry)
-               (km-upd1 m (car entry) (cadr entry)))
-             (sq-partition 2 2 xs)
+               (km_upd1 m (car entry) (cadr entry)))
+             (sq_partition 2 2 xs)
              :initial-value m))
 
-(defmacro km-letk (binding &rest body)
+(defmacro km_let (binding &rest body)
+  "Let binding for keyword maps.
+BINDING specifies variables to be bound from a keyword map,
+and BODY is the code to execute in the context of those bindings."
   (let* ((pat (car binding))
          (pat (if (equal :as (car pat))
                    (list (cadr pat) (cddr pat))
@@ -86,23 +122,29 @@
          (ks (cadr pat))
          (seed (cadr binding)))
     `(let* ((,seedsym ,seed)
-           ,@(cl-mapcar (lambda (k) (list k `(plist-get ,seedsym ,(symbol-to-keyword k))))
-                        ks))
+            ,@(mapcar (lambda (k) (list k `(plist-get ,seedsym ,(symbol-to-keyword k))))
+                      ks))
       ,@body)))
 
-(defmacro fnk (ks &rest body)
+(defmacro km_lambda (ks &rest body)
+  "Define a function that takes a keyword map as its sole argument.
+KS specifies the expected keys, and BODY is the code to execute."
   (let ((seed (gensym)))
     `(lambda (,seed)
-       (km-letk (,ks ,seed)
+       (km_let (,ks ,seed)
                 ,@body))))
 
-(defmacro defnk (name ks &rest body)
+(defmacro km_defun (name ks &rest body)
+  "Define a named function that takes a keyword map as its sole argument.
+NAME is the function name, KS specifies the expected keys,
+and BODY is the code to execute."
   (let ((seed (gensym)))
     `(defun ,name (,seed)
-       (km-letk (,ks ,seed)
-                ,@body))))
+       (km_let (,ks ,seed)
+               ,@body))))
 
-(defun km-test ()
+(defun km_test ()
+  "Run some assertions for the keyword map functions."
   (cl-assert
    (and (and (km? ())
              (km? (list :e 2 :d 4)))
@@ -111,47 +153,53 @@
                  (km? (list 4))))))
 
   (cl-assert
-   (and (eq (km-get (km :a (km :b 45))
+   (and (eq (km_get (km :a (km :b 45))
                     (list :a :b))
             45)
 
-        (eq (km-get (km :a 2)
+        (eq (km_get (km :a 2)
                     :a)
             2)))
 
   (cl-assert
-   (and (equal (km-put '(:a 1 :b (:c 3))
+   (and (equal (km_put '(:a 1 :b (:c 3))
                        (list :b :c)
                        78)
                '(:a 1 :b (:c 78)))
 
-        (equal (km-put-in () (list :a :b :c) 3)
+        (equal (km_put-in () (list :a :b :c) 3)
                '(:a (:b (:c 3))))
 
-        (equal (km-put (km :a 1 :b (km :c 3))
+        (equal (km_put (km :a 1 :b (km :c 3))
                        (list :b :d :e)
                        78)
                '(:a 1 :b (:c 3 :d (:e 78))))))
 
   (cl-assert
-   (and (equal (km-upd '(:a 1) :a (lambda (x) (+ x 1)))
+   (and (equal (km_upd '(:a 1) :a (lambda (x) (+ x 1)))
                '(:a 2))
-        (equal (km-upd '(:a 1 :b (:c 0)) '(:b :c) (lambda (x) (+ x 1)))
+        (equal (km_upd '(:a 1 :b (:c 0)) '(:b :c) (lambda (x) (+ x 1)))
                '(:a 1 :b (:c 1)))
-        (equal (km-upd '(:a 1) '(:b :c) (lambda (x) (or x 32)))
+        (equal (km_upd '(:a 1) '(:b :c) (lambda (x) (or x 32)))
                '(:a 1 :b (:c 32)))))
 
   (cl-assert
-   (equal (km-letk ((a b) (km :a 1 :b 2))
-                   (+ a b))
+   (equal (km_let ((a b) (km :a 1 :b 2))
+                  (+ a b))
           3)
-   (equal (km-letk ((:as m a b) (km :a 1 :b 2))
-                   (km-put m :ret (+ a b)))
+   (equal (km_let ((:as m a b) (km :a 1 :b 2))
+                  (km_put m :ret (+ a b)))
           (km :a 1 :b 2 :ret 3))
-   (equal (funcall (fnk (a b) (+ a b))
+   (equal (funcall (km_lambda (a b) (+ a b))
                    (km :a 1 :b 3))
-          4)))
+          4))
 
-(km-test)
+  (cl-assert
+   (equal (km_into (km :a 2)
+                   (km_entries (km :b 2 :c 4)))
+          (km :a 2 :b 2 :c 4))))
+
+(km_test)
 
 (provide 'km)
+;;; km.el ends here.

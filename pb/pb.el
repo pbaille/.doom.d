@@ -1,49 +1,53 @@
-;;; pb.el --- Multipurpose personal package -*- lexical-binding: t; -*-
+;;; pb.el --- utils -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2023 Pierre Baille
-
-;; Author: Pierre Baille <pierrebaille@gmail.com>
-;; Keywords: lisp
+;; Author: Pierre Baille
+;; URL: https://github.com/pbaille
 ;; Version: 0.0.1
-;; Package-Requires: ((emacs "25.1"))
-;; URL: https://github.com/pbaille/pb.el
-
-;; This program is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
-
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
-
-;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; Package-Requires: ((emacs "29.1"))
 
 ;;; Commentary:
 
-;;; personal utility belt
+;; Utils.
 
 ;;; Code:
 
-(load "~/.doom.d/pb/km.el")
-(load "~/.doom.d/pb/pb-sexpr.el")
+(defun pb_first (s)
+  "Return the first element of the sequence S."
+  (car s))
 
-(load "~/.doom.d/pb/pb-cider.el")
-(load "~/.doom.d/pb/pb-symex.el")
-(load "~/.doom.d/pb/pb-dired.el")
-(load "~/.doom.d/pb/pb-elisp.el")
-(load "~/.doom.d/pb/pb-fennel.el")
-(load "~/.doom.d/pb/pb-fold.el")
-(load "~/.doom.d/pb/pb-gptel.el")
-(load "~/.doom.d/pb/pb-ibuffer.el")
-(load "~/.doom.d/pb/pb-misc.el")
-(load "~/.doom.d/pb/pb-reapl.el")
-(load "~/.doom.d/pb/pb-sidebars.el")
-(load "~/.doom.d/pb/pb-templates.el")
-(load "~/.doom.d/pb/pb-udp.el")
-(load "~/.doom.d/pb/pb-walk.el")
+(defun pb_second (s)
+  "Return the second element of the sequence S."
+  (cadr s))
+
+(defun pb_third (s)
+  "Return the third element of the sequence S."
+  (caddr s))
+
+(defun pb_symbol-to-keyword (sym)
+  "Convert the symbol SYM to a keyword."
+  (intern (concat ":" (symbol-name sym))))
+
+
+(defun pb_keyword-name (kw)
+  "Convert the symbol SYM to a keyword."
+  (if (keywordp kw)
+      (substring (symbol-name kw) 1)))
+
+
+(defun pb_keyword-to-symbol (kw)
+  "Convert the symbol SYM to a keyword."
+  (if-let ((name (keyword-name kw)))
+      (intern name)
+    nil))
+
+(defun pb_test-unprefixed ()
+  "Run some assertions about this file"
+  (cl-assert
+   (and (equal "pierre" (keyword-name :pierre))
+        (equal 'pierre (keyword-to-symbol :pierre))
+        (equal :pierre (symbol-to-keyword 'pierre)))))
+
+(pb_test)
 
 (provide 'pb)
-;;; pb.el ends here
+;;; pb.el ends here.

@@ -25,43 +25,43 @@
 '(progn (switch-to-buffer "scratch.org")
         (goto-char (org-find-olp (list "~/org/scratch.org" "top" "three" "3.2"))))
 
-(defnk pb-org_find-or-create-olp-aux
-  (:as opts
-       file current-path remaining-path)
-  (let* ((next-path (append current-path (list (car remaining-path))))
-         (next-marker (ignore-errors (org-find-olp (cons file next-path)))))
-    (if next-marker
-        (let* ((remaining-next (cdr remaining-path))
-               (next-opts (km-put opts
-                                  :marker next-marker
-                                  :current-path next-path
-                                  :remaining-path remaining-next)))
-          (if remaining-next
-              (pb-org_find-or-create-olp-aux next-opts)
-            next-opts))
-      opts)))
+(km_defun pb-org_find-or-create-olp-aux
+          (:as opts
+               file current-path remaining-path)
+          (let* ((next-path (append current-path (list (car remaining-path))))
+                 (next-marker (ignore-errors (org-find-olp (cons file next-path)))))
+            (if next-marker
+                (let* ((remaining-next (cdr remaining-path))
+                       (next-opts (km_put opts
+                                          :marker next-marker
+                                          :current-path next-path
+                                          :remaining-path remaining-next)))
+                  (if remaining-next
+                      (pb-org_find-or-create-olp-aux next-opts)
+                    next-opts))
+              opts)))
 
 (defun pb-org_find-or-create-olp (file path)
   "Find or create outline path PATH in FILE."
-  (km-letk ((remaining-path marker)
-            (pb-org_find-or-create-olp-aux
-             (km :file file
-                 :marker 0
-                 :current-path ()
-                 :remaining-path path)))
+  (km_let ((remaining-path marker)
+           (pb-org_find-or-create-olp-aux
+            (km :file file
+                :marker 0
+                :current-path ()
+                :remaining-path path)))
 
-           (switch-to-buffer (get-file-buffer file))
-           (goto-char marker)
-           (cl-loop for i in remaining-path
-                    do (org-insert-subheading 0) (insert i))))
+          (switch-to-buffer (get-file-buffer file))
+          (goto-char marker)
+          (cl-loop for i in remaining-path
+                   do (org-insert-subheading 0) (insert i))))
 
 (defun pb-org_put (file path content)
   "Put CONTENT at PATH in FILE."
   (pb-org_find-or-create-olp file path)
   (cond ((stringp content) (evil-open-below 1) (insert content))
         ((km? content)
-         (org-set-tags (km-get content :tags))
-         (evil-open-below 1) (insert (km-get content :text)))))
+         (org-set-tags (km_get content :tags))
+         (evil-open-below 1) (insert (km_get content :text)))))
 
 (defvar pb-org_file-infos "~/org/file-infos.org"
   "The main org file to hold file infos.")

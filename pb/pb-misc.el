@@ -78,6 +78,14 @@
       (setq count (1- count)))
     result))
 
+(defun pb-misc_clear-message-buffer ()
+  "Clear the *Messages* buffer."
+  (interactive)
+  (with-current-buffer "*Messages*"
+    (read-only-mode -1)
+    (erase-buffer)
+    (read-only-mode 1)))
+
 (defun pb-misc_window-split (buffer)
   "Split the current window vertically, displaying BUFFER."
   (let* ((below-window (window-in-direction 'below))
