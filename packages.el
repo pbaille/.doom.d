@@ -39,6 +39,8 @@
 (package! org-modern)
 (package! org-download)
 
+(package! outshine)
+
 ;; lisp
 
 (package! symex
