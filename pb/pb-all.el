@@ -7,30 +7,32 @@
 
 ;;; Commentary:
 
-;; Load every pb packages.
+;; require every pb packages.
 
 ;;; Code:
 
-(load "~/.doom.d/pb/pb.el")
+(print "pb loading..")
 
-(load "~/.doom.d/pb/km.el")
-(load "~/.doom.d/pb/sq.el")
+(require 'pb)
+(require 'km)
+(require 'sq)
 
-(load "~/.doom.d/pb/pb-cider.el")
-(load "~/.doom.d/pb/pb-symex.el")
-(load "~/.doom.d/pb/pb-dired.el")
-(load "~/.doom.d/pb/pb-elisp.el")
-(load "~/.doom.d/pb/pb-fennel.el")
-(load "~/.doom.d/pb/pb-fold.el")
-(load "~/.doom.d/pb/pb-gptel.el")
-(load "~/.doom.d/pb/pb-ibuffer.el")
-(load "~/.doom.d/pb/pb-misc.el")
-(load "~/.doom.d/pb/pb-reapl.el")
-(load "~/.doom.d/pb/pb-sexpr.el")
-(load "~/.doom.d/pb/pb-sidebars.el")
-(load "~/.doom.d/pb/pb-templates.el")
-(load "~/.doom.d/pb/pb-udp.el")
-(load "~/.doom.d/pb/pb-walk.el")
+(require 'pb-cider)
+(require 'pb-symex)
+(require 'pb-dired)
+(require 'pb-elisp)
+(require 'pb-fennel)
+(require 'pb-fold)
+(require 'pb-gptel)
+(require 'pb-ibuffer)
+(require 'pb-misc)
+(require 'pb-reapl)
+(require 'pb-sexpr)
+(require 'pb-sidebars)
+(require 'pb-templates)
+(require 'pb-udp)
+(require 'pb-walk)
 
+(print "pb loaded")
 (provide 'pb-all)
 ;;; pb-all.el ends here.

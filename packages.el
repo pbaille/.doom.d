@@ -9,8 +9,8 @@
 (package! clojure-mode :pin "25d713a")
 
 (package! pb
-  :recipe (:local-repo "pb")
-  :files ("pb-all.el"))
+  :recipe (:local-repo "/Users/pierrebaille/.doom.d/pb"
+           :files ("*.el")))
 
 ;; To install SOME-PACKAGE from MELPA, ELPA or emacsmirror:
 

@@ -7,7 +7,7 @@
 
 (load "~/.doom.d/config/packages.el")
 
-(use-package pb)
+(require 'pb-all)
 
 (load "~/.doom.d/config/org.el")
 
