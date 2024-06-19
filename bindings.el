@@ -162,7 +162,7 @@
        :n "s-r" (lambda () (interactive) (save-buffer) (cider-ns-refresh)))
 
       (:map reapl-mode-map
-       :i "TAB" #'reapl-mode_complete-symbol-at-point)
+       :i "TAB" #'reapl-mode_complete)
 
       (:map fennel-repl-mode-map
        "s-r" #'other-window
