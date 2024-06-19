@@ -36,16 +36,16 @@
 
 (defun pb_keyword-to-symbol (kw)
   "Convert the symbol SYM to a keyword."
-  (if-let ((name (keyword-name kw)))
+  (if-let ((name (pb_keyword-name kw)))
       (intern name)
     nil))
 
-(defun pb_test-unprefixed ()
+(defun pb_test ()
   "Run some assertions about this file"
   (cl-assert
-   (and (equal "pierre" (keyword-name :pierre))
-        (equal 'pierre (keyword-to-symbol :pierre))
-        (equal :pierre (symbol-to-keyword 'pierre)))))
+   (and (equal "pierre" (pb_keyword-name :pierre))
+        (equal 'pierre (pb_keyword-to-symbol :pierre))
+        (equal :pierre (pb_symbol-to-keyword 'pierre)))))
 
 (pb_test)
 

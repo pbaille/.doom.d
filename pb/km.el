@@ -122,7 +122,7 @@ and BODY is the code to execute in the context of those bindings."
          (ks (cadr pat))
          (seed (cadr binding)))
     `(let* ((,seedsym ,seed)
-            ,@(mapcar (lambda (k) (list k `(plist-get ,seedsym ,(symbol-to-keyword k))))
+            ,@(mapcar (lambda (k) (list k `(plist-get ,seedsym ,(pb_symbol-to-keyword k))))
                       ks))
       ,@body)))
 
