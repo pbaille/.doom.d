@@ -5,8 +5,8 @@
 ;; on the command line, then restart Emacs for the changes to take effect -- or
 ;; use 'M-x doom/reload'.
 
-(package! cider :pin "9f7e55b")
-(package! clojure-mode :pin "25d713a")
+(package! cider)
+(package! clojure-mode)
 
 (package! pb
   :recipe (:local-repo "/Users/pierrebaille/.doom.d/pb"
@@ -24,13 +24,16 @@
 
 ;; ui
 (package! auto-dim-other-buffers)
+(package! ef-themes)
 (package! dired-sidebar)
+(package! all-the-icons-dired)
+(package! spacious-padding)
 (package! ibuffer-sidebar
   :recipe (:local-repo "packages"
-           :files ("ibuffer-sidebar.el")))
-(package! svg-tag-mode) ;; replace keywords or regular expression with SVG tags.
+           :files ("ibuffer-sidebar.el"))) ;; replace keywords or regular expression with SVG tags.
 
 ;; org
+(package! svg-tag-mode)
 (package! org-superstar)
 (package! org-bullets)
 (package! org-web-tools)
@@ -39,7 +42,6 @@
 '(package! org-gtd)
 (package! org-modern)
 (package! org-download)
-
 (package! outshine)
 
 ;; lisp
