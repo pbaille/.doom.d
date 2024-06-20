@@ -42,7 +42,7 @@
        (use-package clojure-mode
          :config
          (require 'flycheck-clj-kondo)
-         '(add-hook 'clojure-mode-hook 'lsp)
+         (add-hook 'clojure-mode-hook 'lsp)
          (setq lsp-headerline-breadcrumb-enable nil)
          '(copilot-mode nil)))
 
