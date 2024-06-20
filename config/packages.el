@@ -1,10 +1,16 @@
-;; -*- no-byte-compile: t; -*-
+;; -*- no-byte-compile: t; lexical-binding: t; -*-
 ;;; config/packages.el
+
+(use-package spacious-padding
+  :config
+  (setq spacious-padding-widths
+        (plist-put spacious-padding-widths :right-divider-width 15))
+  (spacious-padding-mode 1))
 
 (use-package company
   :config
   (set-company-backend! 'org-mode nil)
-  (setq company-idle-delay 0.3))
+  (setq company-idle-delay 1))
 
 (use-package dired
   :commands (dired dired-jump)
@@ -24,9 +30,13 @@
               (lambda ()
                 (dired-omit-mode)
                 (dired-hide-details-mode)
+                (all-the-icons-dired-mode)
                 (dired-sort-toggle-or-edit)))))
 
-(use-package dired-sidebar)
+(use-package dired-sidebar
+  :config
+  (add-hook 'dired-sidebar-mode-hook
+            'all-the-icons-dired-mode))
 
 (use-package consult
   :config
@@ -138,6 +148,7 @@
   ;; this key is set in secrets.el
   (setq gptel-api-key pb/openai-api-key)
   (setq gptel-default-mode 'org-mode)
+  (setq gptel-use-header-line nil)
   ;; bindings
   (setq-default gptel-model "gpt-4o")
   ;; the only way I found for redefining the broken RET key of the menu to C-RET
