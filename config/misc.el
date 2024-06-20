@@ -14,8 +14,8 @@
         (width . 200) (height . 150)))
 
 ;;(setq display-line-numbers-type 'relative)
-(setq display-line-numbers-type t)
-(auto-dim-other-buffers-mode nil)
+(setq display-line-numbers-type nil)
+(auto-dim-other-buffers-mode 0)
 (setq max-lisp-eval-depth 6400)
 ;; hack given by doom creator for a workspace loading issue if i remember well
 (defadvice! enforce-encoding-a
