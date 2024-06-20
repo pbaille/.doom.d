@@ -104,6 +104,9 @@
       :desc "open ChatGPT 4"
       "o G" (lambda () (interactive) (browse-url "https://chat.openai.com/?model=gpt-4"))
 
+      :desc "delete-window"
+      :ni "w d" (lambda () (interactive) (delete-window))
+
                                         ;"d d" #'org-gtd-choose
                                         ;"d c" #'org-gtd-capture
                                         ;"d e" #'org-gtd-engage
