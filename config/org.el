@@ -76,8 +76,7 @@
 (use-package org-bullets
   :config
   (setq org-bullets-bullet-list '("⁖")) ; "◉" "○"
-  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
-  (setq org-modern-star ["◉" "○" "◈" "◇"]))
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
 
 ;; for some reason putting this into use-package org-gtd :config do not work, trying this...
 '(use-package org-gtd
@@ -110,7 +109,9 @@
   :after org
   :config
   (add-hook 'org-mode-hook #'org-modern-mode)
-  (add-hook 'org-agenda-finalize-hook #'org-modern-agenda))
+  (add-hook 'org-agenda-finalize-hook #'org-modern-agenda)
+  (setq org-modern-star ["◉" "○" "◈" "◇" "◉" "○" "◈" "◇"])
+  (setq org-modern-replace-stars "◉○◈◇◉○◈◇"))
 
 (use-package org-download
   :after org
