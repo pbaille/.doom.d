@@ -105,8 +105,8 @@
    (modeline-fg     `(,(doom-darken (car fg) 0.2) ,@(cdr fg-alt)))
    (modeline-fg-alt `(,(doom-lighten (car bg) 0.2) ,@(cdr base3)))
 
-   (modeline-bg (if -modeline-bright base4 base1))
-   (modeline-bg-inactive base3))
+   (modeline-bg (doom-darken violet 0.6))
+   (modeline-bg-inactive base2))
 
 
   ;;;; Base theme face overrides
@@ -134,6 +134,7 @@
 
 ;;;; dired
    (diredfl-dir-name :foreground violet)
+   (diredfl-dir-heading :foreground teal :weight 'ultrabold :box `(:line-width 8 :color ,bg-alt))
 
    (lsp-details-face :foreground hor-highlight-bright)
 
@@ -152,10 +153,10 @@
 
    (mode-line
     :background modeline-bg :foreground modeline-fg
-    :box `(:line-width 10 :color ,modeline-bg))
+    :box `(:line-width 5 :color ,modeline-bg))
    (mode-line-inactive
-    :background modeline-bg-inactive :foreground modeline-fg-alt
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive)))
+    :background (doom-lighten base3 0.03) :foreground modeline-fg-alt
+    :box `(:line-width 5 :color ,(doom-lighten base3 0.03)))
    (mode-line-emphasis :foreground (if -modeline-bright base8 highlight))
    (mode-line-highlight :background base1 :foreground fg)
 
@@ -200,6 +201,8 @@
    (magit-branch-remote   :foreground orange)
    (magit-diff-removed  :foreground (doom-blend red magenta 0.6) :background (doom-blend magenta bg 0.05))
    (magit-diff-added  :foreground (doom-blend green blue 0.4) :background (doom-blend blue bg 0.05))
+   (diff-refine-removed  :foreground (doom-blend red magenta 0.6) :weight 'semibold :background (doom-blend magenta bg 0.12))
+   (diff-refine-added  :foreground (doom-blend green blue 0.4) :weight 'semibold :background (doom-blend blue bg 0.12))
    (magit-diff-removed-highlight :inherit 'magit-diff-removed)
    (magit-diff-added-highlight :inherit 'magit-diff-added)
 
