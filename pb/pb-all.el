@@ -28,7 +28,6 @@
 (require 'pb-misc)
 (require 'pb-reapl)
 (require 'pb-sexpr)
-(require 'pb-sidebars)
 (require 'pb-templates)
 (require 'pb-udp)
 (require 'pb-walk)

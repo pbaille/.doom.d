@@ -11,7 +11,7 @@
       "s-j" #'consult-buffer
       "s-k" #'ibuffer
 
-      "s-C-s" #'pb-sidebars_toggle
+      "s-C-s" #'dired-sidebar-toggle-sidebar
 
       "s-t" #'hs-hide-all
       "s-T" #'hs-show-all
@@ -83,7 +83,6 @@
       "SPC" #'consult-buffer
       "t s" #'dired-sidebar-toggle-sidebar
       "t S" #'pb-dired_sidebar-reset
-      "t t" #'ibuffer-sidebar-toggle-sidebar
       "t h" #'hs-toggle-hiding
 
       ;; buffers
@@ -200,10 +199,6 @@
        :n "Q" #'pb-misc_kill-all-dired-buffers
        :n "K" #'dired-subtree-up
        :n "<mouse-1>" #'pb-dired_sidebar-mouse-dwim)
-
-      (:map ibuffer-sidebar-mode-map
-       :n "RET" #'pb-ibuffer_sidebar-visit-buffer
-       :n "l" #'pb-ibuffer_sidebar-visit-buffer)
 
       (:map typescript-mode-map
        :ni "C-S-p" #'prettier-js
