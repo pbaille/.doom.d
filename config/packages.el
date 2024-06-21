@@ -4,8 +4,7 @@
 (use-package spacious-padding
   :config
   (setq spacious-padding-widths
-        (plist-put spacious-padding-widths :right-divider-width 15))
-  (spacious-padding-mode 1))
+        (plist-put spacious-padding-widths :right-divider-width 15)))
 
 (use-package company
   :config
@@ -30,33 +29,33 @@
               (lambda ()
                 (dired-omit-mode)
                 (dired-hide-details-mode)
-                (all-the-icons-dired-mode)
+                (nerd-icons-dired-mode)
                 (dired-sort-toggle-or-edit)))))
 
 (use-package dired-sidebar
   :config
   (add-hook 'dired-sidebar-mode-hook
-            'all-the-icons-dired-mode))
+            'nerd-icons-dired-mode))
 
 (use-package consult
   :config
   (defun consult--buffer-sort-file-first (buffers)
-         (sort buffers (lambda (a b)
-                         (let ((file-a (buffer-file-name a))
-                               (file-b (buffer-file-name b)))
-                           (if file-a
-                               (if file-b
-                                   ;; If both buffers visit files, sort alphabetically.
-                                   (< (or (seq-position buffers a) most-positive-fixnum)
-                                      (or (seq-position buffers b) most-positive-fixnum))
-                                 ;; Buffer A visits a file, but buffer B doesn't.
-                                 t)
-                             ;; Buffer A doesn't visit a file.
-                             (if file-b
-                                 ;; Buffer B visits a file, so buffer A goes at the end.
-                                 nil
-                               ;; Neither buffer visits a file, so sort alphabetically.
-                               (string-lessp (buffer-name a) (buffer-name b))))))))
+    (sort buffers (lambda (a b)
+                    (let ((file-a (buffer-file-name a))
+                          (file-b (buffer-file-name b)))
+                      (if file-a
+                          (if file-b
+                              ;; If both buffers visit files, sort alphabetically.
+                              (< (or (seq-position buffers a) most-positive-fixnum)
+                                 (or (seq-position buffers b) most-positive-fixnum))
+                            ;; Buffer A visits a file, but buffer B doesn't.
+                            t)
+                        ;; Buffer A doesn't visit a file.
+                        (if file-b
+                            ;; Buffer B visits a file, so buffer A goes at the end.
+                            nil
+                          ;; Neither buffer visits a file, so sort alphabetically.
+                          (string-lessp (buffer-name a) (buffer-name b))))))))
 
   (setq consult--source-buffer
         `(:name     "Buffer"
@@ -108,7 +107,11 @@
   :after (doom-themes)
   :config
   ;; tweak appearance
-  (add-hook 'ibuffer-mode-hook (lambda () (setq-local line-spacing 6)))
+
+  (add-hook 'ibuffer-mode-hook
+            (lambda ()
+              (setq-local line-spacing 6)
+              (nerd-icons-ibuffer-mode)))
   (setq ibuffer-filter-group-name-face (list :foreground (doom-color 'magenta) :weight 'ultra-bold :height 1.1))
   (setq ibuffer-title-face (list :foreground (doom-blend 'fg 'bg 0.2) :weight 'normal :height 1.1))
 
@@ -211,63 +214,84 @@
   (ligature-set-ligatures 'org-mode-hook '())
   (global-ligature-mode t))
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 '(use-package codeium
-  ;; if you use straight
-  ;; :straight '(:type git :host github :repo "Exafunction/codeium.el")
-  ;; otherwise, make sure that the codeium.el file is on load-path
+   ;; if you use straight
+   ;; :straight '(:type git :host github :repo "Exafunction/codeium.el")
+   ;; otherwise, make sure that the codeium.el file is on load-path
 
-  :init
-  ;; use globally
-  (add-to-list 'completion-at-point-functions #'codeium-completion-at-point)
-  ;; or on a hook
-  ;; (add-hook 'python-mode-hook
-  ;;     (lambda ()
-  ;;         (setq-local completion-at-point-functions '(codeium-completion-at-point))))
+   :init
+   ;; use globally
+   (add-to-list 'completion-at-point-functions #'codeium-completion-at-point)
+   ;; or on a hook
+   ;; (add-hook 'python-mode-hook
+   ;;     (lambda ()
+   ;;         (setq-local completion-at-point-functions '(codeium-completion-at-point))))
 
-  ;; if you want multiple completion backends, use cape (https://github.com/minad/cape):
-  ;; (add-hook 'python-mode-hook
-  ;;     (lambda ()
-  ;;         (setq-local completion-at-point-functions
-  ;;             (list (cape-super-capf #'codeium-completion-at-point #'lsp-completion-at-point)))))
-  ;; an async company-backend is coming soon!
+   ;; if you want multiple completion backends, use cape (https://github.com/minad/cape):
+   ;; (add-hook 'python-mode-hook
+   ;;     (lambda ()
+   ;;         (setq-local completion-at-point-functions
+   ;;             (list (cape-super-capf #'codeium-completion-at-point #'lsp-completion-at-point)))))
+   ;; an async company-backend is coming soon!
 
-  ;; codeium-completion-at-point is autoloaded, but you can
-  ;; optionally set a timer, which might speed up things as the
-  ;; codeium local language server takes ~0.2s to start up
-  ;; (add-hook 'emacs-startup-hook
-  ;;  (lambda () (run-with-timer 0.1 nil #'codeium-init)))
+   ;; codeium-completion-at-point is autoloaded, but you can
+   ;; optionally set a timer, which might speed up things as the
+   ;; codeium local language server takes ~0.2s to start up
+   ;; (add-hook 'emacs-startup-hook
+   ;;  (lambda () (run-with-timer 0.1 nil #'codeium-init)))
 
-  ;; :defer t ;; lazy loading, if you want
-  :config
-  (setq use-dialog-box nil) ;; do not use popup boxes
+   ;; :defer t ;; lazy loading, if you want
+   :config
+   (setq use-dialog-box nil) ;; do not use popup boxes
 
-  ;; if you don't want to use customize to save the api-key
-  ;; (setq codeium/metadata/api_key "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+   ;; if you don't want to use customize to save the api-key
+   ;; (setq codeium/metadata/api_key "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
 
-  ;; get codeium status in the modeline
-  (setq codeium-mode-line-enable
-        (lambda (api) (not (memq api '(CancelRequest Heartbeat AcceptCompletion)))))
-  (add-to-list 'mode-line-format '(:eval (car-safe codeium-mode-line)) t)
-  ;; alternatively for a more extensive mode-line
-  ;; (add-to-list 'mode-line-format '(-50 "" codeium-mode-line) t)
+   ;; get codeium status in the modeline
+   (setq codeium-mode-line-enable
+         (lambda (api) (not (memq api '(CancelRequest Heartbeat AcceptCompletion)))))
+   (add-to-list 'mode-line-format '(:eval (car-safe codeium-mode-line)) t)
+   ;; alternatively for a more extensive mode-line
+   ;; (add-to-list 'mode-line-format '(-50 "" codeium-mode-line) t)
 
-  ;; use M-x codeium-diagnose to see apis/fields that would be sent to the local language server
-  (setq codeium-api-enabled
-        (lambda (api)
-          (memq api '(GetCompletions Heartbeat CancelRequest GetAuthToken RegisterUser auth-redirect AcceptCompletion))))
-  ;; you can also set a config for a single buffer like this:
-  ;; (add-hook 'python-mode-hook
-  ;;     (lambda ()
-  ;;         (setq-local codeium/editor_options/tab_size 4)))
+   ;; use M-x codeium-diagnose to see apis/fields that would be sent to the local language server
+   (setq codeium-api-enabled
+         (lambda (api)
+           (memq api '(GetCompletions Heartbeat CancelRequest GetAuthToken RegisterUser auth-redirect AcceptCompletion))))
+   ;; you can also set a config for a single buffer like this:
+   ;; (add-hook 'python-mode-hook
+   ;;     (lambda ()
+   ;;         (setq-local codeium/editor_options/tab_size 4)))
 
-  ;; You can overwrite all the codeium configs!
-  ;; for example, we recommend limiting the string sent to codeium for better performance
-  (defun pb-codeium/document/text ()
-    (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (min (+ (point) 1000) (point-max))))
-  ;; if you change the text, you should also change the cursor_offset
-  ;; warning: this is measured by UTF-8 encoded bytes
-  (defun pb-codeium/document/cursor_offset ()
-    (codeium-utf8-byte-length
-     (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (point))))
-  (setq codeium/document/text 'pb-codeium/document/text)
-  (setq codeium/document/cursor_offset 'pb-codeium/document/cursor_offset))
+   ;; You can overwrite all the codeium configs!
+   ;; for example, we recommend limiting the string sent to codeium for better performance
+   (defun pb-codeium/document/text ()
+     (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (min (+ (point) 1000) (point-max))))
+   ;; if you change the text, you should also change the cursor_offset
+   ;; warning: this is measured by UTF-8 encoded bytes
+   (defun pb-codeium/document/cursor_offset ()
+     (codeium-utf8-byte-length
+      (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (point))))
+   (setq codeium/document/text 'pb-codeium/document/text)
+   (setq codeium/document/cursor_offset 'pb-codeium/document/cursor_offset))

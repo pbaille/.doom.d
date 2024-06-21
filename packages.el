@@ -26,11 +26,9 @@
 (package! auto-dim-other-buffers)
 (package! ef-themes)
 (package! dired-sidebar)
-(package! all-the-icons-dired)
+(package! nerd-icons-dired)
 (package! spacious-padding)
-(package! ibuffer-sidebar
-  :recipe (:local-repo "packages"
-           :files ("ibuffer-sidebar.el"))) ;; replace keywords or regular expression with SVG tags.
+(package! nerd-icons-ibuffer) ;; replace keywords or regular expression with SVG tags.
 
 ;; org
 (package! svg-tag-mode)
