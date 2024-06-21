@@ -18,7 +18,7 @@
 (require 'sq)
 
 (require 'pb-cider)
-(require 'pb-symex)
+(require 'pb-color)
 (require 'pb-dired)
 (require 'pb-elisp)
 (require 'pb-fennel)
@@ -28,6 +28,7 @@
 (require 'pb-misc)
 (require 'pb-reapl)
 (require 'pb-sexpr)
+(require 'pb-symex)
 (require 'pb-templates)
 (require 'pb-udp)
 (require 'pb-walk)
