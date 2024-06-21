@@ -153,10 +153,10 @@
 
    (mode-line
     :background modeline-bg :foreground modeline-fg
-    :box `(:line-width 5 :color ,modeline-bg))
+    :box `(:line-width 4 :color ,modeline-bg))
    (mode-line-inactive
     :background (doom-lighten base3 0.03) :foreground modeline-fg-alt
-    :box `(:line-width 5 :color ,(doom-lighten base3 0.03)))
+    :box `(:line-width 4 :color ,(doom-lighten base3 0.03)))
    (mode-line-emphasis :foreground (if -modeline-bright base8 highlight))
    (mode-line-highlight :background base1 :foreground fg)
 
