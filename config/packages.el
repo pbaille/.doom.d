@@ -4,7 +4,15 @@
 (use-package spacious-padding
   :config
   (setq spacious-padding-widths
-        (plist-put spacious-padding-widths :right-divider-width 15)))
+        '(:internal-border-width 15
+          :header-line-width 4
+          :mode-line-width 6
+          :tab-width 4
+          :right-divider-width 15
+          :scroll-bar-width 8
+          :fringe-width 8))
+  (spacious-padding-mode 1)
+  (remove-hook 'doom-init-ui-hook #'window-divider-mode))
 
 (use-package company
   :config
