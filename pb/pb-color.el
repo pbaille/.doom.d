@@ -29,11 +29,15 @@
   (cl-destructuring-bind (h s l) c
     (pb-color_from-rgb (color-hsl-to-rgb h s l))))
 
+(defun pb-color_random-value ()
+  "Return a random value between 0 and 1."
+  (/ (random 255) 255.0))
+
 (defun pb-color_random ()
   "Create a random color."
-  (pb-color_from-rgb (list (/ (random 255) 255.0)
-                           (/ (random 255) 255.0)
-                           (/ (random 255) 255.0))))
+  (pb-color_from-rgb (list (pb-color_random-value)
+                           (pb-color_random-value)
+                           (pb-color_random-value))))
 
 (defun pb-color_blend (c1 c2 alpha)
   "Blend C1 with C2 by a coefficient ALPHA (a float between 0 and 1)."
@@ -125,7 +129,7 @@ RES is resolution."
 (defun pb-color_hue-wheel (c n)
   "Compute hue wheel of size N starting on C."
   (cl-destructuring-bind (h s l) (pb-color_to-hsl c)
-    (cl-loop for x from 0 to n by 1
+    (cl-loop for x from 1 to n by 1
              collect (pb-color_from-hsl
                       (list (mod (+ h (/ x (float n))) 1) s l)))))
 
@@ -166,6 +170,19 @@ RES is resolution."
     (let ((increment (/ l (float n))))
       (cl-loop for x from 1 to n by 1
                collect (pb-color_from-hsl (list h s (- l (* x increment))))))))
+
+
+(defun pb-color_hue (c)
+  "Get the hue of C."
+  (nth 0 (pb-color_to-hsl c)))
+
+(defun pb-color_saturation (c)
+  "Get the saturation of C."
+  (nth 1 (pb-color_to-hsl c)))
+
+(defun pb-color_lightness (c)
+  "Get the lightness of C."
+  (nth 2 (pb-color_to-hsl c)))
 
 (defun pb-color_set-saturation (c saturation)
   "Change the SATURATION of C."
