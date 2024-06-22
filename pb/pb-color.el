@@ -143,6 +143,16 @@ RES is resolution."
       (cl-loop for x from 1 to n by 1
                collect (pb-color_from-hsl (list h (- s (* x increment)) l))))))
 
+(defun pb-color_saturate (c alpha)
+  "Saturate C by ALPHA."
+  (cl-destructuring-bind (h s l) (pb-color_to-hsl c)
+    (pb-color_from-hsl (list h (+ s (* alpha (- 1 s))) l))))
+
+(defun pb-color_desaturate (c alpha)
+  "Desaturate C by ALPHA."
+  (cl-destructuring-bind (h s l) (pb-color_to-hsl c)
+    (pb-color_from-hsl (list h (- s (* alpha s)) l))))
+
 (defun pb-color_lights (c n)
   "Compute N gradualy lighter shades of C."
   (cl-destructuring-bind (h s l) (pb-color_to-hsl c)
@@ -203,6 +213,15 @@ RES is the resolution to be used for computations."
         :lights (pb-color_lights c res)
         :saturations (pb-color_saturations c res)
         :desaturations (pb-color_desaturations c res)))
+
+(defmacro pb-color (c &rest transformations)
+  "Thread C through TRANSFORMATIONS prefixing them with pb-color."
+  (seq-reduce (lambda (ret form)
+                `(,(intern (concat "pb-color_" (symbol-name (car form))))
+                  ,ret
+                  ,@(cdr form)))
+              transformations
+              c))
 
 (defun pb-color_test ()
   (cl-assert
