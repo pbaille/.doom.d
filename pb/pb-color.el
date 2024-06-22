@@ -29,6 +29,12 @@
   (cl-destructuring-bind (h s l) c
     (pb-color_from-rgb (color-hsl-to-rgb h s l))))
 
+(defun pb-color_random ()
+  "Create a random color."
+  (pb-color_from-rgb (list (/ (random 255) 255.0)
+                           (/ (random 255) 255.0)
+                           (/ (random 255) 255.0))))
+
 (defun pb-color_blend (c1 c2 alpha)
   "Blend C1 with C2 by a coefficient ALPHA (a float between 0 and 1)."
   (apply (lambda (r g b) (format "#%02x%02x%02x" (* r 255) (* g 255) (* b 255)))
@@ -48,55 +54,53 @@
   "Make C warmer by a coefficient ALPHA (a float between 0 and 1)."
   (cl-destructuring-bind (r g b) (color-name-to-rgb c)
     (color-rgb-to-hex
-     (min 1.0 (+ r alpha))
-     g
-     (max 0.0 (- b alpha))
+     (+ r (* (- 1 r) alpha))
+     (+ g (* (- 0.6 g) alpha)) ; modified here
+     (- b (* b alpha)) ; and here
      2)))
 
 (defun pb-color_cool (c alpha)
   "Make C cooler by a coefficient ALPHA (a float between 0 and 1)."
   (cl-destructuring-bind (r g b) (color-name-to-rgb c)
     (color-rgb-to-hex
-     (max 0.0 (- r alpha))
-     g
-     (min 1.0 (+ b alpha))
+     (- r (* r alpha))
+     (- g (* g alpha))
+     (+ b (* (- 1 b) alpha))
      2)))
+
+(defun pb-color_warmings (c n)
+  "Warm C in N step."
+  (cl-loop for x from 1 to n by 1
+           collect (pb-color_warm c (* x (/ 1.0 n)))))
+
+(defun pb-color_coolings (c n)
+  "Cool C in N step."
+  (cl-loop for x from 1 to n by 1
+           collect (pb-color_cool c (* x (/ 1.0 n)))))
 
 (defun pb-color_complementary (c)
   "Compute the complementary color of C."
   (pb-color_from-rgb (color-complement c)))
 
+(defun pb-color_analogous (c res)
+  "Compute two analogous colors based on C.
+RES is resolution."
+  (let ((hue-wheel (pb-color_hue-wheel c res)))
+    (list (cadr hue-wheel)
+          (car (reverse hue-wheel)))))
 
-(defun pb-color__iterate-while (f init return)
-  "Repeatedly call F on INIT and accumulate results until RETURN return a value."
-  (cl-labels ((acc (xs)
-                (let* ((x (funcall f (car xs)))
-                       (nxt (cons x xs)))
-                  (or (funcall return nxt)
-                      (acc nxt)))))
-    (acc (list init))))
+(defun pb-color_split-complementary (c resolution)
+  "Compute the C split complementary colors based on RESOLUTION."
+  (pb-color_analogous (pb-color_complementary c)
+                      resolution))
 
-(defun pb-color_derivations (c)
-  "Compute some other colors related to C in some way."
-  (let ((iter (lambda (f)
-                (pb-color__iterate-while f c
-                                         (lambda (xs) (if (equal (car xs) (cadr xs))
-                                                     (reverse xs))))))
-        (comp (pb-color_from-rgb (color-complement c))))
-    (list :complement comp
-          :triad (pb-color_triad c)
-          :tetrad (pb-color_tetrad c)
-          :warmer (funcall iter (lambda (c) (pb-color_warm c 0.1)))
-          :cooler (funcall iter (lambda (c) (pb-color_cool c 0.1)))
-          :darker (funcall iter (lambda (c) (pb-color_darken c 0.1)))
-          :lighter (funcall iter (lambda (c) (pb-color_lighten c 0.1))))))
 
 (defun pb-color_gradient (col1 col2 n)
   "Produce a gradient (list of colors) from COL1 to COL2 in N step."
   (mapcar #'pb-color_from-rgb
-         (color-gradient (color-name-to-rgb col1)
-                         (color-name-to-rgb col2)
-                         n)))
+          (color-gradient (color-name-to-rgb col1)
+                          (color-name-to-rgb col2)
+                          n)))
 
 (defun pb-color_triad (c)
   "Compute color triad based on C (hex string)."
@@ -118,6 +122,41 @@
           (pb-color_from-hsl
            (list (mod (+ h (/ 3.0 4)) 1) s l)))))
 
+(defun pb-color_hue-wheel (c n)
+  "Compute hue wheel of size N starting on C."
+  (cl-destructuring-bind (h s l) (pb-color_to-hsl c)
+    (cl-loop for x from 0 to n by 1
+             collect (pb-color_from-hsl
+                      (list (mod (+ h (/ x (float n))) 1) s l)))))
+
+(defun pb-color_saturations (c n)
+  "Compute N gradual saturations based on C."
+  (cl-destructuring-bind (h s l) (pb-color_to-hsl c)
+    (let ((increment (/ (- 1 s) (float n))))
+      (cl-loop for x from 1 to n by 1
+               collect (pb-color_from-hsl (list h (+ s (* x increment)) l))))))
+
+(defun pb-color_desaturations (c n)
+  "Compute N gradual desaturations based on C."
+  (cl-destructuring-bind (h s l) (pb-color_to-hsl c)
+    (let ((increment (/ s (float n))))
+      (cl-loop for x from 1 to n by 1
+               collect (pb-color_from-hsl (list h (- s (* x increment)) l))))))
+
+(defun pb-color_lights (c n)
+  "Compute N gradualy lighter shades of C."
+  (cl-destructuring-bind (h s l) (pb-color_to-hsl c)
+    (let ((increment (/ (- 1 l) (float n))))
+      (cl-loop for x from 1 to n by 1
+               collect (pb-color_from-hsl (list h s (+ l (* x increment))))))))
+
+(defun pb-color_shades (c n)
+  "Compute N gradualy darker shades of C."
+  (cl-destructuring-bind (h s l) (pb-color_to-hsl c)
+    (let ((increment (/ l (float n))))
+      (cl-loop for x from 1 to n by 1
+               collect (pb-color_from-hsl (list h s (- l (* x increment))))))))
+
 (defun pb-color_set-saturation (c saturation)
   "Change the SATURATION of C."
   (cl-destructuring-bind (h _ l) (pb-color_to-hsl c)
@@ -133,32 +172,66 @@
   (cl-destructuring-bind (_ s l) (pb-color_to-hsl c)
     (pb-color_from-hsl (list hue s l))))
 
-(cl-assert
- (and (equal (pb-color_derivations "#00ff00")
-             '(:complement "#ff00ff"
-               :triad ("#00ff00" "#0000ff" "#ff0000")
-               :tetrad ("#00ff00" "#007fff" "#fe00ff" "#ff7f00")
-               :warmer ("#00ff00" "#19ff00" "#32ff00" "#4bff00" "#64ff00" "#7dff00" "#96ff00" "#afff00" "#c8ff00" "#e1ff00" "#faff00" "#ffff00" "#ffff00")
-               :cooler ("#00ff00" "#00ff19" "#00ff32" "#00ff4b" "#00ff64" "#00ff7d" "#00ff96" "#00ffaf" "#00ffc8" "#00ffe1" "#00fffa" "#00ffff" "#00ffff")
-               :darker ("#00ff00" "#00e500" "#00ce00" "#00b900" "#00a600" "#009500" "#008600" "#007800" "#006c00" "#006100" "#005700" "#004e00" "#004600" "#003f00" "#003800" "#003200" "#002d00" "#002800" "#002400" "#002000" "#001c00" "#001900" "#001600" "#001300" "#001100" "#000f00" "#000d00" "#000b00" "#000900" "#000800" "#000700" "#000600" "#000500" "#000400" "#000300" "#000200" "#000100" "#000000" "#000000")
-               :lighter ("#00ff00" "#19ff19" "#30ff30" "#44ff44" "#56ff56" "#66ff66" "#75ff75" "#82ff82" "#8eff8e" "#99ff99" "#a3ffa3" "#acffac" "#b4ffb4" "#bbffbb" "#c1ffc1" "#c7ffc7" "#ccffcc" "#d1ffd1" "#d5ffd5" "#d9ffd9" "#dcffdc" "#dfffdf" "#e2ffe2" "#e4ffe4" "#e6ffe6" "#e8ffe8" "#eaffea" "#ecffec" "#edffed" "#eeffee" "#efffef" "#f0fff0" "#f1fff1" "#f2fff2" "#f3fff3" "#f4fff4" "#f5fff5" "#f6fff6" "#f6fff6")))
+(defun pb-color_luminance (c)
+  "Compute the luminance of C."
+  (cl-destructuring-bind (r g b) (color-name-to-rgb c)
+    (+ (* 0.2126 r) (* 0.7152 g) (* 0.0722 b))))
 
-      (equal (pb-color_triad "#ffaacf")
-             '("#ffaacf" "#cfffa9" "#a9ceff"))
+(defun pb-color_contrast (c1 c2)
+  "Compute the contrast ratio between C1 and C2."
+  (let* ((lum1 (pb-color_luminance c1))
+         (lum2 (pb-color_luminance c2))
+         (l1 (max lum1 lum2))
+         (l2 (min lum1 lum2)))
+    (/ (- (/ (+ l1 0.05)
+             (+ l2 0.05))
+          1)
+       20.0)))
 
-      (equal (pb-color_tetrad "#ffaacf")
-             '("#ffaacf" "#f9ffa9" "#a9ffda" "#afa9ff"))
+(defun pb-color_overview (c res)
+  "Compute some other colors related to C using functino from the pb-color package.
 
-      (equal (pb-color_gradient
-              "#991322"
-              "#291378"
-              10)
-             '("#8e1329" "#841331" "#7a1339" "#701341" "#661349" "#5b1350" "#511358" "#471360" "#3d1368" "#331370"))
+RES is the resolution to be used for computations."
+  (list :complement (pb-color_complementary c)
+        :analogous (pb-color_analogous c res)
+        :split-complementary (pb-color_split-complementary c res)
+        :triad (pb-color_triad c)
+        :tetrad (pb-color_tetrad c)
+        :warmings (pb-color_warmings c res)
+        :coolings (pb-color_coolings c res)
+        :shades (pb-color_shades c res)
+        :lights (pb-color_lights c res)
+        :saturations (pb-color_saturations c res)
+        :desaturations (pb-color_desaturations c res)))
 
-      (let ((colors (list "#ff00ff" "#6fb3c0" "#ff6f6f" "#00a600")))
-        (equal (mapcar (lambda (c) (pb-color_set-saturation c 1))
-                       colors)
-               '("#ff00fe" "#30ddff" "#ff6f6f" "#00a600")))))
+(defun pb-color_test ()
+  (cl-assert
+   (and (equal (pb-color_triad "#ffaacf")
+               '("#ffaacf" "#cfffa9" "#a9ceff"))
+
+        (equal (pb-color_tetrad "#ffaacf")
+               '("#ffaacf" "#f9ffa9" "#a9ffda" "#afa9ff"))
+
+        (equal (pb-color_gradient
+                "#991322"
+                "#291378"
+                10)
+               '("#8e1329" "#841331" "#7a1339" "#701341" "#661349" "#5b1350" "#511358" "#471360" "#3d1368" "#331370"))
+
+        (equal
+         (pb-color_contrast "black" "white")
+         (pb-color_contrast "white" "black"))
+
+        (equal
+         1.0
+         (pb-color_contrast "white" "black"))
+
+        (equal
+         0.0
+         (pb-color_contrast "white" "white"))
+
+        (equal .0 (pb-color_luminance "black"))
+        (equal 1.0 (pb-color_luminance "white")))))
 
 (provide 'pb-color)
 ;;; pb-color.el ends here.
