@@ -1,4 +1,4 @@
-;;; pb-color.el --- utils -*- lexical-binding: t; -*-
+;;; pb-color.el --- hex colors utility -*- lexical-binding: t; -*-
 
 ;; Author: Pierre Baille
 ;; URL: https://github.com/pbaille
@@ -7,76 +7,12 @@
 
 ;;; Commentary:
 
-;; Color utils.
+;; A utility package for dealing with colors as hex strings.
 
 ;;; Code:
 
 (require 'color)
 (require 'cl-lib)
-
-(progn :from-doom
-
-       (defun doom-name-to-rgb (color)
-         "Retrieves the hexidecimal string repesented the named COLOR (e.g. \"red\")
-for FRAME (defaults to the current frame)."
-         (cl-loop with div = (float (car (tty-color-standard-values "#ffffff")))
-                  for x in (tty-color-standard-values (downcase color))
-                  collect (/ x div)))
-
-       (defun doom-blend (color1 color2 alpha)
-         "Blend two colors (hexidecimal strings) together by a coefficient ALPHA (a
-float between 0 and 1)"
-         (when (and color1 color2)
-           (cond ((and color1 color2 (symbolp color1) (symbolp color2))
-                  (doom-blend (doom-color color1) (doom-color color2) alpha))
-
-                 ((or (listp color1) (listp color2))
-                  (cl-loop for x in color1
-                           when (if (listp color2) (pop color2) color2)
-                           collect (doom-blend x it alpha)))
-
-                 ((and (string-prefix-p "#" color1) (string-prefix-p "#" color2))
-                  (apply (lambda (r g b) (format "#%02x%02x%02x" (* r 255) (* g 255) (* b 255)))
-                         (cl-loop for it    in (doom-name-to-rgb color1)
-                                  for other in (doom-name-to-rgb color2)
-                                  collect (+ (* alpha it) (* other (- 1 alpha))))))
-
-                 (color1))))
-
-       (defun doom-darken (color alpha)
-         "Darken a COLOR (a hexidecimal string) by a coefficient ALPHA (a float between
-0 and 1)."
-         (cond ((and color (symbolp color))
-                (doom-darken (doom-color color) alpha))
-
-               ((listp color)
-                (cl-loop for c in color collect (doom-darken c alpha)))
-
-               ((doom-blend color "#000000" (- 1 alpha)))))
-
-       (defun doom-lighten (color alpha)
-         "Brighten a COLOR (a hexidecimal string) by a coefficient ALPHA (a float
-between 0 and 1)."
-         (cond ((and color (symbolp color))
-                (doom-lighten (doom-color color) alpha))
-
-               ((listp color)
-                (cl-loop for c in color collect (doom-lighten c alpha)))
-
-               ((doom-blend color "#FFFFFF" (- 1 alpha)))))
-
-       (defun doom-color (name &optional type)
-         "Retrieve a specific color named NAME (a symbol) from the current theme."
-         (let ((colors (if (listp name)
-                           name
-                         (cdr-safe (assq name doom-themes--colors)))))
-           (and colors
-                (cond ((listp colors)
-                       (let ((i (or (plist-get '(256 1 16 2 8 3) type) 0)))
-                         (if (> i (1- (length colors)))
-                             (car (last colors))
-                           (nth i colors))))
-                      (t colors))))))
 
 (defun pb-color_from-rgb (c)
   "Convert the rgb color C to hex string (6 digit)."
@@ -84,31 +20,46 @@ between 0 and 1)."
     (color-rgb-to-hex r g b 2)))
 
 (defun pb-color_to-hsl (c)
-  "Convert C from hex to hsl"
+  "Convert C from hex to hsl."
   (cl-destructuring-bind (r g b) (color-name-to-rgb c)
     (color-rgb-to-hsl r g b)))
 
 (defun pb-color_from-hsl (c)
-  "Convert C from hsl to hex"
+  "Convert C from hsl to hex."
   (cl-destructuring-bind (h s l) c
     (pb-color_from-rgb (color-hsl-to-rgb h s l))))
 
-(defun pb-color_warm (c strength)
-  "Make C (hex color string) warmer given STRENGTH ([0..1]) "
+(defun pb-color_blend (c1 c2 alpha)
+  "Blend C1 with C2 by a coefficient ALPHA (a float between 0 and 1)."
+  (apply (lambda (r g b) (format "#%02x%02x%02x" (* r 255) (* g 255) (* b 255)))
+         (cl-loop for it    in (color-name-to-rgb c1)
+                  for other in (color-name-to-rgb c2)
+                  collect (+ (* alpha it) (* other (- 1 alpha))))))
+
+(defun pb-color_darken (c alpha)
+  "Darken C by a coefficient ALPHA (a float between 0 and 1)."
+  (pb-color_blend c "#000000" (- 1 alpha)))
+
+(defun pb-color_lighten (c alpha)
+  "Brighten a C by a coefficient ALPHA (a float between 0 and 1)."
+  (pb-color_blend c "#FFFFFF" (- 1 alpha)))
+
+(defun pb-color_warm (c alpha)
+  "Make C warmer by a coefficient ALPHA (a float between 0 and 1)."
   (cl-destructuring-bind (r g b) (color-name-to-rgb c)
     (color-rgb-to-hex
-     (min 1.0 (+ r strength))
+     (min 1.0 (+ r alpha))
      g
-     (max 0.0 (- b strength))
+     (max 0.0 (- b alpha))
      2)))
 
-(defun pb-color_cool (c strength)
-  "Make C (hex color string) warmer given STRENGTH ([0..1]) "
+(defun pb-color_cool (c alpha)
+  "Make C cooler by a coefficient ALPHA (a float between 0 and 1)."
   (cl-destructuring-bind (r g b) (color-name-to-rgb c)
     (color-rgb-to-hex
-     (max 0.0 (- r strength))
+     (max 0.0 (- r alpha))
      g
-     (min 1.0 (+ b strength))
+     (min 1.0 (+ b alpha))
      2)))
 
 (defun pb-color_complementary (c)
@@ -117,8 +68,7 @@ between 0 and 1)."
 
 
 (defun pb-color__iterate-while (f init return)
-  "Call F on INIT and iterate accumulating intermediary results
-until RETURN returns a non nil value."
+  "Repeatedly call F on INIT and accumulate results until RETURN return a value."
   (cl-labels ((acc (xs)
                 (let* ((x (funcall f (car xs)))
                        (nxt (cons x xs)))
@@ -138,15 +88,15 @@ until RETURN returns a non nil value."
           :tetrad (pb-color_tetrad c)
           :warmer (funcall iter (lambda (c) (pb-color_warm c 0.1)))
           :cooler (funcall iter (lambda (c) (pb-color_cool c 0.1)))
-          :darker (funcall iter (lambda (c) (doom-darken c 0.1)))
-          :lighter (funcall iter (lambda (c) (doom-lighten c 0.1))))))
+          :darker (funcall iter (lambda (c) (pb-color_darken c 0.1)))
+          :lighter (funcall iter (lambda (c) (pb-color_lighten c 0.1))))))
 
-(defun pb-color_gradient (col1 col2 steps)
-  "Produce a sequence of hex colors representing a gradient from COL1 to COL2 in n STEPS."
+(defun pb-color_gradient (col1 col2 n)
+  "Produce a gradient (list of colors) from COL1 to COL2 in N step."
   (mapcar #'pb-color_from-rgb
          (color-gradient (color-name-to-rgb col1)
                          (color-name-to-rgb col2)
-                         steps)))
+                         n)))
 
 (defun pb-color_triad (c)
   "Compute color triad based on C (hex string)."
@@ -169,14 +119,17 @@ until RETURN returns a non nil value."
            (list (mod (+ h (/ 3.0 4)) 1) s l)))))
 
 (defun pb-color_set-saturation (c saturation)
+  "Change the SATURATION of C."
   (cl-destructuring-bind (h _ l) (pb-color_to-hsl c)
     (pb-color_from-hsl (list h saturation l))))
 
 (defun pb-color_set-lightness (c lightness)
+  "Change the LIGHTNESS of C."
   (cl-destructuring-bind (h s _) (pb-color_to-hsl c)
     (pb-color_from-hsl (list h s lightness))))
 
 (defun pb-color_set-hue (c hue)
+  "Change the HUE of C."
   (cl-destructuring-bind (_ s l) (pb-color_to-hsl c)
     (pb-color_from-hsl (list hue s l))))
 
