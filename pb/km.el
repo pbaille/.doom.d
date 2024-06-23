@@ -41,6 +41,12 @@ Throws an error if XS does not form a valid keyword map."
              entries
              :initial-value m))
 
+(defun km_map (m f)
+  "Map F over M. F takes and return an entry (a cons of keyword and value)."
+  (km_into
+   ()
+   (mapcar f (km_entries m))))
+
 (defun km_keys (m)
   "Return the keys of the keyword map M."
   (and (km? m)
