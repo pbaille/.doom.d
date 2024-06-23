@@ -14,6 +14,11 @@
 (require 'color)
 (require 'cl-lib)
 
+(defun pb-color_hex-color-p (x)
+  "Check if X is an hex color string."
+  (and (stringp x)
+       (string-prefix-p "#" x)))
+
 (defun pb-color_from-rgb (c)
   "Convert the rgb color C to hex string (6 digit)."
   (cl-destructuring-bind (r g b) c
