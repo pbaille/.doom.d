@@ -136,6 +136,12 @@
 
   (symex-initialize)
 
+  (add-hook 'evil-symex-state-entry-hook
+            (lambda () (hl-line-mode 0)))
+
+  (add-hook 'evil-symex-state-exit-hook
+            (lambda () (hl-line-mode 1)))
+
   (setq evil-symex-state-cursor
         '(box "#2bfafa"))
 
