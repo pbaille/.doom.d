@@ -47,6 +47,14 @@ Throws an error if XS does not form a valid keyword map."
    ()
    (mapcar f (km_entries m))))
 
+(defun km_map-keys (m f)
+  "Map F over keys of M. F takes and return a keyword."
+  (km_map m (lambda (e) (cons (funcall f (car e)) (cdr e)))))
+
+(defun km_map-vals (m f)
+  "Map F over values of M."
+  (km_map m (lambda (e) (cons (car e) (funcall f (cdr e))))))
+
 (defun km_keys (m)
   "Return the keys of the keyword map M."
   (and (km? m)
