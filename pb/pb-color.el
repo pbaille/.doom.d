@@ -184,20 +184,79 @@ RES is resolution."
   "Get the lightness of C."
   (nth 2 (pb-color_to-hsl c)))
 
+(defun pb-color_set-hue (c hue)
+  "Change the HUE of C."
+  (cl-destructuring-bind (_ s l) (pb-color_to-hsl c)
+    (pb-color_from-hsl (list (mod hue 1) s l))))
+
 (defun pb-color_set-saturation (c saturation)
   "Change the SATURATION of C."
   (cl-destructuring-bind (h _ l) (pb-color_to-hsl c)
-    (pb-color_from-hsl (list h saturation l))))
+    (pb-color_from-hsl (list h (min 1 (max 0 saturation)) l))))
 
 (defun pb-color_set-lightness (c lightness)
   "Change the LIGHTNESS of C."
   (cl-destructuring-bind (h s _) (pb-color_to-hsl c)
-    (pb-color_from-hsl (list h s lightness))))
+    (pb-color_from-hsl (list h s (min 1 (max 0 lightness))))))
 
-(defun pb-color_set-hue (c hue)
-  "Change the HUE of C."
-  (cl-destructuring-bind (_ s l) (pb-color_to-hsl c)
-    (pb-color_from-hsl (list hue s l))))
+(defun pb-color_update-hue (c f)
+  "Update the hue of C using F."
+  (pb-color_set-hue c (funcall f (pb-color_hue c))))
+
+(defun pb-color_update-saturation (c f)
+  "Update the saturation of C using F."
+  (pb-color_set-saturation c (funcall f (pb-color_saturation c))))
+
+(defun pb-color_update-lightness (c f)
+  "Update the lightness of C using F."
+  (pb-color_set-lightness c (funcall f (pb-color_lightness c))))
+
+(defun pb-color_neutralize-lightness (c ratio)
+  "Bring the lightness of C toward its middle value 0.5.
+if RATIO is 1 the lightness will be 0.5, if it is 0 it will be unchanged."
+  (pb-color_update-lightness
+   c (lambda (l) (+ l (* ratio (- .5 l))))))
+
+(defun pb-color_exacerbate-lightness (c ratio)
+  "Push the lightness of C away from its middle value 0.5.
+if RATIO is 1 the lightness will be 0 or 1 depending on C, if it is 0 it will be unchanged."
+  (pb-color_update-lightness
+   c (lambda (l) (+ l (* ratio (if (> l 0.5)
+                              (- 1 l)
+                            (- l)))))))
+
+(defun pb-color_complementary-hue (c)
+  "Change the hue component of C to its complementary value."
+  (pb-color_update-hue
+   c (lambda (h) (mod (+ h .5) 1))))
+
+(defun pb-color_complementary-lightness (c)
+  "Change the lightness component of C to its complementary value."
+  (pb-color_update-lightness
+   c (lambda (l) (if (> l 0.5)
+                (- .5 (- l .5))
+              (+ .5 (- .5 l))))))
+
+(defun pb-color_complementary-saturation (c)
+  "Change the saturation component of C to its complementary value."
+  (pb-color_update-saturation
+   c (lambda (s) (if (> s 0.5)
+                (- .5 (- s .5))
+              (+ .5 (- .5 s))))))
+
+(defun pb-color_neutralize-saturation (c ratio)
+  "Bring the saturation of C toward its middle value 0.5.
+if RATIO is 1 the saturation will be 0.5, if it is 0 it will be unchanged."
+  (pb-color_update-saturation
+   c (lambda (s) (+ s (* ratio (- .5 s))))))
+
+(defun pb-color_exacerbate-saturation (c ratio)
+  "Push the saturation of C away from its middle value 0.5.
+if RATIO is 1 the saturation will be 0 or 1 depending on C, if it is 0 it will be unchanged."
+  (pb-color_update-saturation
+   c (lambda (s) (+ s (* ratio (if (> s 0.5)
+                              (- 1 s)
+                            (- s)))))))
 
 (defun pb-color_luminance (c)
   "Compute the luminance of C."
