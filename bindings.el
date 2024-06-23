@@ -84,6 +84,7 @@
       "t s" #'dired-sidebar-toggle-sidebar
       "t S" #'pb-dired_sidebar-reset
       "t h" #'hs-toggle-hiding
+      "t R" #'rainbow-mode
 
       ;; buffers
       :desc "kill all dired buffers"
