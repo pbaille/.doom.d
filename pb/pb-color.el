@@ -279,6 +279,15 @@ if RATIO is 1 the saturation will be 0 or 1 depending on C, if it is 0 it will b
           1)
        20.0)))
 
+(defun pb-color_walk (data f)
+  "Walk some DATA, applying F to every nested colors (hex strings)."
+  (cond ((consp data)
+         (mapcar (lambda (x) (pb-color_walk x f))
+                 data))
+        ((pb-color_hex-color-p data)
+         (funcall f data))
+        (t data)))
+
 (defun pb-color_overview (c res)
   "Compute some other colors related to C using functino from the pb-color package.
 
