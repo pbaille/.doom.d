@@ -19,7 +19,8 @@
        (after! cc-mode
          (remove-hook 'c-mode-common-hook #'rainbow-delimiters-mode))
        (after! clojure-mode
-         (remove-hook 'clojure-mode-hook #'rainbow-delimiters-mode)))
+         (remove-hook 'clojure-mode-hook #'rainbow-delimiters-mode))
+       (remove-hook 'emacs-lisp-mode-hook #'rainbow-delimiters-mode))
 
 (progn :colors
 
