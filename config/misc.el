@@ -39,3 +39,25 @@
       '(1
         ((shift)
          . hscroll)))
+
+(progn :shorthand-bug-fix
+
+       "In my current version (emacs-mac) the 'elisp-shorthand-font-lock-face was taking an extra char."
+
+       (defun shorthands-font-lock-shorthands (limit)
+         (when read-symbol-shorthands
+           (while (re-search-forward
+                   (concat "\\_<\\(" (rx lisp-mode-symbol) "\\)\\_>")
+                   limit t)
+             (let* ((existing (get-text-property (match-beginning 1) 'face))
+                    (probe (and (not (memq existing '(font-lock-comment-face
+                                                      font-lock-string-face)))
+                                (intern-soft (match-string 1))))
+                    (sname (and probe (symbol-name probe)))
+                    (mm (and sname (shorthands--mismatch-from-end
+                                    (match-string 1) sname))))
+               (unless (or (null mm) (= mm (length sname)))
+                 (add-face-text-property (match-beginning 1) (- (match-end 1) mm)
+                                         'elisp-shorthand-font-lock-face))))))
+
+       (font-lock-add-keywords 'emacs-lisp-mode '((shorthands-font-lock-shorthands)) t))
