@@ -16,6 +16,7 @@
 (require 'pb)
 (require 'km)
 (require 'sq)
+(require 'pb-macros)
 
 (require 'pb-cider)
 (require 'pb-color)
