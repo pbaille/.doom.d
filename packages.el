@@ -24,7 +24,9 @@
 
 ;; ui
 (package! auto-dim-other-buffers)
-(package! ef-themes)
+(package! ef-themes
+  :recipe (:local-repo "/Users/pierrebaille/.doom.d/themes/ef-themes"
+           :files ("*.el")))
 (package! dired-sidebar)
 (package! nerd-icons-dired)
 (package! spacious-padding)
