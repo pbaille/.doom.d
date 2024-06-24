@@ -42,6 +42,12 @@ Throws an error if XS does not form a valid keyword map."
              entries
              :initial-value m))
 
+(defun km_merge (&rest kms)
+  "Merge several KMS together."
+  (cl-reduce (lambda (ret x) (km_into ret (km_entries x)))
+             kms
+             :initial-value ()))
+
 (defun km_map (m f)
   "Map F over M. F takes and return an entry (a cons of keyword and value)."
   (km_into
