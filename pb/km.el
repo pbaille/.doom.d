@@ -1,4 +1,4 @@
-;;; km.el --- utils -*- lexical-binding: t; -*-
+;;; km.el --- Keyword maps (plist) utils -*- lexical-binding: t; -*-
 
 ;; Author: Pierre Baille
 ;; URL: https://github.com/pbaille
@@ -13,6 +13,7 @@
 
 (require 'cl-lib)
 (require 'sq)
+(require 'pb)
 
 (defun km? (m)
   "Check if M is a keyword map."
@@ -124,21 +125,36 @@ XS is a list alternating paths and update-fns."
              (sq_partition 2 2 xs)
              :initial-value m))
 
+(defun km_all-paths (m)
+  "Transform M into an alist of path -> value."
+  (cl-reduce (lambda (ret entry)
+                 (let ((k (car entry))
+                       (v (cdr entry)))
+                   (append ret
+                           (if (km? v)
+                               (mapcar (lambda (e)
+                                         (cons (cons k (car e))
+                                               (cdr e)))
+                                       (km_all-paths v))
+                             (list (cons (list k) v))))))
+             (km_entries m)
+             :initial-value ()))
+
 (defmacro km_let (binding &rest body)
   "Let binding for keyword maps.
 BINDING specifies variables to be bound from a keyword map,
 and BODY is the code to execute in the context of those bindings."
   (let* ((pat (car binding))
          (pat (if (equal :as (car pat))
-                   (list (cadr pat) (cddr pat))
-                 (list (gensym) pat)))
+                  (list (cadr pat) (cddr pat))
+                (list (gensym) pat)))
          (seedsym (car pat))
          (ks (cadr pat))
          (seed (cadr binding)))
     `(let* ((,seedsym ,seed)
             ,@(mapcar (lambda (k) (list k `(plist-get ,seedsym ,(pb_symbol-to-keyword k))))
                       ks))
-      ,@body)))
+       ,@body)))
 
 (defmacro km_lambda (ks &rest body)
   "Define a function that takes a keyword map as its sole argument.
@@ -211,7 +227,17 @@ and BODY is the code to execute."
   (cl-assert
    (equal (km_into (km :a 2)
                    (km_entries (km :b 2 :c 4)))
-          (km :a 2 :b 2 :c 4))))
+          (km :a 2 :b 2 :c 4)))
+
+  (cl-assert
+   (equal (km_all-paths (km :a 2
+                            :b (km :c 3 :d 6)
+                            :d 6
+                            :e (km :f (km :g 4))))
+          '(((:a) . 2)
+            ((:b :c) . 3)
+            ((:b :d) . 6)
+            ((:d) . 6) ((:e :f :g) . 4)))))
 
 (km_test)
 
