@@ -216,34 +216,30 @@ RES is resolution."
   "Update the lightness of C using F."
   (pb-color_set-lightness c (funcall f (pb-color_lightness c))))
 
-(defun pb-color_neutralize-lightness (c ratio)
-  "Bring the lightness of C toward its middle value 0.5.
-if RATIO is 1 the lightness will be 0.5, if it is 0 it will be unchanged."
-  (pb-color_update-lightness
-   c (lambda (l) (+ l (* ratio (- .5 l))))))
-
-(defun pb-color_exacerbate-lightness (c ratio)
-  "Push the lightness of C away from its middle value 0.5.
-if RATIO is 1 the lightness will be 0 or 1 depending on C, if it is 0 it will be unchanged."
-  (pb-color_update-lightness
-   c (lambda (l) (+ l (* ratio (if (> l 0.5)
-                              (- 1 l)
-                            (- l)))))))
-
 (defun pb-color_complementary-hue (c)
   "Change the hue component of C to its complementary value."
   (pb-color_update-hue
    c (lambda (h) (mod (+ h .5) 1))))
 
+(defun pb-color_complementary-saturation (c)
+  "Change the saturation component of C to its complementary value."
+  (pb-color_update-saturation
+   c (lambda (s) (mod (+ s .5) 1))))
+
 (defun pb-color_complementary-lightness (c)
   "Change the lightness component of C to its complementary value."
+  (pb-color_update-lightness
+   c (lambda (l) (mod (+ l .5) 1))))
+
+(defun pb-color_symetric-lightness (c)
+  "Change the lightness component of C to its symetric value (around 0.5)."
   (pb-color_update-lightness
    c (lambda (l) (if (> l 0.5)
                 (- .5 (- l .5))
               (+ .5 (- .5 l))))))
 
-(defun pb-color_complementary-saturation (c)
-  "Change the saturation component of C to its complementary value."
+(defun pb-color_symetric-saturation (c)
+  "Change the saturation component of C to its symetric value (around 0.5)."
   (pb-color_update-saturation
    c (lambda (s) (if (> s 0.5)
                 (- .5 (- s .5))
@@ -255,6 +251,12 @@ if RATIO is 1 the saturation will be 0.5, if it is 0 it will be unchanged."
   (pb-color_update-saturation
    c (lambda (s) (+ s (* ratio (- .5 s))))))
 
+(defun pb-color_neutralize-lightness (c ratio)
+  "Bring the lightness of C toward its middle value 0.5.
+if RATIO is 1 the lightness will be 0.5, if it is 0 it will be unchanged."
+  (pb-color_update-lightness
+   c (lambda (l) (+ l (* ratio (- .5 l))))))
+
 (defun pb-color_exacerbate-saturation (c ratio)
   "Push the saturation of C away from its middle value 0.5.
 if RATIO is 1 the saturation will be 0 or 1 depending on C, if it is 0 it will be unchanged."
@@ -262,6 +264,14 @@ if RATIO is 1 the saturation will be 0 or 1 depending on C, if it is 0 it will b
    c (lambda (s) (+ s (* ratio (if (> s 0.5)
                               (- 1 s)
                             (- s)))))))
+
+(defun pb-color_exacerbate-lightness (c ratio)
+  "Push the lightness of C away from its middle value 0.5.
+if RATIO is 1 the lightness will be 0 or 1 depending on C, if it is 0 it will be unchanged."
+  (pb-color_update-lightness
+   c (lambda (l) (+ l (* ratio (if (> l 0.5)
+                              (- 1 l)
+                            (- l)))))))
 
 (defun pb-color_luminance (c)
   "Compute the luminance of C."
