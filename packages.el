@@ -27,6 +27,9 @@
 (package! ef-themes
   :recipe (:local-repo "/Users/pierrebaille/.doom.d/themes/ef-themes"
            :files ("*.el")))
+(package! modus-themes
+  :recipe (:local-repo "/Users/pierrebaille/Code/forks/modus-themes"
+           :files ("*.el")))
 (package! dired-sidebar)
 (package! nerd-icons-dired)
 (package! spacious-padding)
