@@ -6,27 +6,10 @@
 ;;; Code:
 
 (require 'km)
-(require 'symex)
 (require 'modus-themes)
 (require 'modus-operandi-theme)
 (require 'pb-color)
 (require 'pb-macros)
-
-(progn (defun pb-modus-theme-hook ()
-         (set-face-attribute 'symex--current-node-face nil
-                             :background (modus-themes-get-color-value 'bg-dim))
-         (set-face-attribute 'font-lock-delimiter-face nil
-                             :foreground (pb-color (modus-themes-get-color-value 'bg-main)
-                                                   (lighten .3)))
-         (set-face-attribute 'elisp-shorthand-font-lock-face nil
-                             :weight 'bold
-                             :foreground (modus-themes-get-color-value 'magenta-faint-lighter))
-
-         (setq evil-symex-state-cursor
-               `(box nil)))
-
-       (add-hook 'modus-themes-post-load-hook
-                 #'pb-modus-theme-hook))
 
 (defun pb-modus-warmer (c delta)
   "Warm C by DELTA."
@@ -85,14 +68,22 @@
               combinations)))
     (nreverse combinations)))
 
+(defvar pb-modus-colors
+  (append '((fg-main "gray50")
+            (fg-dim "gray70")
+            (bg-main "white")
+            (bg-dim "#f2f2f2"))
+          (pb-modus-build-colors)))
+
+(defun pb-modus-get-color (name)
+  "Retrieve a color by NAME from `pb-modus-colors'."
+  (car-safe (alist-get name pb-modus-colors)))
+
 (setq modus-operandi-palette-user
-      (pb-modus-build-colors))
+      pb-modus-colors)
 
 (setq modus-operandi-palette-overrides
-      `((fg-main "gray30")
-        (fg-dim "gray50")
-
-        ;; various fg/bg
+      `(;; various fg/bg
 
         (bg-hl-line bg-dim)
 
@@ -126,6 +117,43 @@
         (rainbow-6 "gray60")
         (rainbow-7 "gray60")
         (rainbow-8 "gray60")))
+
+(progn
+
+
+  (require 'symex)
+  (require 'ibuffer)
+
+  (defun pb-modus-theme-hook ()
+
+    (set-face-attribute 'symex--current-node-face nil
+                        :background (pb-modus-get-color 'bg-dim))
+
+    (set-face-attribute 'default nil :foreground (pb-modus-get-color 'fg-main))
+
+    (setq evil-symex-state-cursor
+          (list 'box (pb-modus-get-color 'cyan)))
+
+    (set-face-attribute 'font-lock-delimiter-face nil
+                        :foreground (pb-color (pb-modus-get-color 'bg-main)
+                                              (lighten .3)))
+
+    (set-face-attribute 'elisp-shorthand-font-lock-face nil
+                        :weight 'bold
+                        :foreground (pb-modus-get-color 'magenta-faint-lighter))
+
+    (setq ibuffer-filter-group-name-face
+          (list :foreground (pb-modus-get-color 'rose-warmer-faint-lighter)
+                :weight 'bold
+                :height 1.1))
+
+    (setq ibuffer-title-face
+          (list :foreground (pc/blend (pb-modus-get-color 'fg-main) (pb-modus-get-color 'bg-main) 0.3)
+                :weight 'normal
+                :height 1.1)))
+
+  (add-hook 'modus-themes-post-load-hook
+            #'pb-modus-theme-hook))
 
 (modus-themes-select 'modus-operandi)
 
