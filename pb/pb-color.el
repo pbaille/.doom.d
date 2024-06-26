@@ -14,6 +14,12 @@
 (require 'color)
 (require 'cl-lib)
 
+(defvar pb-color_6-hue-names
+  '(:red :yellow :green :cyan :blue :magenta))
+
+(defvar pb-color_12-hue-names
+  '(:red :orange :yellow :chartreuse :green :spring :cyan :azure :blue :violet :magenta :rose))
+
 (defun pb-color_hex-color-p (x)
   "Check if X is an hex color string."
   (and (stringp x)
@@ -134,7 +140,7 @@ RES is resolution."
 (defun pb-color_hue-wheel (c n)
   "Compute hue wheel of size N starting on C."
   (cl-destructuring-bind (h s l) (pb-color_to-hsl c)
-    (cl-loop for x from 1 to n by 1
+    (cl-loop for x from 0 to (- n 1) by 1
              collect (pb-color_from-hsl
                       (list (mod (+ h (/ x (float n))) 1) s l)))))
 
@@ -151,6 +157,11 @@ RES is resolution."
     (let ((increment (/ s (float n))))
       (cl-loop for x from 1 to n by 1
                collect (pb-color_from-hsl (list h (- s (* x increment)) l))))))
+
+(defun pb-color_rotate (c ratio)
+  "Rotate C hue by RATIO."
+  (cl-destructuring-bind (h s l) (pb-color_to-hsl c)
+    (pb-color_from-hsl (list (mod (+ h ratio) 1) s l))))
 
 (defun pb-color_saturate (c alpha)
   "Saturate C by ALPHA."
