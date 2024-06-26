@@ -11,6 +11,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+
 (defun pb_first (s)
   "Return the first element of the sequence S."
   (car s))
@@ -29,23 +31,57 @@
 
 
 (defun pb_keyword-name (kw)
-  "Convert the symbol SYM to a keyword."
+  "Get the name of KW (its `symbol-name' without colon)."
   (if (keywordp kw)
       (substring (symbol-name kw) 1)))
 
 
 (defun pb_keyword-to-symbol (kw)
-  "Convert the symbol SYM to a keyword."
+  "Convert the keyword KW to a symbol."
   (if-let ((name (pb_keyword-name kw)))
       (intern name)
     nil))
 
+(defun pb_name (x)
+  "Return the name (string) of X (string, keyword or symbol)."
+  (cond ((stringp x) x)
+        ((keywordp x) (pb_keyword-name x))
+        ((symbolp x) (symbol-name x))))
+
+(defun pb_join-string (xs &optional sep)
+  "Build a string from given XS, using SEP as join."
+  (mapconcat #'pb_name xs (or sep "")))
+
+(defun pb_join-symbol (xs &optional sep)
+  "Build a symbol from given XS, using SEP as join."
+  (intern (pb_join-string xs sep)))
+
+(defun pb_join-keyword (xs &optional sep)
+  "Build a keyword from given XS, using SEP as join."
+  (intern (concat ":" (pb_join-string xs sep))))
+
+(defun pb_string (&rest xs)
+  "Build a string from the names of given XS (strings, keywords or symbols)."
+  (mapconcat #'pb_name xs ""))
+
+(defun pb_symbol (&rest xs)
+  "Build a symbol joining the names of given XS with '-'."
+  (pb_join-symbol xs "-"))
+
+(defun pb_keyword (&rest xs)
+  "Build a keyword joining the names of given XS with '-'."
+  (pb_join-keyword xs "-"))
+
 (defun pb_test ()
-  "Run some assertions about this file"
+  "Run some assertions about this file."
   (cl-assert
    (and (equal "pierre" (pb_keyword-name :pierre))
         (equal 'pierre (pb_keyword-to-symbol :pierre))
-        (equal :pierre (pb_symbol-to-keyword 'pierre)))))
+        (equal :pierre (pb_symbol-to-keyword 'pierre))
+        (equal :foo-bar (pb_keyword "foo" "bar"))
+        (equal 'foo-bar (pb_symbol "foo" "bar"))
+        (equal :foo_bar (pb_join-keyword (list "foo" "bar") "_"))
+        (equal 'foo_bar (pb_join-symbol (list "foo" "bar") "_")))))
 
 (pb_test)
 
