@@ -1,6 +1,18 @@
 ;; -*- no-byte-compile: t; lexical-binding: t; -*-
 ;;; config/packages.el
 
+(use-package evil
+  :config
+  ;; this is needed to prevent the cursor color to change in unexpected ways:
+  ;; https://github.com/emacs-evil/evil/issues/1835#issuecomment-1722500688
+  (advice-add 'evil-initialize-state
+              :around
+              (lambda (orig-fun &rest args)
+                (if (or (string-match "*eldoc" (buffer-name))
+                        (string-match " *temp*" (buffer-name)))
+                    nil
+                  (apply orig-fun args)))))
+
 (use-package spacious-padding
   :config
   (setq spacious-padding-widths
