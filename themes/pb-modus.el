@@ -69,10 +69,14 @@
     (nreverse combinations)))
 
 (defvar pb-modus-colors
-  (append '((fg-main "gray50")
-            (fg-dim "gray70")
-            (bg-main "white")
-            (bg-dim "#f2f2f2"))
+  (append `((fg-intense ,(pc/from-hsl (list 0 0 .35)))
+            (fg-main ,(pc/from-hsl (list 0 0 .45)))
+            (fg-dim ,(pc/from-hsl (list 0 0 .55)))
+            (fg-faint ,(pc/from-hsl (list 0 0 .65)))
+            (bg-intense ,(pc/from-hsl (list 0 0 1)))
+            (bg-main ,(pc/from-hsl (list 0 0 .95)))
+            (bg-dim ,(pc/from-hsl (list 0 0 .9)))
+            (bg-faint ,(pc/from-hsl (list 0 0 .8))))
           (pb-modus-build-colors)))
 
 (defun pb-modus-get-color (name)
@@ -92,6 +96,17 @@
 
         (bg-paren-match bg-dim)
         (fg-paren-match fg-main)
+
+        ;; Modeline
+        (bg-mode-line-active bg-faint)
+        (fg-mode-line-active fg-intense)
+        (border-mode-line-active bg-faint)
+        (bg-mode-line-inactive bg-dim)
+        (fg-mode-line-inactive fg-dim)
+        (border-mode-line-inactive bg-dim)
+        (modeline-err red)
+        (modeline-warning yellow)
+        (modeline-info azure)
 
         ;; Code
         (builtin red-warmer-intense-lighter)
@@ -126,6 +141,10 @@
 
   (defun pb-modus-theme-hook ()
 
+    (setq evil-normal-state-cursor `(box ,(pb-modus-get-color 'red-lighter))
+          evil-insert-state-cursor `((bar . 3) ,(pb-modus-get-color 'cyan-intense-darker))
+          evil-visual-state-cursor `(box ,(pb-modus-get-color 'yellow-warmer-intense-lighter)))
+
     (set-face-attribute 'symex--current-node-face nil
                         :background (pb-modus-get-color 'bg-dim))
 
@@ -141,6 +160,9 @@
     (set-face-attribute 'elisp-shorthand-font-lock-face nil
                         :weight 'bold
                         :foreground (pb-modus-get-color 'magenta-faint-lighter))
+
+    (set-face-attribute 'doom-modeline-bar nil
+                        :background (pb-modus-get-color 'azure))
 
     (setq ibuffer-filter-group-name-face
           (list :foreground (pb-modus-get-color 'rose-warmer-faint-lighter)
