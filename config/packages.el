@@ -32,6 +32,8 @@
                insert-directory-program "/usr/local/bin/gls"
                dired-listing-switches "-aBhl --group-directories-first"))
 
+    (setq delete-by-moving-to-trash t)
+
     ;; (setq dired-omit-files ...)
     (add-hook 'dired-mode-hook
               (lambda ()
