@@ -132,6 +132,7 @@
           ;; clojure specific TO MOVE
           ("M" . pb-symex_cider-macroexpand) ; +lookup/documentation
           ("E" . symex-eval-print)
+          ("C-e" . symex-evaluate-pretty)
           ("C-;" . pb-symex_clj-toggle-comment)))
 
   (symex-initialize)
