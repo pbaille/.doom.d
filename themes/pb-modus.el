@@ -68,17 +68,7 @@
               combinations)))
     (nreverse combinations)))
 
-(defvar pb-modus-colors
-  (pb-modus-build-colors))
-
-(defun pb-modus-get-color (name)
-  "Retrieve a color by NAME from `pb-modus-colors'."
-  (car-safe (alist-get name pb-modus-colors)))
-
-(setq modus-operandi-palette-user
-      pb-modus-colors)
-
-(defun pb-modus-bindings* (bindings)
+(defun pb-modus-bindings* (base bindings)
   "Produce a palette override binding list incrementally.
 It works similarly to the `let*' macro, but BINDINGS is quoted.
 It makes each binding available to the following ones.
@@ -89,7 +79,7 @@ the cdr is interpreted as a `pb-color' form:
 which is tranformed to:
 \(sym (pb-color color trans1 trans2 ...))"
   (eval `(let* ((unspecified 'unspecified)
-                ,@pb-modus-colors
+                ,@base
                 ,@(mapcar (lambda (x) (list (car x)
                                        (if (cddr x)
                                            (cons 'pb-color (cdr x))
@@ -99,23 +89,33 @@ which is tranformed to:
                                 (if (alist-get binding-sym bindings)
                                     bindings
                                   (cons `(list ',binding-sym ,binding-sym) bindings)))
-                              (reverse (mapcar #'car bindings))
+                              (reverse (mapcar #'car (append base bindings)))
                               :initial-value ())))))
+
+(defvar pb-modus-colors
+  (pb-modus-bindings*
+   (pb-modus-build-colors)
+   '((ground "#ffffff")
+     (fg-intense ground (set-lightness .35))
+     (fg-main ground (set-lightness .45))
+     (fg-dim ground (set-lightness .55))
+     (fg-faint ground (set-lightness .65))
+     (bg-intense ground (set-lightness 1))
+     (bg-main ground (set-lightness .97))
+     (bg-dim ground (set-lightness .94))
+     (bg-faint ground (set-lightness .8)))))
+
+(setq modus-operandi-palette-user
+      pb-modus-colors)
+
+(defun pb-modus-get-color (name)
+  "Retrieve a color by NAME from `pb-modus-colors'."
+  (car-safe (alist-get name modus-operandi-palette-user)))
 
 (setq modus-operandi-palette-overrides
       (pb-modus-bindings*
+       modus-operandi-palette-user
        '(
-         ;; fg/bg
-         (ground "#ffffff")
-         (fg-intense ground (set-lightness .35))
-         (fg-main ground (set-lightness .45))
-         (fg-dim ground (set-lightness .55))
-         (fg-faint ground (set-lightness .65))
-         (bg-intense ground (set-lightness 1))
-         (bg-main ground (set-lightness .97))
-         (bg-dim ground (set-lightness .94))
-         (bg-faint ground (set-lightness .8))
-
          ;; specific bg/fg
          (bg-hl-line bg-dim)
          (bg-region bg-dim)
@@ -137,14 +137,14 @@ which is tranformed to:
          ;; Headings
          (fg-heading-0 cyan-faint-lighter)
          (fg-heading-1 rose-faint-lighter)
-         (fg-heading-2 rose-faint-lighter (blend violet-faint-lighter .8))
-         (fg-heading-3 rose-faint-lighter (blend violet-faint-lighter .6))
-         (fg-heading-4 rose-faint-lighter (blend violet-faint-lighter .2))
-         (fg-heading-5 violet-faint-lighter)
-         (fg-heading-6 violet-faint-lighter (blend blue-faint-lighter .8))
-         (fg-heading-7 violet-faint-lighter (blend blue-faint-lighter .6))
-         (fg-heading-8 violet-faint-lighter (blend blue-faint-lighter .4))
-         (fg-heading-9 violet-faint-lighter (blend blue-faint-lighter .2))
+         (fg-heading-2 fg-heading-1 (rotate -0.07))
+         (fg-heading-3 fg-heading-2 (rotate -0.07))
+         (fg-heading-4 fg-heading-3 (rotate -0.07))
+         (fg-heading-5 fg-heading-4 (rotate -0.07))
+         (fg-heading-6 fg-heading-5 (rotate -0.07))
+         (fg-heading-7 fg-heading-6 (rotate -0.07))
+         (fg-heading-8 fg-heading-7 (rotate -0.07))
+         (fg-heading-9 fg-heading-8 (rotate -0.07))
 
          ;; Code
          (builtin red-warmer-intense-lighter)
@@ -209,9 +209,13 @@ which is tranformed to:
     (set-face-attribute 'org-block-begin-line nil
                         :foreground (pb-modus-get-color 'fg-faint))
 
-    (set-face-attribute 'org-level-1 nil :inherit 'outline-1 :height 1.3)
-    (set-face-attribute 'org-level-2 nil :inherit 'outline-2 :height 1.15)
-    (set-face-attribute 'org-level-3 nil :inherit 'outline-3 :height 1.1)
+    (set-face-attribute 'org-level-1 nil :inherit 'outline-1 :height 1.3 :box (list :line-width 8 :color (pb-modus-get-color 'bg-main)))
+    (set-face-attribute 'org-level-2 nil :inherit 'outline-2 :height 1.15 :box (list :line-width 6 :color (pb-modus-get-color 'bg-main)))
+    (set-face-attribute 'org-level-3 nil :inherit 'outline-3 :height 1.1 :box (list :line-width 5 :color (pb-modus-get-color 'bg-main)))
+    (set-face-attribute 'org-level-4 nil :inherit 'outline-4 :box (list :line-width 4 :color (pb-modus-get-color 'bg-main)))
+    (set-face-attribute 'org-level-5 nil :inherit 'outline-5 :box (list :line-width 3 :color (pb-modus-get-color 'bg-main)))
+    (set-face-attribute 'org-level-6 nil :inherit 'outline-6 :box (list :line-width 2 :color (pb-modus-get-color 'bg-main)))
+    (set-face-attribute 'org-level-7 nil :inherit 'outline-7 :box (list :line-width 1 :color (pb-modus-get-color 'bg-main)))
 
     (set-face-attribute 'nerd-icons-ibuffer-file-face nil
                         :foreground (pb-modus-get-color 'fg-dim))
@@ -225,7 +229,13 @@ which is tranformed to:
     (setq ibuffer-title-face
           (list :foreground (pc/blend (pb-modus-get-color 'fg-main) (pb-modus-get-color 'bg-main) 0.3)
                 :weight 'normal
-                :height 1.1)))
+                :height 1.1))
+
+    (set-face-attribute 'diredfl-dir-name nil
+                        :foreground (pb-modus-get-color 'cyan-faint))
+
+    (set-face-attribute 'diredfl-dir-heading nil
+                        :box (list :line-width 10 :color (pb-modus-get-color 'bg-main))))
 
   (add-hook 'modus-themes-post-load-hook
             #'pb-modus-theme-hook))
