@@ -86,63 +86,79 @@
 (setq modus-operandi-palette-user
       pb-modus-colors)
 
+(defun pb-modus-bindings (xs)
+  "Produce a palette override binding list.
+The only thing it does is to provide syntax sugar for color transformations.
+XS is a list of bindings, the right part can contain an expression of the form:
+\(<user-palette-color> <transformation1> ...)
+which is tranformed to:
+\(pb-color (pb-modus-get-color <user-palette-color>) <transformation1> ...)"
+  (mapcar (lambda (binding)
+            (cl-destructuring-bind (sym . val) binding
+              (list sym
+                    (if (cdr val)
+                        (eval `(pb-color ,(pb-modus-get-color (car val)) ,@(cdr val)))
+                      (car val)))))
+          xs))
+
 (setq modus-operandi-palette-overrides
-      `(;; various fg/bg
+      (pb-modus-bindings
+       `(;; various fg/bg
 
-        (bg-hl-line bg-dim)
+         (bg-hl-line bg-dim)
 
-        (bg-region bg-dim)
-        (fg-region unspecified)
+         (bg-region bg-dim)
+         (fg-region unspecified)
 
-        (bg-paren-match bg-dim)
-        (fg-paren-match fg-main)
+         (bg-paren-match bg-dim)
+         (fg-paren-match fg-main)
 
-        ;; Modeline
-        (bg-mode-line-active bg-faint)
-        (fg-mode-line-active fg-intense)
-        (border-mode-line-active bg-faint)
-        (bg-mode-line-inactive bg-dim)
-        (fg-mode-line-inactive fg-dim)
-        (border-mode-line-inactive bg-dim)
-        (modeline-err red)
-        (modeline-warning yellow)
-        (modeline-info azure)
+         ;; Modeline
+         (bg-mode-line-active bg-faint)
+         (fg-mode-line-active fg-intense)
+         (border-mode-line-active bg-faint)
+         (bg-mode-line-inactive bg-dim)
+         (fg-mode-line-inactive fg-dim)
+         (border-mode-line-inactive bg-dim)
+         (modeline-err red)
+         (modeline-warning yellow)
+         (modeline-info azure)
 
-        ;; Headings
-        (fg-heading-0 cyan-faint-lighter)
-        (fg-heading-1 rose-faint-lighter)
-        (fg-heading-2 violet-faint-lighter)
-        (fg-heading-3 cyan-faint-lighter)
-        (fg-heading-4 rose-faint-lighter)
-        (fg-heading-5 violet-faint-lighter)
-        (fg-heading-6 cyan-faint-lighter)
-        (fg-heading-7 rose-faint-lighter)
-        (fg-heading-8 violet-faint-lighter)
+         ;; Headings
+         (fg-heading-0 violet-faint-lighter)
+         (fg-heading-1 rose-faint-lighter)
+         (fg-heading-2 cyan-faint-lighter)
+         (fg-heading-3 violet-faint-lighter)
+         (fg-heading-4 rose-faint-lighter (lighten .1) (desaturate .2))
+         (fg-heading-5 cyan-faint-lighter (lighten .1) (desaturate .2))
+         (fg-heading-6 violet-faint-lighter (lighten .1) (desaturate .2))
+         (fg-heading-7 rose-faint-lighter (lighten .1) (desaturate .4))
+         (fg-heading-8 cyan-faint-lighter (lighten .1) (desaturate .4))
 
-        ;; Code
-        (builtin red-warmer-intense-lighter)
-        (comment orange-lighter)
-        (constant cyan-faint-darker)
-        (docstring orange-lighter)
-        (docmarkup cyan-faint)
-        (fnname magenta-faint-lighter)
-        (keyword azure)
-        (preprocessor red-cooler)
-        (string orange-warmer-intense-darker)
-        (type cyan-cooler)
-        (variable spring-darker)
-        (rx-construct green-cooler)
-        (rx-backslash magenta)
+         ;; Code
+         (builtin red-warmer-intense-lighter)
+         (comment orange-lighter)
+         (constant cyan-faint-darker)
+         (docstring orange-lighter)
+         (docmarkup cyan-faint)
+         (fnname magenta-faint-lighter)
+         (keyword azure)
+         (preprocessor red-cooler)
+         (string orange-warmer-intense-darker)
+         (type cyan-cooler)
+         (variable spring-darker)
+         (rx-construct green-cooler)
+         (rx-backslash magenta)
 
-        (rainbow-0 "gray60")
-        (rainbow-1 "gray60")
-        (rainbow-2 "gray60")
-        (rainbow-3 "gray60")
-        (rainbow-4 "gray60")
-        (rainbow-5 "gray60")
-        (rainbow-6 "gray60")
-        (rainbow-7 "gray60")
-        (rainbow-8 "gray60")))
+         (rainbow-0 "gray60")
+         (rainbow-1 "gray60")
+         (rainbow-2 "gray60")
+         (rainbow-3 "gray60")
+         (rainbow-4 "gray60")
+         (rainbow-5 "gray60")
+         (rainbow-6 "gray60")
+         (rainbow-7 "gray60")
+         (rainbow-8 "gray60"))))
 
 (progn
 
@@ -164,9 +180,6 @@
 
     (set-face-attribute 'default nil :foreground (pb-modus-get-color 'fg-main))
 
-    (set-face-attribute 'nerd-icons-ibuffer-file-face nil
-                        :foreground (pb-modus-get-color 'fg-dim))
-
     (set-face-attribute 'font-lock-delimiter-face nil
                         :foreground (pb-color (pb-modus-get-color 'bg-main)
                                               (lighten .3)))
@@ -184,6 +197,13 @@
 
     (set-face-attribute 'org-block-begin-line nil
                         :foreground (pb-modus-get-color 'fg-faint))
+
+    (set-face-attribute 'org-level-1 nil :inherit 'outline-1 :height 1.3)
+    (set-face-attribute 'org-level-2 nil :inherit 'outline-2 :height 1.15)
+    (set-face-attribute 'org-level-3 nil :inherit 'outline-3 :height 1.1)
+
+    (set-face-attribute 'nerd-icons-ibuffer-file-face nil
+                        :foreground (pb-modus-get-color 'fg-dim))
 
     (setq ibuffer-filter-group-name-face
           (list :foreground (pb-modus-get-color 'orange-lighter)
