@@ -69,15 +69,7 @@
     (nreverse combinations)))
 
 (defvar pb-modus-colors
-  (append `((fg-intense ,(pc/from-hsl (list 0 0 .35)))
-            (fg-main ,(pc/from-hsl (list 0 0 .45)))
-            (fg-dim ,(pc/from-hsl (list 0 0 .55)))
-            (fg-faint ,(pc/from-hsl (list 0 0 .65)))
-            (bg-intense ,(pc/from-hsl (list 0 0 1)))
-            (bg-main ,(pc/from-hsl (list 0 0 .97)))
-            (bg-dim ,(pc/from-hsl (list 0 0 .94)))
-            (bg-faint ,(pc/from-hsl (list 0 0 .8))))
-          (pb-modus-build-colors)))
+  (pb-modus-build-colors))
 
 (defun pb-modus-get-color (name)
   "Retrieve a color by NAME from `pb-modus-colors'."
@@ -86,30 +78,48 @@
 (setq modus-operandi-palette-user
       pb-modus-colors)
 
-(defun pb-modus-bindings (xs)
-  "Produce a palette override binding list.
-The only thing it does is to provide syntax sugar for color transformations.
-XS is a list of bindings, the right part can contain an expression of the form:
-\(<user-palette-color> <transformation1> ...)
+(defun pb-modus-bindings* (bindings)
+  "Produce a palette override binding list incrementally.
+It works similarly to the `let*' macro, but BINDINGS is quoted.
+It makes each binding available to the following ones.
+Additionally it provide syntax sugar for color transformations.
+If a binding contains more than two component,
+the cdr is interpreted as a `pb-color' form:
+\(sym color trans1 trans2 ...)
 which is tranformed to:
-\(pb-color (pb-modus-get-color <user-palette-color>) <transformation1> ...)"
-  (mapcar (lambda (binding)
-            (cl-destructuring-bind (sym . val) binding
-              (list sym
-                    (if (cdr val)
-                        (eval `(pb-color ,(pb-modus-get-color (car val)) ,@(cdr val)))
-                      (car val)))))
-          xs))
+\(sym (pb-color color trans1 trans2 ...))"
+  (eval `(let* ((unspecified 'unspecified)
+                ,@pb-modus-colors
+                ,@(mapcar (lambda (x) (list (car x)
+                                       (if (cddr x)
+                                           (cons 'pb-color (cdr x))
+                                         (cadr x))))
+                          bindings))
+           (list ,@(cl-reduce (lambda (bindings binding-sym)
+                                (if (alist-get binding-sym bindings)
+                                    bindings
+                                  (cons `(list ',binding-sym ,binding-sym) bindings)))
+                              (reverse (mapcar #'car bindings))
+                              :initial-value ())))))
 
 (setq modus-operandi-palette-overrides
-      (pb-modus-bindings
-       `(;; various fg/bg
+      (pb-modus-bindings*
+       '(
+         ;; fg/bg
+         (ground "#ffffff")
+         (fg-intense ground (set-lightness .35))
+         (fg-main ground (set-lightness .45))
+         (fg-dim ground (set-lightness .55))
+         (fg-faint ground (set-lightness .65))
+         (bg-intense ground (set-lightness 1))
+         (bg-main ground (set-lightness .97))
+         (bg-dim ground (set-lightness .94))
+         (bg-faint ground (set-lightness .8))
 
+         ;; specific bg/fg
          (bg-hl-line bg-dim)
-
          (bg-region bg-dim)
          (fg-region unspecified)
-
          (bg-paren-match bg-dim)
          (fg-paren-match fg-main)
 
@@ -125,15 +135,16 @@ which is tranformed to:
          (modeline-info azure)
 
          ;; Headings
-         (fg-heading-0 violet-faint-lighter)
+         (fg-heading-0 cyan-faint-lighter)
          (fg-heading-1 rose-faint-lighter)
-         (fg-heading-2 cyan-faint-lighter)
-         (fg-heading-3 violet-faint-lighter)
-         (fg-heading-4 rose-faint-lighter (lighten .1) (desaturate .2))
-         (fg-heading-5 cyan-faint-lighter (lighten .1) (desaturate .2))
-         (fg-heading-6 violet-faint-lighter (lighten .1) (desaturate .2))
-         (fg-heading-7 rose-faint-lighter (lighten .1) (desaturate .4))
-         (fg-heading-8 cyan-faint-lighter (lighten .1) (desaturate .4))
+         (fg-heading-2 rose-faint-lighter (blend violet-faint-lighter .8))
+         (fg-heading-3 rose-faint-lighter (blend violet-faint-lighter .6))
+         (fg-heading-4 rose-faint-lighter (blend violet-faint-lighter .2))
+         (fg-heading-5 violet-faint-lighter)
+         (fg-heading-6 violet-faint-lighter (blend blue-faint-lighter .8))
+         (fg-heading-7 violet-faint-lighter (blend blue-faint-lighter .6))
+         (fg-heading-8 violet-faint-lighter (blend blue-faint-lighter .4))
+         (fg-heading-9 violet-faint-lighter (blend blue-faint-lighter .2))
 
          ;; Code
          (builtin red-warmer-intense-lighter)
