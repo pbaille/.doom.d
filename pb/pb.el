@@ -12,6 +12,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'pb-destructure)
 
 (defun pb_first (s)
   "Return the first element of the sequence S."
@@ -72,6 +73,10 @@
   "Build a keyword joining the names of given XS with '-'."
   (pb_join-keyword xs "-"))
 
+(defalias 'pb_let 'pb-destructure_let)
+(defalias 'pb_fn 'pb-destructure_fn)
+(defalias 'pb_defun 'pb-destructure_defun)
+
 (defun pb_test ()
   "Run some assertions about this file."
   (cl-assert
@@ -81,7 +86,14 @@
         (equal :foo-bar (pb_keyword "foo" "bar"))
         (equal 'foo-bar (pb_symbol "foo" "bar"))
         (equal :foo_bar (pb_join-keyword (list "foo" "bar") "_"))
-        (equal 'foo_bar (pb_join-symbol (list "foo" "bar") "_")))))
+        (equal 'foo_bar (pb_join-symbol (list "foo" "bar") "_"))
+        (equal (list 1 2 (list 3 4))
+               (pb_let [(list* a b xs) (list 1 2 3 4)]
+                       (list a b xs)))
+        (equal (funcall (pb_fn ((list* a b xs))
+                               (list a b xs))
+                        (list 1 2 3 4))
+               (list 1 2 (list 3 4))))))
 
 (pb_test)
 
