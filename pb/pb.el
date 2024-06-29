@@ -12,6 +12,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'seq)
 (require 'pb-destructure)
 
 (defun pb_first (s)
@@ -76,6 +77,27 @@
 (defalias 'pb_let 'pb-destructure_let)
 (defalias 'pb_fn 'pb-destructure_fn)
 (defalias 'pb_defun 'pb-destructure_defun)
+
+(defmacro pb-> (x &rest forms)
+  "Threads X through FORMS as first argument."
+  (seq-reduce
+   (lambda (result form)
+     (if (seqp form)
+         `(,(car form) ,result ,@(cdr form))
+       (list form result)))
+   forms
+   x))
+
+(defmacro pb->_ (&rest forms)
+  "Thread the first argument into following FORMS.
+using the _ placeholder to determine threaded value positioning."
+  (cl-destructuring-bind (ret . bindings) (reverse forms)
+    `(let* ,(seq-reduce
+             (lambda (bindings form)
+               (cons (list '_ form) bindings))
+             bindings
+             (list))
+       ,ret)))
 
 (defun pb_test ()
   "Run some assertions about this file."
