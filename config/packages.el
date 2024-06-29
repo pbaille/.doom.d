@@ -182,7 +182,10 @@
   (defun pb-gptel-change-return-key-in-menu ()
     (transient-suffix-put 'gptel-menu (kbd "RET") :key "C-<return>")
     (advice-remove #'gptel-menu #'pb-gptel-change-return-key-in-menu))
-  (advice-add #'gptel-menu :after #'pb-gptel-change-return-key-in-menu))
+  (advice-add #'gptel-menu :after #'pb-gptel-change-return-key-in-menu)
+  (gptel-make-anthropic "Claude"          ;Any name you want
+    :stream t                             ;Streaming responses
+    :key pb/claude-api-key))
 
 (use-package tide
   :config
