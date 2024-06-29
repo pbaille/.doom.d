@@ -57,6 +57,16 @@
   ""
   (pb-flow_emit-form body))
 
+(defmacro pb-flow_fn (&rest xs)
+  ""
+  (pb_let [(cons name xs) (if (symbolp (car xs)) xs (cons nil xs))
+           (cons doc body) (if (stringp (car xs)) xs (cons nil xs))
+           argsym (gensym "args_")]
+          `(lambda (&rest ,argsym)
+             (pb-flow ,@(sq_join (mapcar (pb_fn [(list pat ret)]
+                                                (list (vector (cons 'list (append pat ())) argsym) ret))
+                                         (sq_partition 2 2 body)))))))
+
 (defun pb-flow_tests ()
   "Some little checks."
   (and (not (pb-flow (equal 3 1) :ok))
@@ -76,6 +86,15 @@
                                   :zero))]
                (and (equal :zero (funcall f 0))
                     (equal (list :pos 1) (funcall f 1))
-                    (equal (list :neg -1) (funcall f -1))))))
+                    (equal (list :neg -1) (funcall f -1))))
+       (equal (let ((f (pb-flow_fn
+                        [(list :pair x y)] (list :pair (km :left x :right y))
+                        [(list :atom x)] (list :atom x)
+                        [(cons x :pouet)] (list :case3 x))))
+                (list (funcall f (list :pair 1 2))
+                      (funcall f (list :atom 2))
+                      (funcall f (cons :yop :pouet))))
+              '((:pair (:left 1 :right 2)) (:atom 2) (:case3 :yop))
+)))
 
 (pb-flow_tests)
