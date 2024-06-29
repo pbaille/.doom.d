@@ -52,11 +52,21 @@ is returned."
 (defmacro pb-destructure_fn (pat &rest body)
   "Destructuring lambda, use `pb-destructure_let' to bind its arguments using PAT.
 Then execute its BODY within those bindings."
-  (let ((argsyms (mapcar (lambda (x) (if (symbolp x) x (gensym "arg_")))
-                         pat)))
+  (let* ((docstring (if (and (cdr body) (stringp (car body)))
+                        (car body)) )
+         (body (if docstring (cdr body) body))
+         (argsyms (mapcar (lambda (x) (if (symbolp x) x (gensym "arg_")))
+                          pat)))
     `(lambda ,argsyms
+       ,@(if docstring (list docstring) ())
        (pb-destructure_let ,(sq_interleave pat argsyms)
                            ,@body))))
+
+(defmacro pb-destructure_defun (name &rest fn-decl)
+  "Like `defun' but use `pb-destructure_fn' under the hood.
+NAME is the top level name the lambda will be bound to.
+FN-DECL is the same kind of arguments `pb-destructure_fn' expects."
+  `(defalias ,name (function (pb-destructure_fn ,@fn-decl))))
 
 (defun pb-destructure_seed-sym (seed prefix)
   "Generate a symbol for binding the SEED of a destructuration using PREFIX.
