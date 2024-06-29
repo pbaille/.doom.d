@@ -56,7 +56,7 @@ Then execute its BODY within those bindings."
                         (car body)) )
          (body (if docstring (cdr body) body))
          (argsyms (mapcar (lambda (x) (if (symbolp x) x (gensym "arg_")))
-                          pat)))
+                          (append pat ()))))
     `(lambda ,argsyms
        ,@(if docstring (list docstring) ())
        (pb-destructure_let ,(sq_interleave pat argsyms)
@@ -66,7 +66,8 @@ Then execute its BODY within those bindings."
   "Like `defun' but use `pb-destructure_fn' under the hood.
 NAME is the top level name the lambda will be bound to.
 FN-DECL is the same kind of arguments `pb-destructure_fn' expects."
-  `(defalias ,name (function (pb-destructure_fn ,@fn-decl))))
+  (declare (indent defun))
+  `(defalias ',name (pb-destructure_fn ,@fn-decl)))
 
 (defun pb-destructure_seed-sym (seed prefix)
   "Generate a symbol for binding the SEED of a destructuration using PREFIX.
@@ -112,6 +113,17 @@ If seed is a symbol, gensym is not used and the symbol is returned."
                                                      (list 'plist-get sym (car entry))))
                                    (km_entries args)))))))
 
+(pb-destructure_extend
+ 'km_keys (lambda (args seed)
+            (pb-destructure (cons 'km (sq_interleave (mapcar #'pb_symbol-to-keyword args)
+                                                     args))
+                            seed)))
+
+(pb-destructure_extend
+ 'km_at (lambda (args seed)
+          (pb-destructure (cadr args)
+                          (list 'km_get seed (car args)))))
+
 (defun pb-destructure_test ()
   "Test some of the functionalities."
 
@@ -139,7 +151,11 @@ If seed is a symbol, gensym is not used and the symbol is returned."
 
   (equal (pb-destructure_let [(km :a (list* a b xs) :c c) (km :a (list 1 2 3) :c 34)]
                              (list a b c xs))
-         '(1 2 34 (3))))
+         '(1 2 34 (3)))
+
+  (equal (pb-destructure_let [(km_keys a b c) (km :a 1 :b 2 :c 3)]
+                             (list a b c))
+         (list 1 2 3)))
 
 (pb-destructure_test)
 
