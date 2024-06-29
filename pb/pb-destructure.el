@@ -55,8 +55,9 @@ Then execute its BODY within those bindings."
   (let* ((docstring (if (and (cdr body) (stringp (car body)))
                         (car body)) )
          (body (if docstring (cdr body) body))
+         (pat (append pat ()))
          (argsyms (mapcar (lambda (x) (if (symbolp x) x (gensym "arg_")))
-                          (append pat ()))))
+                          pat)))
     `(lambda ,argsyms
        ,@(if docstring (list docstring) ())
        (pb-destructure_let ,(sq_interleave pat argsyms)
