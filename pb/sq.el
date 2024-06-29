@@ -51,6 +51,31 @@ Returns a list of numbers from START up to but not including END."
   "Return a new list containing all elements of LST except the last one."
   (cl-subseq lst 0 (- (length lst) 1)))
 
+(defun sq_last (lst)
+  "Return the last element of LST."
+  (car-safe (reverse lst)))
+
+(defun sq_interleave (list1 list2)
+  "Interleave elements of LIST1 and LIST2."
+  (cl-loop for e1 in list1 and e2 in list2
+           append (if e1 (list e1) '())
+           append (if e2 (list e2) '())))
+
+(defun sq_take-strict (lst n)
+  "Produce a list containing the N first elements of LST.
+Returns nil if LST is shorter than N."
+  (let ((taken (take n lst)))
+    (if (= n (length taken))
+        taken)))
+
+(defun sq_repeat (n x)
+  "Produce a list containing N times X."
+  (cl-loop for i from 1 to n collect x))
+
+(defun sq_join (xs)
+  "Concat several lists (XS) together."
+  (apply #'append xs))
+
 (defun sq_test ()
   "Test."
   (cl-assert
@@ -72,7 +97,13 @@ Returns a list of numbers from START up to but not including END."
 
   (cl-assert
    (equal (sq_butlast (sq_range 0 10))
-          (sq_range 0 9))))
+          (sq_range 0 9)))
+
+  (cl-assert
+   (and (equal (sq_interleave '(a b c) '(x y z))
+               '(a x b y c z))
+        (equal (sq_interleave '(a b) '(x y z))
+               (sq_interleave '(a b c) '(x y))))))
 
 (sq_test)
 
