@@ -13,9 +13,10 @@
 
 (print "pb loading..")
 
-(require 'pb)
-(require 'km)
 (require 'sq)
+(require 'km)
+(require 'pb-destructure)
+(require 'pb)
 (require 'pb-macros)
 
 (require 'pb-cider)
