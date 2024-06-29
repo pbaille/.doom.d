@@ -27,7 +27,8 @@ and the seed it has to destructure against."
 
 (defun pb-destructure (pat seed)
   "Produce a list of bindings from PAT and SEED."
-  (cond ((symbolp pat)
+  (cond ((and (symbolp pat)
+              (not (keywordp pat)))
          (if (equal pat seed)
              ()
            (list (list pat seed))))
@@ -38,7 +39,8 @@ and the seed it has to destructure against."
            (if f
                (funcall f args seed)
              (error (format "No destructuring implementation for: %s"
-                            op)))))))
+                            op)))))
+        (t (list (list (gensym "equal-check_") (list 'equal pat seed))))))
 
 (defmacro pb-destructure_let (bindings &rest body)
   "Destructuring let, unlike let and let*, BINDINGS are a flat list.
