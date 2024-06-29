@@ -9,7 +9,6 @@
 (require 'modus-themes)
 (require 'modus-operandi-theme)
 (require 'pb-color)
-(require 'pb-macros)
 
 (defun pb-modus-warmer (c delta)
   "Warm C by DELTA."
@@ -32,20 +31,20 @@
   (let (combinations)
     (dolist (h (list
                 nil
-                (cons :warmer (fn (c) (pb-modus-warmer c 0.05)))
-                (cons :cooler (fn (c) (pb-modus-cooler c 0.05)))))
+                (cons :warmer (lambda (c) (pb-modus-warmer c 0.05)))
+                (cons :cooler (lambda (c) (pb-modus-cooler c 0.05)))))
       (dolist (s (list
                   nil
-                  (cons :intense (fn (c) (pb-color_saturate c 0.5)))
-                  (cons :faint (fn (c) (pb-color_desaturate c 0.3)))))
+                  (cons :intense (lambda (c) (pb-color_saturate c 0.5)))
+                  (cons :faint (lambda (c) (pb-color_desaturate c 0.3)))))
         (dolist (l (list
                     nil
-                    (cons :lighter (fn (c) (pb-color_lighten c 0.1)))
-                    (cons :darker (fn (c) (pb-color_darken c 0.1)))))
+                    (cons :lighter (lambda (c) (pb-color_lighten c 0.1)))
+                    (cons :darker (lambda (c) (pb-color_darken c 0.1)))))
           (let ((xs (remove nil (list h s l))))
             (if xs
                 (push (cons (pb_join-keyword (mapcar #'car xs) "-")
-                            (seq-reduce (fn (ret f)
+                            (seq-reduce (lambda (ret f)
                                             (funcall f ret))
                                         (mapcar #'cdr xs)
                                         c))

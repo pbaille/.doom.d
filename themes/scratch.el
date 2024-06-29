@@ -86,59 +86,23 @@
           :fg (funcall decline fg)
           :colors (km_map
                    colors
-                   (fn ((name . c))
-                       (cons name (funcall decline-color c)))))))
+                   (pb_fn [(cons name c)]
+                          (cons name (funcall decline-color c)))))))
 
 (defun km_flat (m sep)
-  (seq-mapcat (fn ((k . v))
-                  (if (km? v)
-                      (km_map (km_flat v sep)
-                              (fn ((k1 . v1))
-                                  (cons (intern
-                                         (concat ":"
-                                                 (pb_keyword-name k)
-                                                 sep
-                                                 (pb_keyword-name k1)))
-                                        v1)))
-                    (list k v)))
+  (seq-mapcat (pb_fn [(cons k v)]
+                     (if (km? v)
+                         (km_map (km_flat v sep)
+                                 (pb_fn [(cons k1 v1)]
+                                        (cons (intern
+                                               (concat ":"
+                                                       (pb_keyword-name k)
+                                                       sep
+                                                       (pb_keyword-name k1)))
+                                              v1)))
+                       (list k v)))
               (km_entries m)))
 
-
-(progn :macros
-
-       (defmacro -> (x &rest forms)
-         (seq-reduce
-          (lambda (result form)
-            (if (seqp form)
-                `(,(car form) ,result ,@(cdr form))
-              (list form result)))
-          forms
-          x))
-
-       (defmacro dlet (bindings &rest body)
-         (seq-reduce
-          (lambda (ret binding)
-            (cl-destructuring-bind (pat expr) binding
-              (if (symbolp pat)
-                  `(let (,binding) ,ret)
-                `(cl-destructuring-bind ,@binding ,ret))))
-          (reverse (sq_partition 2 2 bindings))
-          (cons 'progn body)))
-
-       (defmacro >_ (&rest forms)
-         "Thread the first argument into following FORMS.
-using the _ placeholder to determine threaded value positioning."
-         (cl-destructuring-bind (ret . bindings) (reverse forms)
-           `(let* ,(seq-reduce
-                    (lambda (bindings form)
-                      (cons (list '_ form) bindings))
-                    bindings
-                    (list))
-              ,ret)))
-
-       (defmacro f_ (&rest body)
-         `(lambda (_)
-            ,@body)))
 
 (defun pb-theme_transform-color-key (k separator)
   (pcase (string-split (symbol-name k) separator)
@@ -154,15 +118,15 @@ using the _ placeholder to determine threaded value positioning."
                                                           (_ variant))))))))))
 
 (defun pb-theme_rand-palette ()
-  (-> (pb-color_from-hsl
-       (list (pb-color_random-value) .2 .8))
-      (pb-theme_palette)
-      (km_flat "-")
-      (km_map-keys
-       (f_ (pb_keyword-to-symbol
-            (or (pb-theme_transform-color-key _ "-") _))))
-      (km_map-vals #'list)
-      (km_entries))
+  (pb-> (pb-color_from-hsl
+         (list (pb-color_random-value) .2 .8))
+        (pb-theme_palette)
+        (km_flat "-")
+        (km_map-keys
+         (lambda (x) (pb_keyword-to-symbol
+                 (or (pb-theme_transform-color-key x "-") x))))
+        (km_map-vals #'list)
+        (km_entries))
 
   )
 
