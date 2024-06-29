@@ -40,6 +40,10 @@
   (cl-destructuring-bind (h s l) c
     (pb-color_from-rgb (color-hsl-to-rgb h s l))))
 
+(defun pb-color_hsl (hue saturation lightness)
+  "Create a color based on HUE, SATURATION and LIGHTNESS."
+  (pb-color_from-hsl (list hue saturation lightness)))
+
 (defun pb-color_random-value ()
   "Return a random value between 0 and 1."
   (/ (random 255) 255.0))
