@@ -61,6 +61,13 @@ Returns a list of numbers from START up to but not including END."
            append (if e1 (list e1) '())
            append (if e2 (list e2) '())))
 
+(defun sq_interpose (lst sep)
+  "Interpose SEP between elements of LST."
+  (if (cadr lst)
+      (append (list (car lst) sep)
+              (sq_interpose (cdr lst) sep))
+    lst))
+
 (defun sq_take-strict (lst n)
   "Produce a list containing the N first elements of LST.
 Returns nil if LST is shorter than N."
@@ -103,7 +110,12 @@ Returns nil if LST is shorter than N."
    (and (equal (sq_interleave '(a b c) '(x y z))
                '(a x b y c z))
         (equal (sq_interleave '(a b) '(x y z))
-               (sq_interleave '(a b c) '(x y))))))
+               (sq_interleave '(a b c) '(x y)))))
+
+  (cl-assert
+   (equal (sq_interpose (list 1 2 3 4) :a)
+          '(1 :a 2 :a 3 :a 4)
+)))
 
 (sq_test)
 
