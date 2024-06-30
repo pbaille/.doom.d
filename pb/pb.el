@@ -108,15 +108,4 @@ using the _ placeholder to determine threaded value positioning."
 (pb_test)
 
 (provide 'pb)
-
-(require 'pb-destructure)
-(defalias 'pb_let 'pb-destructure_let)
-(defalias 'pb_fn 'pb-destructure_fn)
-(defalias 'pb_defun 'pb-destructure_defun)
-
-(require 'pb-flow)
-(defalias 'pb_if 'pb-flow)
-(defalias 'pb_fm 'pb-flow_fn)
-
-
 ;;; pb.el ends here.
