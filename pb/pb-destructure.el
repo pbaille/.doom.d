@@ -13,6 +13,7 @@
 
 (require 'sq)
 (require 'km)
+(require 'pb)
 
 (defvar pb-destructure_implementations ())
 
@@ -158,7 +159,16 @@ If seed is a symbol, gensym is not used and the symbol is returned."
 
   (equal (pb-destructure_let [(km_keys a b c) (km :a 1 :b 2 :c 3)]
                              (list a b c))
-         (list 1 2 3)))
+         (list 1 2 3))
+
+  (equal (list 1 2 (list 3 4))
+         (pb-destructure_let [(list* a b xs) (list 1 2 3 4)]
+                 (list a b xs)))
+
+  (equal (funcall (pb-destructure_fn ((list* a b xs))
+                         (list a b xs))
+                  (list 1 2 3 4))
+         (list 1 2 (list 3 4))))
 
 (pb-destructure_test)
 
