@@ -12,6 +12,7 @@
 ;;; Code:
 
 (require 'pb)
+(require 'pb-destructure)
 
 (defun pb-flow_thunk-symbols (n)
   "Generating N symbols to hold case thunks."
@@ -127,9 +128,16 @@ Followed by a flat serie of cases of the form args-pattern return-expr."
                  (list (funcall f (list :pair 1 2))
                        (funcall f (list :atom 2))
                        (funcall f (cons :yop :pouet))))
-               '((:pair (:left 1 :right 2)) (:atom 2) (:case3 :yop))))))
+               '((:pair (:left 1 :right 2)) (:atom 2) (:case3 :yop)))
+        (equal (list 5 4 3 2 1)
+               (funcall (pb-flow_fn rec [x] (if (> x 0)
+                                                (cons x (rec (- x 1)))))
+                        5)))))
 
 (pb-flow_tests)
+
+(defalias 'pb_if 'pb-flow)
+(defalias 'pb_fm 'pb-flow_fn)
 
 (provide 'pb-flow)
 ;;; pb-flow.el ends here.
