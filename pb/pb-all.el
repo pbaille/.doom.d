@@ -16,6 +16,8 @@
 (require 'sq)
 (require 'km)
 (require 'pb)
+(require 'pb-destructure)
+(require 'pb-flow)
 
 (require 'pb-cider)
 (require 'pb-color)
