@@ -13,7 +13,6 @@
 
 (require 'cl-lib)
 (require 'seq)
-(require 'pb-destructure)
 
 (defun pb_first (s)
   "Return the first element of the sequence S."
@@ -74,10 +73,6 @@
   "Build a keyword joining the names of given XS with '-'."
   (pb_join-keyword xs "-"))
 
-(defalias 'pb_let 'pb-destructure_let)
-(defalias 'pb_fn 'pb-destructure_fn)
-(defalias 'pb_defun 'pb-destructure_defun)
-
 (defmacro pb-> (x &rest forms)
   "Threads X through FORMS as first argument."
   (seq-reduce
@@ -108,16 +103,20 @@ using the _ placeholder to determine threaded value positioning."
         (equal :foo-bar (pb_keyword "foo" "bar"))
         (equal 'foo-bar (pb_symbol "foo" "bar"))
         (equal :foo_bar (pb_join-keyword (list "foo" "bar") "_"))
-        (equal 'foo_bar (pb_join-symbol (list "foo" "bar") "_"))
-        (equal (list 1 2 (list 3 4))
-               (pb_let [(list* a b xs) (list 1 2 3 4)]
-                       (list a b xs)))
-        (equal (funcall (pb_fn ((list* a b xs))
-                               (list a b xs))
-                        (list 1 2 3 4))
-               (list 1 2 (list 3 4))))))
+        (equal 'foo_bar (pb_join-symbol (list "foo" "bar") "_")))))
 
 (pb_test)
 
 (provide 'pb)
+
+(require 'pb-destructure)
+(defalias 'pb_let 'pb-destructure_let)
+(defalias 'pb_fn 'pb-destructure_fn)
+(defalias 'pb_defun 'pb-destructure_defun)
+
+(require 'pb-flow)
+(defalias 'pb_if 'pb-flow)
+(defalias 'pb_fm 'pb-flow_fn)
+
+
 ;;; pb.el ends here.
