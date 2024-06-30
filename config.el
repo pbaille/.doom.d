@@ -17,4 +17,6 @@
 
 ;; extras
 
+(load-file "~/.doom.d/themes/pb-modus.el")
+
 ;; (load "~/Code/WIP/noon/emacs/noon-modes.el")
