@@ -13,7 +13,6 @@
 
 (require 'cl-lib)
 (require 'sq)
-(require 'pb)
 
 (defun km? (m)
   "Check if M is a keyword map."
@@ -158,7 +157,7 @@ and BODY is the code to execute in the context of those bindings."
          (ks (cadr pat))
          (seed (cadr binding)))
     `(let* ((,seedsym ,seed)
-            ,@(mapcar (lambda (k) (list k `(plist-get ,seedsym ,(pb_symbol-to-keyword k))))
+            ,@(mapcar (lambda (k) (list k `(plist-get ,seedsym ,(intern (concat ":" (symbol-name k))))))
                       ks))
        ,@body)))
 
