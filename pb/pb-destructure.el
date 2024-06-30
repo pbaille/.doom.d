@@ -47,24 +47,27 @@ and the seed it has to destructure against."
   "Destructuring let, unlike let and let*, BINDINGS are a flat list.
 BODY expressions are evaluated in those new bindings, the last value
 is returned."
+  (declare (indent 2))
   `(let* ,(sq_join (mapcar (lambda (binding)
                              (pb-destructure (car binding) (cadr binding)))
                            (sq_partition 2 2 (append bindings nil))))
      ,@body))
 
-(defmacro pb-destructure_fn (pat &rest body)
-  "Destructuring lambda, use `pb-destructure_let' to bind its arguments using PAT.
-Then execute its BODY within those bindings."
-  (let* ((docstring (if (and (cdr body) (stringp (car body)))
-                        (car body)) )
-         (body (if docstring (cdr body) body))
-         (pat (append pat ()))
-         (argsyms (mapcar (lambda (x) (if (symbolp x) x (gensym "arg_")))
-                          pat)))
-    `(lambda ,argsyms
-       ,@(if docstring (list docstring) ())
-       (pb-destructure_let ,(sq_interleave pat argsyms)
-                           ,@body))))
+(defmacro pb-destructure_fn (&rest decl)
+  "Create a lambda function that use the `pb-destructure_let' for its arguments.
+DECL can be prefixed by a name for the lambda and a docstring.
+Followed by the args pattern and expressions."
+  (pb-destructure_let [(list* name argv xs) (if (symbolp (car decl)) decl (cons nil decl))
+                       (cons doc body) (if (stringp (car xs)) xs (cons nil xs))
+                       argsyms (mapcar (lambda (x) (if (symbolp x) x (gensym "arg_")))
+                                       argv)
+                       compiled-body `(,@(if doc (list doc))
+                                       (pb-destructure_let ,(sq_interleave argv argsyms)
+                                           ,@body))]
+      (if name
+          `(cl-labels ((,name ,argsyms ,@compiled-body))
+             (function ,name))
+        `(lambda ,argsyms ,@compiled-body))))
 
 (defmacro pb-destructure_defun (name &rest fn-decl)
   "Like `defun' but use `pb-destructure_fn' under the hood.
@@ -131,44 +134,45 @@ If seed is a symbol, gensym is not used and the symbol is returned."
 (defun pb-destructure_test ()
   "Test some of the functionalities."
 
-  (equal (pb-destructure_let [(cons a b) (list 1 2 3 4)
-                              (list (cons x y) z) (list (cons a :io) :bop b)
-                              (and xs (list* j (cons k1 k2) l)) (list 1 (cons 3 4) 2)]
-                             (list a b x y z j k1 k2 l xs))
-         '(1 (2 3 4) 1 :io :bop 1 3 4 (2) (1 (3 . 4) 2)))
+  (cl-assert
+   (and (equal (pb-destructure_let [(cons a b) (list 1 2 3 4)
+                                    (list (cons x y) z) (list (cons a :io) :bop b)
+                                    (and xs (list* j (cons k1 k2) l)) (list 1 (cons 3 4) 2)]
+                                   (list a b x y z j k1 k2 l xs))
+               '(1 (2 3 4) 1 :io :bop 1 3 4 (2) (1 (3 . 4) 2)))
 
-  (equal (funcall (pb-destructure_fn (a b c) (list a b c))
-                  1 2 3)
-         (list 1 2 3))
+        (equal (funcall (pb-destructure_fn (a b c) (list a b c))
+                        1 2 3)
+               (list 1 2 3))
 
-  (equal (funcall (pb-destructure_fn ((list* a b xs)) (list a b xs))
-                  (list 1 2 3 4))
-         (list 1 2 (list 3 4)))
+        (equal (funcall (pb-destructure_fn ((list* a b xs)) (list a b xs))
+                        (list 1 2 3 4))
+               (list 1 2 (list 3 4)))
 
-  (equal (pb-destructure_let [(list* a b c xs) (list 2 3)]
-                             (list a b c xs))
-         (list nil nil nil nil))
+        (equal (pb-destructure_let [(list* a b c xs) (list 2 3)]
+                                   (list a b c xs))
+               (list nil nil nil nil))
 
-  (equal (pb-destructure_let [(list* a b xs) (list 2 3)]
-                             (list a b xs))
-         '(2 3 nil))
+        (equal (pb-destructure_let [(list* a b xs) (list 2 3)]
+                                   (list a b xs))
+               '(2 3 nil))
 
-  (equal (pb-destructure_let [(km :a (list* a b xs) :c c) (km :a (list 1 2 3) :c 34)]
-                             (list a b c xs))
-         '(1 2 34 (3)))
+        (equal (pb-destructure_let [(km :a (list* a b xs) :c c) (km :a (list 1 2 3) :c 34)]
+                                   (list a b c xs))
+               '(1 2 34 (3)))
 
-  (equal (pb-destructure_let [(km_keys a b c) (km :a 1 :b 2 :c 3)]
-                             (list a b c))
-         (list 1 2 3))
+        (equal (pb-destructure_let [(km_keys a b c) (km :a 1 :b 2 :c 3)]
+                                   (list a b c))
+               (list 1 2 3))
 
-  (equal (list 1 2 (list 3 4))
-         (pb-destructure_let [(list* a b xs) (list 1 2 3 4)]
-                 (list a b xs)))
+        (equal (list 1 2 (list 3 4))
+               (pb-destructure_let [(list* a b xs) (list 1 2 3 4)]
+                                   (list a b xs)))
 
-  (equal (funcall (pb-destructure_fn ((list* a b xs))
-                         (list a b xs))
-                  (list 1 2 3 4))
-         (list 1 2 (list 3 4))))
+        (equal (funcall (pb-destructure_fn ((list* a b xs))
+                                           (list a b xs))
+                        (list 1 2 3 4))
+               (list 1 2 (list 3 4))))))
 
 (pb-destructure_test)
 
