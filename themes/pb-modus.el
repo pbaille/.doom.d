@@ -8,6 +8,7 @@
 (require 'km)
 (require 'modus-themes)
 (require 'modus-operandi-theme)
+(require 'pb)
 (require 'pb-color)
 
 (defun pb-modus-warmer (c delta)
@@ -175,6 +176,7 @@ which is tranformed to:
 
   (require 'symex)
   (require 'ibuffer)
+  (require 'nerd-icons-ibuffer)
 
   (defun pb-modus-theme-hook ()
 
@@ -184,6 +186,7 @@ which is tranformed to:
           evil-symex-state-cursor (list 'box (pb-modus-get-color 'cyan)))
 
     (set-face-attribute 'symex--current-node-face nil
+                        :inherit nil
                         :background (pb-color_blend (pb-modus-get-color 'bg-main)
                                                     (pb-modus-get-color 'cyan-faint-lighter)
                                                     .9))
@@ -216,7 +219,8 @@ which is tranformed to:
     (set-face-attribute 'org-level-6 nil :inherit 'outline-6 :box (list :line-width 2 :color (pb-modus-get-color 'bg-main)))
     (set-face-attribute 'org-level-7 nil :inherit 'outline-7 :box (list :line-width 1 :color (pb-modus-get-color 'bg-main)))
 
-    (set-face-attribute 'nerd-icons-ibuffer-file-face nil
+    (set-face-attribute 'nerd-icons-ibuffer-file-face
+                        nil
                         :foreground (pb-modus-get-color 'fg-dim))
 
     (setq ibuffer-filter-group-name-face
@@ -239,7 +243,10 @@ which is tranformed to:
   (add-hook 'modus-themes-post-load-hook
             #'pb-modus-theme-hook))
 
-(modus-themes-select 'modus-operandi)
+(defun pb-modus-load ()
+  "Load personal theme."
+  (interactive)
+  (modus-themes-select 'modus-operandi))
 
 ;; Local Variables:
 ;; read-symbol-shorthands: (("pc/" . "pb-color_"))
