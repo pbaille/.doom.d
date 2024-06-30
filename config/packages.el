@@ -31,6 +31,14 @@
   (set-company-backend! 'org-mode nil)
   (setq company-idle-delay 1))
 
+(use-package nerd-icons-dired
+  :hook
+  (dired-mode . nerd-icons-dired-mode))
+
+(use-package nerd-icons-ibuffer
+  :ensure t
+  :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
+
 (use-package dired
   :commands (dired dired-jump)
   :bind (("C-d" . dired-jump))
@@ -132,8 +140,7 @@
 
   (add-hook 'ibuffer-mode-hook
             (lambda ()
-              (setq-local line-spacing 6)
-              (nerd-icons-ibuffer-mode)))
+              (setq-local line-spacing 6)))
   (setq ibuffer-filter-group-name-face (list :foreground (doom-color 'magenta) :weight 'ultra-bold :height 1.1))
   (setq ibuffer-title-face (list :foreground (doom-blend 'fg 'bg 0.2) :weight 'normal :height 1.1))
 
