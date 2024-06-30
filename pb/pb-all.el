@@ -15,7 +15,6 @@
 
 (require 'sq)
 (require 'km)
-(require 'pb-destructure)
 (require 'pb)
 
 (require 'pb-cider)
