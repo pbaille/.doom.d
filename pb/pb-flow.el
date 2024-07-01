@@ -67,11 +67,12 @@ Each case is a map containing keys :return, :symbol, :next, :test, :bindings."
                                                                           (pb-destructure pat seed))
                                                                    (sq_partition 2 2 (append left ()))))) )))
               (sq_partition 2 2 normalized-body)
-              (sq_partition 2 1 (pb-flow_thunk-symbols case-count)))))
+              (sq_partition 2 1 (append (pb-flow_thunk-symbols case-count)
+                                        (list nil))))))
 
 (defun pb-flow_emit-form (body)
   "Transform a normalized BODY into a form.
-The resulting form is either a single return value or a cl-labels expression."
+The resulting form is either a single return value or a `cl-labels' expression."
   (let* ((thunks (pb-> (pb-flow_body->cases body) pb-flow_cases->thunks))
          (return (nth 2 (car thunks))))
     (if-let ((bindings (cdr thunks)))
