@@ -51,15 +51,14 @@
   (let* ((bar-positions (pr-bar-positions pr))
          (lines (mapcar (lambda (pitch)
                           (append (seq-mapn (pb_fn [i bar (list beg end)]
-                                                   (let ((face (funcall (km_get faces :bar)
-                                                                        (km_put bar :idx i)
-                                                                        (funcall (km_get faces :line)
-                                                                                 pitch))))
-                                                     (-> (pb_join-string (sq_repeat (* resolution (- end beg)) " "))
-                                                         (propertize 'face face))))
+                                                   (-> (pb_join-string (sq_repeat (* resolution (- end beg)) " "))
+                                                       (propertize 'face (funcall (km_get faces :bar)
+                                                                                  (km_put bar :idx i)
+                                                                                  (funcall (km_get faces :line)
+                                                                                           pitch)))))
                                             (sq_range 0 (length bars))
                                             bars
-                                            (sq_butlast (sq_partition 2 1 bar-positions)))
+                                            (sq_partition 2 1 bar-positions))
                                   (list "\n")))
                         (reverse (sq_range (car pitch-range)
                                            (+ 1 (cdr pitch-range)))))))
@@ -73,8 +72,18 @@
           displayable-notes)
     s))
 
-(quote
- (let ((pr (km :pitch-range (cons 58 74)
+(defun pr-read-plist-from-file (filename)
+  (with-temp-buffer
+    (insert-file-contents filename)
+    (read (current-buffer))))
+
+(let* (;; colors
+       (bg-light "gray90")
+       (bg-dark "gray80")
+       (bg-note (pb-color_hsl .95 .6 .6))
+       (grid-border-color "gray95")
+       ;; spec
+       (pr (km :pitch-range (cons 58 74)
                :resolution 32
                :bars (list (km :beat 1 :length 4)
                            (km :beat 1 :length 2)
@@ -88,10 +97,10 @@
                             (km :pitch 66 :position 8 :duration 3))
                :faces (km :line (lambda (pitch)
                                   (let* ((is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))))
-                                    (km :box (km :line-width (cons 0 1) :color "gray95")
-                                        :background (if is-light "gray90" "gray80"))))
+                                    (km :box (km :line-width (cons 0 1) :color grid-border-color)
+                                        :background (if is-light bg-light bg-dark))))
                           :note (lambda (note)
-                                  (km :background (pb-color_hsl .95 .6 .6)))
+                                  (km :background bg-note))
                           :bar (lambda (bar face)
                                  (km_upd face :background
                                          (lambda (bg)
@@ -101,4 +110,39 @@
   (with-current-buffer (get-buffer-create "*pr*")
     (delete-region (point-min) (point-max))
     (insert (pr-render pr))
-    (text-scale-set -3))))
+    (text-scale-set -3)))
+
+(let* (;; colors
+       (bg-light "gray90")
+       (bg-dark "gray80")
+       (bg-note (pb-color_hsl .95 .6 .6))
+       (grid-border-color "gray95")
+       ;; overides
+       (overides (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el"))
+       ;; spec
+       (pr (km_merge (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")
+                     (km :pitch-range (cons 48 84)
+                         :resolution 32
+                         :faces (km :line (lambda (pitch)
+                                            (let* ((is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))))
+                                              (km :box (km :line-width (cons 0 1) :color grid-border-color)
+                                                  :background (if is-light bg-light bg-dark))))
+                                    :note (lambda (note)
+                                            (let ((color (or (km_get note :color)
+                                                             (pcase (km_get note :kind)
+                                                               (:tonic (pb-color :azure))
+                                                               (:structural (pb-color :cyan))
+                                                               (:diatonic (pb-color :chartreuse (lighten .2) (saturate .2)))
+                                                               (:chromatic (pb-color :orange (lighten .2)))
+                                                               (_ bg-note)))))
+                                              (km :background color)))
+                                    :bar (lambda (bar face)
+                                           (km_upd face :background
+                                                   (lambda (bg)
+                                                     (if (cl-oddp (km_get bar :idx))
+                                                         (pb-color_darken bg .05)
+                                                       bg)))))))))
+  (with-current-buffer (get-buffer-create "*pr*")
+    (delete-region (point-min) (point-max))
+    (insert (pr-render pr))
+    (text-scale-set -3)))
