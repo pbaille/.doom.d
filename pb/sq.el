@@ -33,8 +33,9 @@ SEQ is the sequence to partition.
 
 Returns a list of sublists, each of SIZE elements,
 until the end of SEQ is reached."
-  (cl-loop for start from 0 below (length seq) by step
-           collect (cl-subseq seq start (min (+ start size) (length seq)))))
+  (cl-loop for start from 0 to (- (length seq) step) by step
+           if (<= (+ start size) (length seq))
+           collect (cl-subseq seq start (+ start size))))
 
 (defun sq_range (start end &optional step)
   "Generate a list of numbers from START to END, incrementing by STEP.
@@ -87,9 +88,9 @@ Returns nil if LST is shorter than N."
   "Test."
   (cl-assert
    (and (equal (sq_partition 2 2 '(1 2 3 4 5 6 7))
-               '((1 2) (3 4) (5 6) (7)))
+               '((1 2) (3 4) (5 6)))
         (equal (sq_partition 2 1 '(1 2 3 4))
-               '((1 2) (2 3) (3 4) (4)))))
+               '((1 2) (2 3) (3 4)))))
 
   (cl-assert
    (equal (sq_range 0 10 2)
