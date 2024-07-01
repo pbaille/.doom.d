@@ -13,6 +13,7 @@
 
 (require 'color)
 (require 'cl-lib)
+(require 'sq)
 
 (defvar pb-color_6-hue-names
   '(:red :yellow :green :cyan :blue :magenta))
@@ -24,6 +25,24 @@
   "Check if X is an hex color string."
   (and (stringp x)
        (string-prefix-p "#" x)))
+
+(defun pb-color_hsl-p (x)
+  "Check if X is a valid HSL list."
+  (and (consp x)
+       (= 3 (length x))
+       (cl-every (lambda (x)
+                   (and (numberp x)
+                        (<= 0 x 1)))
+                 x)))
+
+(defun pb-color_from-name (name)
+  "Produce an hex string from a color NAME."
+  (let ((name (cond ((stringp name) name)
+                    ((keywordp name) (substring (symbol-name name) 1))
+                    ((symbolp name) (symbol-name name)))))
+    (if-let ((rgb (color-name-to-rgb name)))
+        (pb-color_from-rgb rgb)
+      (error (format "Unknown color: %s" x)))))
 
 (defun pb-color_from-rgb (c)
   "Convert the rgb color C to hex string (6 digit)."
@@ -329,6 +348,26 @@ RES is the resolution to be used for computations."
         :saturations (pb-color_saturations c res)
         :desaturations (pb-color_desaturations c res)))
 
+
+(defvar pb-color_user-palette
+  (sq_interleave pb-color_12-hue-names
+                 (pb-color_hue-wheel (pb-color_hsl 0 .5 .5)
+                                     12)))
+
+(defun pb-color_coerce (c)
+  "Coerce C to an hex color string."
+  (or (plist-get pb-color_user-palette c)
+      (cond ((pb-color_hex-color-p c) c)
+            ((pb-color_hsl-p c) (pb-color_from-hsl c))
+            ((or (stringp c)
+                 (symbolp c))
+             (pb-color_from-name c)))
+      (error (format "Unknown color: %s" c))))
+
+(pb-color_coerce "dodgerblue")
+"#1e90ff"
+
+
 (defmacro pb-color (c &rest transformations)
   "Thread C through TRANSFORMATIONS prefixing them with pb-color."
   (seq-reduce (lambda (ret form)
@@ -336,7 +375,14 @@ RES is the resolution to be used for computations."
                   ,ret
                   ,@(cdr form)))
               transformations
-              c))
+              (cond ((keywordp c) (or (plist-get pb-color_builtins c)
+                                      (color-name-to-rgb (substring (symbol-name c) 1))
+                                      (error (format "Unknown color: %s" c))))
+                    ((pb-color_hex-color-p c) c)
+                    ((stringp c) (or (color-name-to-rgb c)
+                                     (error (format "Unknown color: %s" c))))
+                    ((symbolp c) (or (color-name-to-rgb (symbol-name c))
+                                     (error (format "Unknown color: %s" c)))))))
 
 (defun pb-color_test ()
   (cl-assert
