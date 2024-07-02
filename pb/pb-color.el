@@ -364,10 +364,6 @@ RES is the resolution to be used for computations."
              (pb-color_from-name c)))
       (error (format "Unknown color: %s" c))))
 
-(pb-color_coerce "dodgerblue")
-"#1e90ff"
-
-
 (defmacro pb-color (c &rest transformations)
   "Thread C through TRANSFORMATIONS prefixing them with pb-color."
   (seq-reduce (lambda (ret form)
@@ -375,14 +371,7 @@ RES is the resolution to be used for computations."
                   ,ret
                   ,@(cdr form)))
               transformations
-              (cond ((keywordp c) (or (plist-get pb-color_builtins c)
-                                      (color-name-to-rgb (substring (symbol-name c) 1))
-                                      (error (format "Unknown color: %s" c))))
-                    ((pb-color_hex-color-p c) c)
-                    ((stringp c) (or (color-name-to-rgb c)
-                                     (error (format "Unknown color: %s" c))))
-                    ((symbolp c) (or (color-name-to-rgb (symbol-name c))
-                                     (error (format "Unknown color: %s" c)))))))
+              (pb-color_coerce c)))
 
 (defun pb-color_test ()
   (cl-assert
