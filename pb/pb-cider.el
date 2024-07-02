@@ -14,8 +14,8 @@
 (require 'cider)
 
 (defun pb-cider_eval! (code)
-  "Eval some CODE using cider."
-  (interactive)
+  "Eval some CODE using cider.
+The `current-buffer' has to be a buffer recognized by cider for this to work,"
   (cider-interactive-eval code
                           nil nil
                           (cider--nrepl-pr-request-map)))
