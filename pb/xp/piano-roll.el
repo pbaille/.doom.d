@@ -77,48 +77,69 @@
     (insert-file-contents filename)
     (read (current-buffer))))
 
-(let* (;; colors
-       (bg-light "gray90")
-       (bg-dark "gray80")
-       (bg-note (pb-color_hsl .95 .6 .6))
-       (grid-border-color "gray95")
-       ;; spec
-       (pr (km :pitch-range (cons 58 74)
-               :resolution 32
-               :bars (list (km :beat 1 :length 4)
-                           (km :beat 1 :length 2)
-                           (km :beat 1 :length 3)
-                           (km :beat 1 :length 3))
-               :notes (list (km :pitch 60 :position 0 :duration 2)
-                            (km :pitch 64 :position 2 :duration 4)
-                            (km :pitch 67 :position 6 :duration 1)
-                            (km :pitch 72 :position 7 :duration 1)
-                            (km :pitch 69 :position 8 :duration 3)
-                            (km :pitch 66 :position 8 :duration 3))
-               :faces (km :line (lambda (pitch)
-                                  (let* ((is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))))
-                                    (km :box (km :line-width (cons 0 1) :color grid-border-color)
-                                        :background (if is-light bg-light bg-dark))))
-                          :note (lambda (note)
-                                  (km :background bg-note))
-                          :bar (lambda (bar face)
-                                 (km_upd face :background
-                                         (lambda (bg)
-                                           (if (cl-oddp (km_get bar :idx))
-                                               (pb-color_darken bg .05)
-                                             bg))))))))
-  (with-current-buffer (get-buffer-create "*pr*")
-    (delete-region (point-min) (point-max))
-    (insert (pr-render pr))
-    (text-scale-set -3)))
+(defvar-local pr-local-data ())
+
+(define-minor-mode proll-mode
+  "PRoll"
+  :lighter "PRoll"
+  (if proll-mode
+      (progn (print "proll-mode enabled")
+             (let* ((content (buffer-substring-no-properties (point-min) (point-max)))
+                    (data (eval (read content) t)))
+               (fundamental-mode)
+               (setq proll-mode t)
+               (setq pr-local-data content)
+               (delete-region (point-min) (point-max))
+               (insert (pr-render data))
+               (text-scale-set -3)))
+    (progn (print "proll-mode disabled")
+           (delete-region (point-min) (point-max))
+           (insert pr-local-data)
+           (emacs-lisp-mode)
+           (setq pr-local-data ()))))
+
+(defvar pr-sample-data
+  (let* (;; colors
+         (bg-light "gray90")
+         (bg-dark "gray80")
+         (bg-note (pb-color_hsl .95 .6 .6))
+         (grid-border-color "gray95"))
+
+    (km :pitch-range (cons 58 74)
+        :resolution 32
+        :bars (list (km :beat 1 :length 4)
+                    (km :beat 1 :length 2)
+                    (km :beat 1 :length 3)
+                    (km :beat 1 :length 3))
+        :notes (list (km :pitch 60 :position 0 :duration 2)
+                     (km :pitch 64 :position 2 :duration 4)
+                     (km :pitch 67 :position 6 :duration 1)
+                     (km :pitch 72 :position 7 :duration 1)
+                     (km :pitch 69 :position 8 :duration 3)
+                     (km :pitch 66 :position 8 :duration 3))
+        :faces (km :line (lambda (pitch)
+                           (let* ((is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))))
+                             (km :box (km :line-width (cons 0 1) :color grid-border-color)
+                                 :background (if is-light bg-light bg-dark))))
+                   :note (lambda (note)
+                           (km :background bg-note))
+                   :bar (lambda (bar face)
+                          (km_upd face :background
+                                  (lambda (bg)
+                                    (if (cl-oddp (km_get bar :idx))
+                                        (pb-color_darken bg .05)
+                                      bg))))))))
+
+(with-current-buffer (get-buffer-create "*pr*")
+  (delete-region (point-min) (point-max))
+  (insert (pr-render pr-sample-data))
+  (text-scale-set -3))
 
 (let* (;; colors
        (bg-light "gray90")
        (bg-dark "gray80")
        (bg-note (pb-color_hsl .95 .6 .6))
        (grid-border-color "gray95")
-       ;; overides
-       (overides (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el"))
        ;; spec
        (pr (km_merge (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")
                      (km :pitch-range (cons 48 84)
@@ -145,4 +166,4 @@
   (with-current-buffer (get-buffer-create "*pr*")
     (delete-region (point-min) (point-max))
     (insert (pr-render pr))
-    (text-scale-set -3)))
+    (text-scale-set -3.5)))
