@@ -76,6 +76,17 @@ Returns nil if LST is shorter than N."
     (if (= n (length taken))
         taken)))
 
+(defun sq_drop (lst n)
+  "Drop the N first elements of LST."
+  (nthcdr n lst))
+
+(defun sq_put (lst idx v)
+  "Put V at IDX in LST.
+returns nil if IDX is out of bounds, except if it is equal to length,
+in this case V is added at the end of the LST."
+  (if-let ((head (sq_take-strict lst idx)))
+      (append head (cons v (sq_drop lst (+ 1 idx))))))
+
 (defun sq_repeat (n x)
   "Produce a list containing N times X."
   (cl-loop for i from 1 to n collect x))
@@ -115,8 +126,29 @@ Returns nil if LST is shorter than N."
 
   (cl-assert
    (equal (sq_interpose (list 1 2 3 4) :a)
-          '(1 :a 2 :a 3 :a 4)
-)))
+          '(1 :a 2 :a 3 :a 4)))
+
+  (cl-assert
+   (and (equal (sq_put (list 1 2 3 4) 2 9)
+               (list 1 2 9 4))
+
+        (equal (sq_put (list 1 2 3 4) 4 10)
+               (list 1 2 3 4 10))
+
+        (not (sq_put (list 1 2 3 4) 10 'nop))
+
+        (not (sq_put (list 1 2 3 4) -1 'nop))
+
+        (equal (sq_drop (list 1 2 3 4) 2)
+               (list 3 4))
+
+        (equal (sq_drop (list 1 2 3 4) 0)
+               (list 1 2 3 4))
+
+        (equal (sq_drop (list 1 2 3 4) -1)
+               (list 1 2 3 4))
+
+        (not (sq_drop (list 1 2 3 4) 12)))))
 
 (sq_test)
 
