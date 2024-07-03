@@ -5,15 +5,30 @@
 (defvar pb-config_lisp-modes
   '(emacs-lisp-mode-map clojure-mode-map fennel-mode-map scheme-mode-map racket-mode-map))
 
+;; TODO split this between relevant packages and combine together later
+(define-abbrev-table 'emacs-lisp-mode-abbrev-table
+  '(("wcb" "with-current-buffer" nil 1)
+    ("lam" "lambda" nil 1)
+
+    ("iff" "pb_if" nil 1)
+    ("fn" "pb_fn" nil 1)
+    ("defn" "pb_defun" nil 1)
+
+    ("kget" "km_get" nil 1)
+    ("kput" "km_put" nil 1)
+    ("kupd" "km_upd" nil 1)
+    ("pbcol" "pb-color" nil 1)))
+
+(add-hook 'emacs-lisp-mode-hook #'abbrev-mode)
+
 (use-package geiser
   :config
   (setq geiser-active-implementations '(chez guile chicken mit chibi gambit))
   (add-hook 'scheme-mode-hook 'geiser-mode)
   (setq geiser-default-implementation 'chez)
   (setq geiser-chez-binary "chez")
-                                        ;(setq geiser-racket-binary "/usr/local/bin/racket")
-                                        ;(setq geiser-racket-minimum-version "8.12")
-  )
+  (setq geiser-racket-binary "/usr/local/bin/racket")
+  (setq geiser-racket-minimum-version "8.12"))
 
 (progn :racket
        (setq racket-program "/usr/local/bin/racket")
