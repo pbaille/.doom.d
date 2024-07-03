@@ -82,6 +82,10 @@ If seed is a symbol, gensym is not used and the symbol is returned."
                                      args))))))
 
   (pb-destructure_extend
+   'as (lambda (args seed)
+         (pb-destructure (cons 'and args) seed)))
+
+  (pb-destructure_extend
    'km (lambda (args seed)
          (let ((sym (pb-destructure_seed-sym seed "plist_")))
            (append (pb-destructure sym seed)
@@ -178,7 +182,11 @@ FN-DECL is the same kind of arguments `pb-destructure_fn' expects."
         (equal (funcall (pb-destructure_fn [(list* a b xs)]
                                            (list a b xs))
                         (list 1 2 3 4))
-               (list 1 2 (list 3 4))))))
+               (list 1 2 (list 3 4)))
+        (equal (pb_let [(as m (km_keys a)) (km :a 1 :b 2)]
+                   (list m a))
+               '((:a 1 :b 2) 1)
+))))
 
 (pb-destructure_test)
 
