@@ -69,9 +69,10 @@
     (nreverse combinations)))
 
 (defun pb-modus-bindings* (base bindings)
-  "Produce a palette override binding list incrementally.
-It works similarly to the `let*' macro, but BINDINGS is quoted.
-It makes each binding available to the following ones.
+  "Incrementally extend BASE palette with BINDINGS.
+BASE and BINDINGS are a list of bindings (list of length 2 lists).
+BINDINGS right hand sides can refer to BASE bindings or previous ones.
+Like the `let*' macro, each binding in BINDINGS is available to the nexts.
 Additionally it provide syntax sugar for color transformations.
 If a binding contains more than two component,
 the cdr is interpreted as a `pb-color' form:
