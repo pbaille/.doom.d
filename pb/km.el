@@ -178,6 +178,13 @@ and BODY is the code to execute."
        (km_let (,ks ,seed)
                ,@body))))
 
+(defmacro kmq (&rest keys)
+  "Build a km using binding names as KEYS."
+  (cons 'list (km_into ()
+                       (mapcar (lambda (k) (cons (intern (concat ":" (symbol-name k)))
+                                            k))
+                               keys))))
+
 (defun km_test ()
   "Run some assertions for the keyword map functions."
   (cl-assert
@@ -242,7 +249,12 @@ and BODY is the code to execute."
           '(((:a) . 2)
             ((:b :c) . 3)
             ((:b :d) . 6)
-            ((:d) . 6) ((:e :f :g) . 4)))))
+            ((:d) . 6) ((:e :f :g) . 4))))
+
+  (cl-assert
+   (let ((a 1)(b 2))
+     (equal (kmq a b)
+            (km :a a :b b)))))
 
 (km_test)
 
