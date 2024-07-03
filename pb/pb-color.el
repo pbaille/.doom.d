@@ -42,7 +42,7 @@
                     ((symbolp name) (symbol-name name)))))
     (if-let ((rgb (color-name-to-rgb name)))
         (pb-color_from-rgb rgb)
-      (error (format "Unknown color: %s" x)))))
+      (error (format "Unknown color: %s" name)))))
 
 (defun pb-color_from-rgb (c)
   "Convert the rgb color C to hex string (6 digit)."
@@ -371,7 +371,9 @@ RES is the resolution to be used for computations."
                   ,ret
                   ,@(cdr form)))
               transformations
-              (pb-color_coerce c)))
+              (if (or (stringp c) (keywordp c))
+                  (pb-color_coerce c)
+                (list 'pb-color_coerce c))))
 
 (defun pb-color_test ()
   (cl-assert
