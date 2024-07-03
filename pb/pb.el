@@ -83,6 +83,16 @@
    forms
    x))
 
+(defmacro pb->> (x &rest forms)
+  "Threads X through FORMS as last argument."
+  (seq-reduce
+   (lambda (result form)
+     (if (seqp form)
+         `(,@form ,result)
+       (list form result)))
+   forms
+   x))
+
 (defmacro pb->_ (&rest forms)
   "Thread the first argument into following FORMS.
 using the _ placeholder to determine threaded value positioning."
