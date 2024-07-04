@@ -326,8 +326,8 @@ if RATIO is 1 the lightness will be 0 or 1 depending on C, if it is 0 it will be
 (defun pb-color_walk (data f)
   "Walk some DATA, applying F to every nested colors (hex strings)."
   (cond ((consp data)
-         (mapcar (lambda (x) (pb-color_walk x f))
-                 data))
+         (cons (pb-color_walk (car data) f)
+               (pb-color_walk (cdr data) f)))
         ((pb-color_hex-color-p data)
          (funcall f data))
         (t data)))
