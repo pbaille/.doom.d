@@ -143,6 +143,9 @@
        :ni "C-m" #'gptel-menu
        "C-c C-k" #'kill-buffer-and-window)
 
+      (:map messages-buffer-mode-map
+            "s-k" #'pb-misc_clear-message-buffer)
+
       (:map symex-mode-map
        :n "s-e" (lambda () (interactive) (symex-goto-lowest) (symex-evaluate 1))
        :n "s-i" #'cider-inspect-last-result)
@@ -168,9 +171,9 @@
        :i "TAB" #'reapl-mode_complete)
 
       (:map fennel-repl-mode-map
-       "s-r" #'other-window
-       "C-k" #'comint-clear-buffer
-       "C-c C-k" #'kill-buffer-and-window)
+            "s-r" #'other-window
+            "C-k" #'comint-clear-buffer
+            "C-c C-k" #'kill-buffer-and-window)
 
       (:map org-mode-map
        :n "C-t" #'org-set-tags-command
