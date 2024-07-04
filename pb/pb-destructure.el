@@ -183,7 +183,7 @@ FN-DECL is the same kind of arguments `pb-destructure_fn' expects."
                                            (list a b xs))
                         (list 1 2 3 4))
                (list 1 2 (list 3 4)))
-        (equal (pb_let [(as m (km_keys a)) (km :a 1 :b 2)]
+        (equal (pb-destructure_let [(as m (km_keys a)) (km :a 1 :b 2)]
                    (list m a))
                '((:a 1 :b 2) 1)
 ))))
