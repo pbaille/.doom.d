@@ -81,6 +81,7 @@ Throws an error if XS does not form a valid keyword map."
   "Get the value at AT in the keyword map M.
 If AT is a list, get the value in a nested map."
   (cond ((listp at) (km_get-in m at))
+        ((vectorp at) (km_get-in m (append at ())))
         ((keywordp at) (plist-get m at))))
 
 (defun km_put-in (m path v)
@@ -96,6 +97,7 @@ If AT is a list, get the value in a nested map."
 If AT is a list, put the value in a nested map."
   (km_put-in m
              (cond ((listp at) at)
+                   ((vectorp at) (append at ()))
                    ((keywordp at) (list at)))
              v))
 
@@ -119,6 +121,7 @@ If AT is a list, put the value in a nested map."
 If AT is a list, update the value in a nested map."
   (km_upd-in m
              (cond ((listp at) at)
+                   ((vectorp at) (append at ()))
                    ((keywordp at) (list at)))
              f))
 
@@ -205,7 +208,7 @@ and BODY is the code to execute."
 
   (cl-assert
    (and (equal (km_put '(:a 1 :b (:c 3))
-                       (list :b :c)
+                       [:b :c]
                        78)
                '(:a 1 :b (:c 78)))
 
@@ -220,7 +223,7 @@ and BODY is the code to execute."
   (cl-assert
    (and (equal (km_upd '(:a 1) :a (lambda (x) (+ x 1)))
                '(:a 2))
-        (equal (km_upd '(:a 1 :b (:c 0)) '(:b :c) (lambda (x) (+ x 1)))
+        (equal (km_upd '(:a 1 :b (:c 0)) [:b :c] (lambda (x) (+ x 1)))
                '(:a 1 :b (:c 1)))
         (equal (km_upd '(:a 1) '(:b :c) (lambda (x) (or x 32)))
                '(:a 1 :b (:c 32)))))
