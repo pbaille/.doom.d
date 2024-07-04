@@ -50,7 +50,8 @@
                          (km :beg note-beg
                              :end note-end
                              :face (funcall (km_get faces :note)
-                                            note)))))
+                                            note
+                                            pr)))))
             notes)))
 
 (pb_defun pr-render-grid [(as pr
@@ -61,8 +62,10 @@
                                                    (-> (pb_join-string (sq_repeat (* resolution (- end beg)) " "))
                                                        (propertize 'face (funcall (km_get faces :bar)
                                                                                   (km_put bar :idx i)
+                                                                                  pr
                                                                                   (funcall (km_get faces :line)
-                                                                                           pitch)))))
+                                                                                           pitch
+                                                                                           pr)))))
                                             (sq_range 0 (length bars))
                                             bars
                                             (sq_partition 2 1 bar-positions))
@@ -79,31 +82,54 @@
           displayable-notes)
     s))
 
-(defvar pr-default-faces
-  (let* (;; colors
-         (bg-light "gray90")
-         (bg-dark "gray80")
-         (bg-note (pb-color_hsl .95 .6 .6))
-         (grid-border-color "gray95"))
-    (km :line (lambda (pitch)
-                (let* ((is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))))
-                  (km :box (km :line-width (cons 0 1) :color grid-border-color)
-                      :background (if is-light bg-light bg-dark))))
-        :note (lambda (note)
-                (let ((color (or (km_get note :color)
-                                 (pcase (km_get note :kind)
-                                   (:tonic (pb-color :azure))
-                                   (:structural (pb-color :cyan))
-                                   (:diatonic (pb-color :chartreuse (lighten .2) (saturate .2)))
-                                   (:chromatic (pb-color :orange (lighten .2)))
-                                   (_ bg-note)))))
-                  (km :background color)))
-        :bar (lambda (bar face)
-               (km_upd face :background
-                       (lambda (bg)
-                         (if (cl-oddp (km_get bar :idx))
-                             (pb-color_darken bg .05)
-                           bg)))))))
+
+(defvar pr-colors
+  (km
+   :lines
+   (km :light (pb-color "gray90")
+       :dark (pb-color "gray85")
+       :border (pb-color "gray95")
+       :octave-delimiter (pb-color "gray75"))
+
+   :channels
+   (pb_let [colors (reverse (pb-color_hue-wheel (pb-color_hsl 0 .6 .6) 8))]
+       (append colors (mapcar (lambda (c) (pb-color_desaturate c .5))
+                              colors)))
+
+   :note-kinds
+   (km :tonic (pb-color :azure)
+       :structural (pb-color :cyan)
+       :diatonic (pb-color :chartreuse (lighten .2) (saturate .2))
+       :chromatic (pb-color :orange (lighten .2)))
+
+   :note-default
+   (pb-color_hsl .95 .6 .6)))
+
+(setq pr-default-faces
+  (km :line (lambda (pitch _pr)
+              (pb_let [(km_keys border light dark octave-delimiter) (km_get pr-colors :lines)
+                       is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))]
+                  (km :box (km :line-width (cons 0 1) :color border)
+                      :background (if is-light light dark)
+                      ;; handles the dark line between B and C
+                      :underline (if (equal 0 (mod pitch 12)) (list :color octave-delimiter :position -10))
+                      :overline (if (equal 11 (mod pitch 12)) octave-delimiter))))
+      :note (lambda (note pr)
+              (km :background
+                  (pb_if [c (km_get note :color)]
+                         (pb-color c)
+
+                         (km_get pr [:options :colors :by-kind])
+                         (km_get pr-colors (list :note-kinds (km_get note :kind)))
+
+                         [chan (km_get note :channel)]
+                         (nth chan (km_get pr-colors :channels))
+
+                         (km_get pr-colors :note-default))))
+      :bar (lambda (bar pr face)
+             (if (cl-oddp (km_get bar :idx))
+                 (pb-color_walk face (lambda (c) (pb-color_darken c .03)))
+               face))))
 
 (pb_defun pr-coerce [(as pr
                          (km_keys notes bar))]
@@ -119,7 +145,7 @@
                                                                      bounds))
                                                        notes
                                                        nil)]
-                                      (cons (- min 3) (+ 3 max)))))
+                                      (cons (- min 2) (+ 2 max)))))
           :bars (lambda (x) (or x
                            (let ((bar (or bar (km :beat 1 :length 4))))
                              (sq_repeat (ceiling (/ (pr-last-note-end-position pr)
@@ -130,20 +156,9 @@
 (defun pr-make (data)
   (pr-coerce
    (km_merge (km :resolution 32
+                 :text-scale -3
                  :faces pr-default-faces)
              data)))
-
-(defvar pr-sample-data
-  (pr-make (km :bars (list (km :beat 1 :length 4)
-                           (km :beat 1 :length 2)
-                           (km :beat 1 :length 3)
-                           (km :beat 1 :length 3))
-               :notes (list (km :pitch 60 :position 0 :duration 2)
-                            (km :pitch 64 :position 2 :duration 4)
-                            (km :pitch 67 :position 6 :duration 1)
-                            (km :pitch 72 :position 7 :duration 1)
-                            (km :pitch 69 :position 8 :duration 3)
-                            (km :pitch 66 :position 8 :duration 3)))))
 
 (defun pr-read-plist-from-file (filename)
   (with-temp-buffer
@@ -151,25 +166,16 @@
     (read (current-buffer))))
 
 (defun pr-render-buffer (buf data)
-  (print (km :pr-render-buffer (kmq buf data)))
   (with-current-buffer (get-buffer-create buf)
     (erase-buffer)
     (insert (pr-render data))
     (let ((w (or (get-buffer-window (get-buffer buf))
                  (split-window-below))))
       (set-window-buffer w (get-buffer buf))
+      (text-scale-set (km_get data :text-scale))
       (window-resize w (- (count-lines (point-min) (point-max))
                           (window-height w))))))
 
-(quote
- (pr-render-buffer "*pr*"
-  (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
-
-(quote
- (pr-render-buffer "*pr*"
-  pr-sample-data))
-
-(defvar pr-buffers-data ())
 (setq pr-buffers-data ())
 
 (defun pr-get-buffer-data (&optional buf)
@@ -183,8 +189,7 @@
          (progn (setq pr-buffers-data
                       (cons (cons buf-name next-data)
                             (assq-delete-all buf-name pr-buffers-data)))
-                (pr-render-buffer buf-name (km_get next-data :pr-data))
-                (text-scale-set (km_get next-data :text-scale)))
+                (pr-render-buffer buf-name (km_get next-data :pr-data)))
          (error "Something went wrong with buffer data update")))
 
 (defvar proll-mode-keymap (make-sparse-keymap))
@@ -201,12 +206,11 @@
                (pb_if [(km_keys content pr-data) (pr-get-buffer-data buf)]
                       (pr-render-buffer buf pr-data)
                       [content (buffer-substring-no-properties (point-min) (point-max))
-                               data (pr-make (eval (read content) t))]
+                       data (pr-make (eval (read content) t))]
                       (progn (setq pr-buffers-data
                                    (cons (cons (buffer-name buf)
                                                (km :content content
-                                                   :pr-data data
-                                                   :text-scale text-scale-mode-amount))
+                                                   :pr-data data))
                                          pr-buffers-data))
                              (pr-render-buffer buf data)))))
     (progn (erase-buffer)
@@ -223,20 +227,55 @@
        :n "J" (lambda ()
                 (interactive)
                 (pr-upd-buffer-data
-                 nil (lambda (pr) (km_upd pr :text-scale (lambda (s) (- (or s 0) 1))))))
+                 nil (lambda (pr) (km_upd pr [:pr-data :text-scale]
+                                     (lambda (s) (- (or s 0) 1))))))
        :n "K" (lambda ()
                 (interactive)
                 (pr-upd-buffer-data
-                 nil (lambda (pr) (km_upd pr :text-scale (lambda (s) (+ (or s 0) 1))))))
+                 nil (lambda (pr) (km_upd pr [:pr-data :text-scale]
+                                     (lambda (s) (+ (or s 0) 1))))))
        :n "H" (lambda ()
                 (interactive)
                 (pr-upd-buffer-data
                  nil (lambda (pr)
-                       (km_upd pr (list :pr-data :resolution)
+                       (km_upd pr [:pr-data :resolution]
                                (lambda (r) (- (or r 32) 4))))))
        :n "L" (lambda ()
                 (interactive)
                 (pr-upd-buffer-data
                  nil (lambda (pr)
-                       (km_upd pr (list :pr-data :resolution)
+                       (km_upd pr [:pr-data :resolution]
                                (lambda (r) (+ (or r 32) 4))))))))
+
+(quote
+ (list :tests
+  (defvar pr-sample-data
+    (pr-make (km :bars (list (km :beat 1 :length 4)
+                             (km :beat 1 :length 2)
+                             (km :beat 1 :length 3)
+                             (km :beat 1 :length 3))
+                 :notes (list (km :pitch 60 :position 0 :duration 2)
+                              (km :pitch 64 :position 2 :duration 4)
+                              (km :pitch 67 :position 6 :duration 1)
+                              (km :pitch 72 :position 7 :duration 1)
+                              (km :pitch 69 :position 8 :duration 3)
+                              (km :pitch 66 :position 8 :duration 3)))))
+
+  (pr-render-buffer "*pr*"
+                    (pr-make (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
+
+  (quote (with-current-buffer  (get-buffer-create "*pr*")
+          (erase-buffer)
+          (insert (format "'%s" (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
+          (proll-mode 1)))
+
+  (pr-render-buffer "*pr*"
+                    (pr-make (km :notes (list (km :pitch 60 :position 0 :duration 2)
+                                              (km :pitch 64 :position 2 :duration 4)
+                                              (km :pitch 67 :position 6 :duration 1)
+                                              (km :pitch 72 :position 7 :duration 1)
+                                              (km :pitch 69 :position 8 :duration 3)
+                                              (km :pitch 66 :position 8 :duration 3)))))
+
+  (pb-color_walk `(:box (:line-width (0 . 1) :color ,(pb-color "gray95")) :background ,(pb-color "gray90") :underline nil :overline nil)
+                 (lambda (c) (print c) (pb-color_saturate c .5)))))
