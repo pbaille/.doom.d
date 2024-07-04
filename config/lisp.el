@@ -10,7 +10,8 @@
   '(("wcb" "with-current-buffer" nil 1)
     ("lam" "lambda" nil 1)
 
-    ("iff" "pb_if" nil 1)
+    ("pif" "pb_if" nil 1)
+    ("plet" "pb_let" nil 1)
     ("fn" "pb_fn" nil 1)
     ("defn" "pb_defun" nil 1)
 
@@ -96,7 +97,6 @@
         ;; by default j goes to the root of the tree, but the root of a symex are higher in the buffer...
 
         '(("s-r" . symex-repl)
-          ("d" . dired-jump)
           ("C-d" . +lookup/documentation )
 
           ;; nav
@@ -145,10 +145,9 @@
           ("C-SPC" . pb-symex_mark)
 
           ;; clojure specific TO MOVE
-          ("M" . pb-symex_cider-macroexpand) ; +lookup/documentation
+          ("M" . +lookup/documentation)
           ("E" . symex-eval-print)
-          ("C-e" . symex-evaluate-pretty)
-          ("C-;" . pb-symex_clj-toggle-comment)))
+          ("C-e" . symex-evaluate-pretty)))
 
   (symex-initialize)
 
@@ -170,8 +169,8 @@
    :keymaps pb-config_lisp-modes
    [escape] #'pb-symex_escape-insert-mode
    [mouse-1] #'pb-symex_click
-   ; ";" (lambda () (interactive) (print "please use  M-;"))
-   ; "M-;" (lambda () (interactive) (insert ";"))
+   ";" (lambda () (interactive) (insert "-"))
+   "M-;" (lambda () (interactive) (insert ";"))
    "C-y" #'racket-insert-lambda
    "C-w" #'pb-misc_insert-open-paren)
 
