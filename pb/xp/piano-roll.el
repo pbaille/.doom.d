@@ -11,6 +11,12 @@
               bars
               0))
 
+(pb_defun pr-last-note-end-position [(km_keys notes)]
+  (seq-reduce (pb_fn [ret (km_keys position duration)]
+                     (max ret (+ position duration)))
+              notes
+              0))
+
 (pb_defun pr-pixel-width [(as pr
                               (km_keys resolution))]
   (* resolution (pr-beat-length pr)))
@@ -73,27 +79,6 @@
           displayable-notes)
     s))
 
-(defvar-local pr-local-data ())
-
-(define-minor-mode proll-mode
-  "PRoll"
-  :lighter "PRoll"
-  (if proll-mode
-      (progn (print "proll-mode enabled")
-             (let* ((content (buffer-substring-no-properties (point-min) (point-max)))
-                    (data (eval (read content) t)))
-               (fundamental-mode)
-               (setq proll-mode t)
-               (setq pr-local-data content)
-               (delete-region (point-min) (point-max))
-               (insert (pr-render data))
-               (text-scale-set -3)))
-    (progn (print "proll-mode disabled")
-           (delete-region (point-min) (point-max))
-           (insert pr-local-data)
-           (emacs-lisp-mode)
-           (setq pr-local-data ()))))
-
 (defvar pr-default-faces
   (let* (;; colors
          (bg-light "gray90")
@@ -120,16 +105,27 @@
                              (pb-color_darken bg .05)
                            bg)))))))
 
-(pb_defun pr-coerce [(as pr (km_keys notes))]
+(pb_defun pr-coerce [(as pr
+                         (km_keys notes bar))]
   (km_upd pr
-          :pitch-range (lambda (x) (or x (seq-reduce (pb_fn [(as bounds
-                                                            (cons pitch-min pitch-max))
-                                                        (km_keys pitch)]
-                                                       (pb_if (> pitch pitch-max) (cons pitch-min pitch)
-                                                              (< pitch pitch-min) (cons pitch pitch-max)
-                                                              bounds))
-                                                notes
-                                                (cons 0 127))))))
+          :pitch-range (lambda (x) (or x
+                                  (pb_let [(cons min max)
+                                           (seq-reduce (pb_fn [(as bounds
+                                                                   (cons pitch-min pitch-max))
+                                                               (as note (km_keys pitch))]
+                                                              (pb_if (not bounds) (cons pitch pitch)
+                                                                     (> pitch pitch-max) (cons pitch-min pitch)
+                                                                     (< pitch pitch-min) (cons pitch pitch-max)
+                                                                     bounds))
+                                                       notes
+                                                       nil)]
+                                      (cons (- min 3) (+ 3 max)))))
+          :bars (lambda (x) (or x
+                           (let ((bar (or bar (km :beat 1 :length 4))))
+                             (sq_repeat (ceiling (/ (pr-last-note-end-position pr)
+                                                    (float (* (km_get bar :beat)
+                                                              (km_get bar :length)))))
+                                        bar))))))
 
 (defun pr-make (data)
   (pr-coerce
@@ -155,11 +151,92 @@
     (read (current-buffer))))
 
 (defun pr-render-buffer (buf data)
+  (print (km :pr-render-buffer (kmq buf data)))
   (with-current-buffer (get-buffer-create buf)
-    (delete-region (point-min) (point-max))
-    (insert (pr-render (pr-make data)))
-    (text-scale-set -3)))
+    (erase-buffer)
+    (insert (pr-render data))
+    (let ((w (or (get-buffer-window (get-buffer buf))
+                 (split-window-below))))
+      (set-window-buffer w (get-buffer buf))
+      (window-resize w (- (count-lines (point-min) (point-max))
+                          (window-height w))))))
 
 (quote
  (pr-render-buffer "*pr*"
   (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
+
+(quote
+ (pr-render-buffer "*pr*"
+  pr-sample-data))
+
+(defvar pr-buffers-data ())
+(setq pr-buffers-data ())
+
+(defun pr-get-buffer-data (&optional buf)
+  (alist-get (buffer-name (or buf (current-buffer)))
+             pr-buffers-data))
+
+(defun pr-upd-buffer-data (buf f)
+  (pb_if [buf-name (buffer-name (or buf (current-buffer)))
+          data (pr-get-buffer-data buf)
+          next-data (funcall f data)]
+         (progn (setq pr-buffers-data
+                      (cons (cons buf-name next-data)
+                            (assq-delete-all buf-name pr-buffers-data)))
+                (pr-render-buffer buf-name (km_get next-data :pr-data))
+                (text-scale-set (km_get next-data :text-scale)))
+         (error "Something went wrong with buffer data update")))
+
+(defvar proll-mode-keymap (make-sparse-keymap))
+
+(define-minor-mode proll-mode
+  "PRoll"
+  :lighter "PRoll"
+  :keymap proll-mode-keymap
+  (if proll-mode
+      (progn (fundamental-mode)
+             (setq proll-mode t)
+             (evil-normal-state 1)
+             (let ((buf (current-buffer)))
+               (pb_if [(km_keys content pr-data) (pr-get-buffer-data buf)]
+                      (pr-render-buffer buf pr-data)
+                      [content (buffer-substring-no-properties (point-min) (point-max))
+                               data (pr-make (eval (read content) t))]
+                      (progn (setq pr-buffers-data
+                                   (cons (cons (buffer-name buf)
+                                               (km :content content
+                                                   :pr-data data
+                                                   :text-scale text-scale-mode-amount))
+                                         pr-buffers-data))
+                             (pr-render-buffer buf data)))))
+    (progn (erase-buffer)
+           (insert (km_get (pr-get-buffer-data (current-buffer))
+                           :content))
+           (emacs-lisp-mode)
+           (setq pr-local-data ()))))
+
+(map! (:map proll-mode-keymap
+       :n "h" (lambda () (interactive) (scroll-right 3))
+       :n "l" (lambda () (interactive) (scroll-left 3))
+       :n "j" (lambda () (interactive) (scroll-up 3))
+       :n "k" (lambda () (interactive) (scroll-down 3))
+       :n "J" (lambda ()
+                (interactive)
+                (pr-upd-buffer-data
+                 nil (lambda (pr) (km_upd pr :text-scale (lambda (s) (- (or s 0) 1))))))
+       :n "K" (lambda ()
+                (interactive)
+                (pr-upd-buffer-data
+                 nil (lambda (pr) (km_upd pr :text-scale (lambda (s) (+ (or s 0) 1))))))
+       :n "H" (lambda ()
+                (interactive)
+                (pr-upd-buffer-data
+                 nil (lambda (pr)
+                       (km_upd pr (list :pr-data :resolution)
+                               (lambda (r) (- (or r 32) 4))))))
+       :n "L" (lambda ()
+                (interactive)
+                (pr-upd-buffer-data
+                 nil (lambda (pr)
+                       (km_upd pr (list :pr-data :resolution)
+                               (lambda (r) (+ (or r 32) 4))))))))
