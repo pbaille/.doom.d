@@ -32,7 +32,7 @@
   (pb_if [(list lang content args) info
           custom-params (km_get pb-org-babel_custom-params (pb_keyword lang))
           (cons content args) (seq-reduce (pb_fn [(cons content args) (cons k wrappers)]
-                                                 (if (alist-get k args)
+                                                 (if (assoc k args)
                                                      (cons (pb_if [f (km_get wrappers :content)]
                                                                   (funcall f content)
                                                                   content)
@@ -52,7 +52,7 @@
   (pb_if [(list lang content args) info
           custom-params (km_get pb-org-babel_custom-params (pb_keyword lang))]
          (pb_if [result (seq-reduce (pb_fn [result (cons k wrappers)]
-                                           (if (alist-get k args)
+                                           (if (assoc k args)
                                                (pb_if [f (km_get wrappers :result)]
                                                       (funcall f result)
                                                       result)
