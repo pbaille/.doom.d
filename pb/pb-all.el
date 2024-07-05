@@ -33,6 +33,7 @@
 (require 'pb-sexpr)
 (require 'pb-symex)
 (require 'pb-templates)
+(require 'pb-text-properties)
 (require 'pb-udp)
 (require 'pb-walk)
 
