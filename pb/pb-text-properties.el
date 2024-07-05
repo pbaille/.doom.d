@@ -33,7 +33,7 @@ The change list returned has the form ((pos . face-prop-value) ...)."
   "Compress the value V of a face property into a plist."
   (if (and (consp v) (listp (car v)))
       (seq-reduce #'km_merge (reverse v) ())
-    v))
+    (copy-tree v)))
 
 (defun pb-text-properties_update-face-value (f v)
   "Apply the function F to a face property value V.
@@ -51,8 +51,13 @@ therefore F has to be applied meaninfully."
             (next-change
              (or (next-single-property-change (point) 'face (current-buffer))
                  (point-max))))
+        (print (list (point) (min next-change end)
+                     (pb-text-properties_update-face-value f face-prop)) )
         (add-face-text-property (point) (min next-change end)
-                                (pb-text-properties_update-face-value f face-prop))
+                                (pb-text-properties_update-face-value f face-prop)
+                                nil
+                                (or buf (current-buffer))
+                                )
         (goto-char next-change)))))
 
 (quote
@@ -64,7 +69,25 @@ therefore F has to be applied meaninfully."
   (pb-text-properties_update-faces (get-buffer "*delete-me*") 3 13 (lambda (pl) (km_upd pl :background (lambda (c) (pb-color (or c :white) (lighten .5))))))
   (pb-text-properties_update-faces (get-buffer "*delete-me*")
                                    2 10
-                                   (lambda (pl) (pb-color_walk pl (lambda (c) (pb-color_blend (pb-color :blue) c .5)))))))
+                                   (lambda (pl) (pb-color_walk pl (lambda (c) (pb-color_blend (pb-color :blue) c .5)))))
+  (with-current-buffer (get-buffer-create "*delete-me*")
+    (erase-buffer)
+    (insert (propertize "hello you ---------------"
+                        'face
+                        (list :background (pb-color "gray80"))))
+    (pb-text-properties_update-faces (get-buffer "*delete-me*")
+                                     3 6 (lambda (pl)
+                                           '(print (km :pl pl
+                                                       :upd (km_upd pl :background (lambda (c) (pb-color c (lighten .5))))))
+                                           (km_upd pl :background (lambda (c) "red"))))
+    '(pb-text-properties_update-faces (get-buffer "*delete-me*")
+      3 6 (lambda (pl) (list :background (pb-color (or (km_get pl :background)
+                                                       "white")
+                                                   (darken .3)))))
+    '(add-face-text-property 3 6
+      (list :background "white")
+      nil
+      (get-buffer "*delete-me*")))))
 
 (provide 'pb-text-properties)
 ;;; pb-text-properties.el ends here.
