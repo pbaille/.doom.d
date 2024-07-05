@@ -82,20 +82,19 @@
           displayable-notes)
     s))
 
-
 (defvar pr-colors
   (km
    :lines
-   (km :light (pb-color "gray90")
-       :dark (pb-color "gray85")
-       :border (pb-color "gray95")
-       :octave-delimiter (pb-color "gray75"))
+   (km :light (pb-color :gray90)
+       :dark (pb-color :gray85)
+       :border (pb-color :gray95)
+       :octave-delimiter (pb-color :gray75))
 
    :harmonic-functions
-   (km :tonic (pb-color :blue)
-       :structural (pb-color :azure)
-       :diatonic (pb-color :spring)
-       :chromatic (pb-color :cyan))
+   (km :tonic (pb-color :gray75)
+       :structural (pb-color :gray80)
+       :diatonic (pb-color :gray85)
+       :chromatic (pb-color :gray95))
 
    :channels
    (pb_let [colors (reverse (pb-color_hue-wheel (pb-color_hsl 0 .6 .6) 8))]
@@ -112,30 +111,55 @@
    (pb-color_hsl .95 .6 .6)))
 
 (setq pr-default-faces
-  (km :line (lambda (pitch _pr)
-              (pb_let [(km_keys border light dark octave-delimiter) (km_get pr-colors :lines)
-                       is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))]
-                  (km :box (km :line-width (cons 0 1) :color border)
-                      :background (if is-light light dark)
-                      ;; handles the dark line between B and C
-                      :underline (if (equal 0 (mod pitch 12)) (list :color octave-delimiter :position -10))
-                      :overline (if (equal 11 (mod pitch 12)) octave-delimiter))))
-      :note (lambda (note pr)
-              (km :background
-                  (pb_if [c (km_get note :color)]
-                         (pb-color c)
+      (km :line (lambda (pitch pr)
+                  (pb_let [(km_keys border light dark octave-delimiter) (km_get pr-colors :lines)
+                           is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))]
+                      (km :box (km :line-width (cons 0 1) :color border)
+                          :background (if is-light light dark)
+                          ;; handles the dark line between B and C
+                          :underline (if (equal 0 (mod pitch 12)) (list :color octave-delimiter :position -10))
+                          :overline (if (equal 11 (mod pitch 12)) octave-delimiter))))
 
-                         (km_get pr [:options :colors :by-kind])
-                         (km_get pr-colors (list :note-kinds (km_get note :kind)))
+          :grid (lambda (bar harmonic-ctx pitch pr)
+                  (pb_let [(km_keys border light dark octave-delimiter) (km_get pr-colors :lines)]
+                      (pb->_ (km :box (km :line-width (cons 0 1) :color border)
+                                 ;; handles the dark line between B and C
+                                 :underline (if (equal 0 (mod pitch 12)) (list :color octave-delimiter :position -10))
+                                 :overline (if (equal 11 (mod pitch 12)) octave-delimiter))
+                             ;; line colors
+                             (km_merge _ (if (km_get pr [:options :harmonic-grid])
+                                             (pb_let [(km_keys origin struct scale) harmonic-ctx
+                                                      m (mod (- pitch (km_get origin :c)) 12)]
+                                                 (km :background (km_get pr-colors
+                                                                         (list :harmonic-functions
+                                                                               (cond ((= 0 m) :tonic)
+                                                                                     ((member (-elem-index m scale) struct) :structural)
+                                                                                     ((member m scale) :diatonic)
+                                                                                     (t :chromatic))))))
+                                           (let ((is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))))
+                                             (km :background (if is-light light dark)))))
+                             ;; darken odd bars
+                             (if (cl-oddp (km_get bar :idx))
+                                 (pb-color_walk _ (lambda (c) (pb-color_darken c .03)))
+                               _))))
 
-                         [chan (km_get note :channel)]
-                         (nth chan (km_get pr-colors :channels))
+          :note (lambda (note pr)
+                  (km :background
+                      (pb_if [c (km_get note :color)]
+                             (pb-color c)
 
-                         (km_get pr-colors :note-default))))
-      :bar (lambda (bar pr face)
-             (if (cl-oddp (km_get bar :idx))
-                 (pb-color_walk face (lambda (c) (pb-color_darken c .03)))
-               face))))
+                             (km_get pr [:options :colors :by-kind])
+                             (km_get pr-colors (list :note-kinds (km_get note :kind)))
+
+                             [chan (km_get note :channel)]
+                             (nth chan (km_get pr-colors :channels))
+
+                             (km_get pr-colors :note-default))))
+
+          :bar (lambda (bar pr face)
+                 (if (cl-oddp (km_get bar :idx))
+                     (pb-color_walk face (lambda (c) (pb-color_darken c .03)))
+                   face))))
 
 (pb_defun pr-coerce [(as pr
                          (km_keys notes bar))]
@@ -292,6 +316,7 @@
        ,@body))
 
 
+  (setq pr-buffers-data ())
   (pr-with-buf
    (erase-buffer)
    (insert (format "'%s" (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
@@ -326,14 +351,14 @@
                    buf
                    (+ 1 start-pos offset)
                    (+ 1 end-pos offset)
-                   (lambda (face) (funcall f i face pr-data)))))
+                   (lambda (face) (funcall f (- pitch-max i) face pr-data)))))
               (sq_range 0 (+ 1 (- pitch-max pitch-min))))))
 
   (pr-update-timerange-face (get-buffer "*pr*")
                             2 3
-                            (lambda (line-idx face pr)
+                            (lambda (pitch face pr)
                                 (km_upd face :background
-                                      (lambda (c) (pb-color c (saturate .5) (rotate (/ line-idx (float 10))))))))
+                                      (lambda (c) (pb-color c (saturate .5) (rotate (/ pitch (float 10))))))))
 
   (pr-with-buf
    (pb_let [(km_keys pr-data) (pr-get-buffer-data)]
@@ -341,18 +366,15 @@
                           (km :harmonic-ctx (km_keys origin struct scale)))]
                     (pr-update-timerange-face pr-buf
                                               position (+ position duration)
-                                              (lambda (line-idx face pr)
-                                                (let ((m (mod (- (- (cdr (km_get pr :pitch-range))
-                                                                    line-idx)
-                                                                 (km_get origin :c))
-                                                              12)))
+                                              (lambda (pitch face pr)
+                                                (let ((m (mod (- pitch (km_get origin :c)) 12)))
                                                   (km_upd face :background
-                                                          (lambda (c) (pb-color (km_get pr-colors (list :harmonic-functions
-                                                                                                   (cond ((= 0 m) :tonic)
-                                                                                                         ((member (-elem-index m scale) struct) :structural)
-                                                                                                         ((member m scale) :diatonic)
-                                                                                                         (t :chromatic))))
-                                                                           (lighten .8))))))))
+                                                          (lambda (c) (pb-color c (blend (km_get pr-colors (list :harmonic-functions
+                                                                                                      (cond ((= 0 m) :tonic)
+                                                                                                            ((member (-elem-index m scale) struct) :structural)
+                                                                                                            ((member m scale) :diatonic)
+                                                                                                            (t :chromatic))))
+                                                                                    .7))))))))
              (km_get pr-data :harmony))))
 
   (pr-with-buf
