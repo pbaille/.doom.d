@@ -91,6 +91,12 @@
        :border (pb-color "gray95")
        :octave-delimiter (pb-color "gray75"))
 
+   :harmonic-functions
+   (km :tonic (pb-color :blue)
+       :structural (pb-color :azure)
+       :diatonic (pb-color :spring)
+       :chromatic (pb-color :cyan))
+
    :channels
    (pb_let [colors (reverse (pb-color_hue-wheel (pb-color_hsl 0 .6 .6) 8))]
        (append colors (mapcar (lambda (c) (pb-color_desaturate c .5))
@@ -264,11 +270,6 @@
   (pr-render-buffer "*pr*"
                     (pr-make (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
 
-  (quote (with-current-buffer  (get-buffer-create "*pr*")
-          (erase-buffer)
-          (insert (format "'%s" (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
-          (proll-mode 1)))
-
   (pr-render-buffer "*pr*"
                     (pr-make (km :notes (list (km :pitch 60 :position 0 :duration 2)
                                               (km :pitch 64 :position 2 :duration 4)
@@ -277,5 +278,86 @@
                                               (km :pitch 69 :position 8 :duration 3)
                                               (km :pitch 66 :position 8 :duration 3)))))
 
-  (pb-color_walk `(:box (:line-width (0 . 1) :color ,(pb-color "gray95")) :background ,(pb-color "gray90") :underline nil :overline nil)
-                 (lambda (c) (print c) (pb-color_saturate c .5)))))
+  (pb-text-properties_update-faces (get-buffer-create "*pr*")
+                                   100 200
+                                   (lambda (pl) (pb-color_walk pl (pb-color_f> (blend "red" .5)))))))
+
+(quote
+ (list
+
+  (defvar pr-buf (get-buffer-create "*pr*"))
+
+  (defmacro pr-with-buf (&rest body)
+    `(with-current-buffer (get-buffer-create "*pr*")
+       ,@body))
+
+
+  (pr-with-buf
+   (erase-buffer)
+   (insert (format "'%s" (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
+   (proll-mode 1))
+
+  (defun pr-hightlight-test (buf start end)
+    (pb_let [(km_keys pr-data) (pr-get-buffer-data buf)
+             (cons pitch-min pitch-max) (km_get pr-data :pitch-range)
+             width (pr-pixel-width pr-data)]
+        (mapc (lambda (i)
+                (let ((offset (* i (+ 1 width))))
+                  (pb-text-properties_update-faces
+                   buf
+                   (+ start offset)
+                   (+ end offset)
+                   (lambda (face) (km_upd face :background (lambda (c) (pb-color (or c "black") (lighten .2))))))))
+              (sq_range 0 (+ 1 (- pitch-max pitch-min))))))
+
+  (pr-hightlight-test (get-buffer "*pr*")
+                      120 160)
+
+  (defun pr-update-timerange-face (buf start end f)
+    (pb_let [(km_keys pr-data) (pr-get-buffer-data buf)
+             (cons pitch-min pitch-max) (km_get pr-data :pitch-range)
+             width (pr-pixel-width pr-data)
+             beat-length (pr-beat-length pr-data)]
+        (mapc (lambda (i)
+                (let* ((offset (* i (+ 1 width)))
+                       (start-pos (round (* width (/ start (float beat-length)))))
+                       (end-pos (round (* width (/ end (float beat-length))))))
+                  (pb-text-properties_update-faces
+                   buf
+                   (+ 1 start-pos offset)
+                   (+ 1 end-pos offset)
+                   (lambda (face) (funcall f i face pr-data)))))
+              (sq_range 0 (+ 1 (- pitch-max pitch-min))))))
+
+  (pr-update-timerange-face (get-buffer "*pr*")
+                            2 3
+                            (lambda (line-idx face pr)
+                                (km_upd face :background
+                                      (lambda (c) (pb-color c (saturate .5) (rotate (/ line-idx (float 10))))))))
+
+  (pr-with-buf
+   (pb_let [(km_keys pr-data) (pr-get-buffer-data)]
+       (mapc (pb_fn [(and (km_keys position duration)
+                          (km :harmonic-ctx (km_keys origin struct scale)))]
+                    (pr-update-timerange-face pr-buf
+                                              position (+ position duration)
+                                              (lambda (line-idx face pr)
+                                                (let ((m (mod (- (- (cdr (km_get pr :pitch-range))
+                                                                    line-idx)
+                                                                 (km_get origin :c))
+                                                              12)))
+                                                  (km_upd face :background
+                                                          (lambda (c) (pb-color (km_get pr-colors (list :harmonic-functions
+                                                                                                   (cond ((= 0 m) :tonic)
+                                                                                                         ((member (-elem-index m scale) struct) :structural)
+                                                                                                         ((member m scale) :diatonic)
+                                                                                                         (t :chromatic))))
+                                                                           (lighten .8))))))))
+             (km_get pr-data :harmony))))
+
+  (pr-with-buf
+   (pb_let [(km_keys pr-data) (pr-get-buffer-data)]
+       (km_get pr-data :harmony)))
+
+
+  (mod (- 60 59) 12)))
