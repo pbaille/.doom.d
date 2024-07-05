@@ -55,23 +55,40 @@
             notes)))
 
 (pb_defun pr-render-grid [(as pr
-                              (km_keys bars pitch-range faces resolution))]
+                              (km_keys bars harmony pitch-range faces resolution))]
   (let* ((bar-positions (pr-bar-positions pr))
+         (enriched-bars (seq-mapn (pb_fn [idx (as bar (km_keys beat length)) position]
+                                         (km_put (copy-tree bar) :idx idx :position position :duration (* length beat)))
+                                  (sq_range 0 (length bars))
+                                  bars
+                                  bar-positions))
+         (zones (seq-reduce (pb_fn [(as zones (cons (cons pos last-zone) previous-zones))
+                                    (as zone (km_keys position beat))]
+                                   (let ((nxt-zone (km_put (copy-tree last-zone) (if beat :bar :harmony) zone)))
+                                     (if (equal position pos) (cons (cons pos nxt-zone) previous-zones)
+                                       (cons (cons position nxt-zone) zones))))
+                            (sort (append (cdr harmony) (cdr enriched-bars))
+                                  (lambda (a b) (< (km_get a :position) (km_get b :position))))
+                            (list (cons 0 (km :harmony (car harmony) :bar (car enriched-bars))))))
+         (enriched-zones (pb->>
+                          (reverse (cons (cons (pr-beat-length pr) ())
+                                         zones))
+                          (sq_partition 2 1)
+                          (mapcar (pb_fn [(list (cons start-pos data) (cons end-pos _))]
+                                         (km_put data :start-pos start-pos :end-pos end-pos)))))
          (lines (mapcar (lambda (pitch)
-                          (append (seq-mapn (pb_fn [i bar (list beg end)]
-                                                   (-> (pb_join-string (sq_repeat (* resolution (- end beg)) " "))
-                                                       (propertize 'face (funcall (km_get faces :bar)
-                                                                                  (km_put bar :idx i)
-                                                                                  pr
-                                                                                  (funcall (km_get faces :line)
-                                                                                           pitch
-                                                                                           pr)))))
-                                            (sq_range 0 (length bars))
-                                            bars
-                                            (sq_partition 2 1 bar-positions))
+                          (append (seq-mapn (pb_fn [(km_keys bar harmony start-pos end-pos)]
+                                                   (-> (pb_join-string (sq_repeat (* resolution (- end-pos start-pos)) " "))
+                                                       (propertize 'face (funcall (km_get faces :grid)
+                                                                                  bar
+                                                                                  (km_get harmony :harmonic-ctx)
+                                                                                  pitch
+                                                                                  pr))))
+                                            enriched-zones)
                                   (list "\n")))
                         (reverse (sq_range (car pitch-range)
                                            (+ 1 (cdr pitch-range)))))))
+    '(pp (kmq zones enriched-zones))
     (apply #'concat (sq_join lines))))
 
 (pb_defun pr-render [pr]
@@ -185,7 +202,8 @@
 
 (defun pr-make (data)
   (pr-coerce
-   (km_merge (km :resolution 32
+   (km_merge (km :options (km :harmonic-grid t)
+                 :resolution 32
                  :text-scale -3
                  :faces pr-default-faces)
              data)))
