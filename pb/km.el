@@ -181,12 +181,22 @@ and BODY is the code to execute."
        (km_let (,ks ,seed)
                ,@body))))
 
-(defmacro kmq (&rest keys)
-  "Build a km using binding names as KEYS."
-  (cons 'list (km_into ()
-                       (mapcar (lambda (k) (cons (intern (concat ":" (symbol-name k)))
-                                            k))
-                               keys))))
+(defun km_parse-free-form (xs)
+  "Parse arguments XS to a serie of entries."
+  (if (consp xs)
+      (let ((x (car xs)))
+        (cond ((keywordp x)
+               (cons (cons x (cadr xs))
+                     (km_parse-free-form (cddr xs))))
+              ((symbolp x)
+               (cons (cons (intern (concat ":" (symbol-name x)))
+                           x)
+                     (km_parse-free-form (cdr xs))))
+              (t (error "Invalid km free form args"))))))
+
+(defmacro kmq (&rest xs)
+  "Build a km using free form arguments XS."
+  (cons 'list (km_into () (km_parse-free-form xs))))
 
 (defun km_test ()
   "Run some assertions for the keyword map functions."
@@ -257,7 +267,14 @@ and BODY is the code to execute."
   (cl-assert
    (let ((a 1)(b 2))
      (equal (kmq a b)
-            (km :a a :b b)))))
+            (km :a a :b b))))
+
+  (cl-assert
+   (and (equal (km_parse-free-form '(a b :c 34 :d (pouet) f))
+               '((:a . a) (:b . b) (:c . 34) (:d pouet) (:f . f)))
+
+        (equal (should-error (km_parse-free-form '((+ 1 2) :d (pouet))))
+               '(error "Invalid km free form args")))))
 
 (km_test)
 
