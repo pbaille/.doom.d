@@ -95,6 +95,19 @@ in this case V is added at the end of the LST."
   "Concat several lists (XS) together."
   (apply #'append xs))
 
+(defun sq_find (xs f)
+  "Return the first element of XS that satisfies F."
+  (if (consp xs)
+      (let ((x (car xs)))
+        (or (and (funcall f x) x)
+            (sq_find (cdr xs) f)))))
+
+(defun sq_index-of (xs x)
+  "Return the first index of XS where element is equal to X."
+  (if-let ((found (sq_find (seq-mapn #'cons (sq_range 0 (length xs)) xs)
+                           (lambda (e) (equal x (cdr e))))))
+      (car found)))
+
 (defun sq_test ()
   "Test."
   (cl-assert
@@ -148,7 +161,18 @@ in this case V is added at the end of the LST."
         (equal (sq_drop (list 1 2 3 4) -1)
                (list 1 2 3 4))
 
-        (not (sq_drop (list 1 2 3 4) 12)))))
+        (not (sq_drop (list 1 2 3 4) 12))))
+  (cl-assert
+   (and (equal (sq_find (list :a 's 3 :b "er" 'c)
+                        #'stringp)
+               "er")
+
+        (equal (sq_index-of (list :a 's 3 :b "er" 'c "er")
+                            "er")
+               4)
+
+        (not (sq_index-of (list :a 's 3 :b "er" 'c "er")
+                          "ert")))))
 
 (sq_test)
 
