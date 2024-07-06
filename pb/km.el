@@ -39,7 +39,7 @@ Throws an error if XS does not form a valid keyword map."
   (cl-reduce (lambda (m entry)
                (plist-put m (car entry) (cdr entry)))
              entries
-             :initial-value m))
+             :initial-value (copy-tree m)))
 
 (defun km_merge (&rest kms)
   "Merge several KMS together."
@@ -106,7 +106,7 @@ If AT is a list, put the value in a nested map."
   (cl-reduce (lambda (m entry)
                (km_put1 m (car entry) (cadr entry)))
              (sq_partition 2 2 xs)
-             :initial-value m))
+             :initial-value (copy-tree m)))
 
 (defun km_upd-in (m path f)
   "Update the value at PATH in the nested keyword map M by applying function F."
@@ -131,7 +131,7 @@ XS is a list alternating paths and update-fns."
   (cl-reduce (lambda (m entry)
                (km_upd1 m (car entry) (cadr entry)))
              (sq_partition 2 2 xs)
-             :initial-value m))
+             :initial-value (copy-tree m)))
 
 (defun km_all-paths (m)
   "Transform M into an alist of path -> value."
