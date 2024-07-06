@@ -108,9 +108,9 @@
        :octave-delimiter (pb-color :gray75))
 
    :harmonic-functions
-   (km :tonic (pb-color :gray75)
+   (km :tonic (pb-color :gray73)
        :structural (pb-color :gray80)
-       :diatonic (pb-color :gray85)
+       :diatonic (pb-color :gray90)
        :chromatic (pb-color :gray95))
 
    :channels
