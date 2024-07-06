@@ -58,13 +58,13 @@
                               (km_keys bars harmony pitch-range faces resolution))]
   (let* ((bar-positions (pr-bar-positions pr))
          (enriched-bars (seq-mapn (pb_fn [idx (as bar (km_keys beat length)) position]
-                                         (km_put (copy-tree bar) :idx idx :position position :duration (* length beat)))
+                                         (km_put bar :idx idx :position position :duration (* length beat)))
                                   (sq_range 0 (length bars))
                                   bars
                                   bar-positions))
          (zones (seq-reduce (pb_fn [(as zones (cons (cons pos last-zone) previous-zones))
                                     (as zone (km_keys position beat))]
-                                   (let ((nxt-zone (km_put (copy-tree last-zone) (if beat :bar :harmony) zone)))
+                                   (let ((nxt-zone (km_put last-zone (if beat :bar :harmony) zone)))
                                      (if (equal position pos) (cons (cons pos nxt-zone) previous-zones)
                                        (cons (cons position nxt-zone) zones))))
                             (sort (append (cdr harmony) (cdr enriched-bars))
@@ -139,10 +139,7 @@
 
           :grid (lambda (bar harmonic-ctx pitch pr)
                   (pb_let [(km_keys border light dark octave-delimiter) (km_get pr-colors :lines)]
-                      (pb->_ (km :box (km :line-width (cons 0 1) :color border)
-                                 ;; handles the dark line between B and C
-                                 :underline (if (equal 0 (mod pitch 12)) (list :color octave-delimiter :position -10))
-                                 :overline (if (equal 11 (mod pitch 12)) octave-delimiter))
+                      (pb->_ (km :box (km :line-width (cons 0 1) :color border))
                              ;; line colors
                              (km_merge _ (if (km_get pr [:options :harmonic-grid])
                                              (pb_let [(km_keys origin struct scale) harmonic-ctx
@@ -154,7 +151,10 @@
                                                                                      ((member m scale) :diatonic)
                                                                                      (t :chromatic))))))
                                            (let ((is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))))
-                                             (km :background (if is-light light dark)))))
+                                             (km :background (if is-light light dark)
+                                                 ;; handles the dark line between B and C
+                                                 :underline (if (equal 0 (mod pitch 12)) (list :color octave-delimiter :position -10))
+                                                 :overline (if (equal 11 (mod pitch 12)) octave-delimiter)))))
                              ;; darken odd bars
                              (if (cl-oddp (km_get bar :idx))
                                  (pb-color_walk _ (lambda (c) (pb-color_darken c .03)))
