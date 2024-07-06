@@ -57,19 +57,20 @@
 (pb_defun pr-render-grid [(as pr
                               (km_keys bars harmony pitch-range faces resolution))]
   (let* ((bar-positions (pr-bar-positions pr))
-         (enriched-bars (seq-mapn (pb_fn [idx (as bar (km_keys beat length)) position]
-                                         (km_put bar :idx idx :position position :duration (* length beat)))
+         (marked-harmonies (mapcar (lambda (h) (km_put h :type :harmony)) harmony))
+         (enriched-bars (seq-mapn (pb_fn [idx bar position]
+                                         (km_put bar :idx idx :position position :type :bar))
                                   (sq_range 0 (length bars))
                                   bars
                                   bar-positions))
          (zones (seq-reduce (pb_fn [(as zones (cons (cons pos last-zone) previous-zones))
-                                    (as zone (km_keys position beat))]
-                                   (let ((nxt-zone (km_put last-zone (if beat :bar :harmony) zone)))
+                                    (as zone (km_keys type position))]
+                                   (let ((nxt-zone (km_put last-zone type zone)))
                                      (if (equal position pos) (cons (cons pos nxt-zone) previous-zones)
                                        (cons (cons position nxt-zone) zones))))
-                            (sort (append (cdr harmony) (cdr enriched-bars))
+                            (sort (append marked-harmonies enriched-bars)
                                   (lambda (a b) (< (km_get a :position) (km_get b :position))))
-                            (list (cons 0 (km :harmony (car harmony) :bar (car enriched-bars))))))
+                            (list (list 0))))
          (enriched-zones (pb->>
                           (reverse (cons (cons (pr-beat-length pr) ())
                                          zones))
@@ -103,6 +104,7 @@
   (km
    :lines
    (km :light (pb-color :gray90)
+       :c-key (pb-color :gray92)
        :dark (pb-color :gray85)
        :border (pb-color :gray95)
        :octave-delimiter (pb-color :gray75))
@@ -128,17 +130,8 @@
    (pb-color_hsl .95 .6 .6)))
 
 (setq pr-default-faces
-      (km :line (lambda (pitch pr)
-                  (pb_let [(km_keys border light dark octave-delimiter) (km_get pr-colors :lines)
-                           is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))]
-                      (km :box (km :line-width (cons 0 1) :color border)
-                          :background (if is-light light dark)
-                          ;; handles the dark line between B and C
-                          :underline (if (equal 0 (mod pitch 12)) (list :color octave-delimiter :position -10))
-                          :overline (if (equal 11 (mod pitch 12)) octave-delimiter))))
-
-          :grid (lambda (bar harmonic-ctx pitch pr)
-                  (pb_let [(km_keys border light dark octave-delimiter) (km_get pr-colors :lines)]
+      (km :grid (lambda (bar harmonic-ctx pitch pr)
+                  (pb_let [(km_keys border light dark c-key octave-delimiter) (km_get pr-colors :lines)]
                       (pb->_ (km :box (km :line-width (cons 0 1) :color border))
                              ;; line colors
                              (km_merge _ (if (km_get pr [:options :harmonic-grid])
@@ -147,14 +140,16 @@
                                                  (km :background (km_get pr-colors
                                                                          (list :harmonic-functions
                                                                                (cond ((= 0 m) :tonic)
-                                                                                     ((member (-elem-index m scale) struct) :structural)
+                                                                                     ((member (sq_index-of scale m) struct) :structural)
                                                                                      ((member m scale) :diatonic)
                                                                                      (t :chromatic))))))
-                                           (let ((is-light (member (mod pitch 12) (list 0 2 4 5 7 9 11))))
-                                             (km :background (if is-light light dark)
-                                                 ;; handles the dark line between B and C
-                                                 :underline (if (equal 0 (mod pitch 12)) (list :color octave-delimiter :position -10))
-                                                 :overline (if (equal 11 (mod pitch 12)) octave-delimiter)))))
+                                           (let* ((pitch-class (mod pitch 12))
+                                                  (is-light (member pitch-class (list 0 2 4 5 7 9 11))))
+                                             (km :background (if (= 0 pitch-class) c-key (if is-light light dark))
+                                                 ;; handles the dark line between B and C (this produces a little shift that I don't like)
+                                                 ;; :underline (if (equal 0 (mod pitch 12)) (list :color octave-delimiter :position 0))
+                                                 ;; :overline (if (equal 11 (mod pitch 12)) octave-delimiter)
+                                                 ))))
                              ;; darken odd bars
                              (if (cl-oddp (km_get bar :idx))
                                  (pb-color_walk _ (lambda (c) (pb-color_darken c .03)))
@@ -171,12 +166,7 @@
                              [chan (km_get note :channel)]
                              (nth chan (km_get pr-colors :channels))
 
-                             (km_get pr-colors :note-default))))
-
-          :bar (lambda (bar pr face)
-                 (if (cl-oddp (km_get bar :idx))
-                     (pb-color_walk face (lambda (c) (pb-color_darken c .03)))
-                   face))))
+                             (km_get pr-colors :note-default))))))
 
 (pb_defun pr-coerce [(as pr
                          (km_keys notes bar))]
@@ -202,7 +192,7 @@
 
 (defun pr-make (data)
   (pr-coerce
-   (km_merge (km :options (km :harmonic-grid t)
+   (km_merge (km :options (km :harmonic-grid nil)
                  :resolution 32
                  :text-scale -3
                  :faces pr-default-faces)
@@ -295,34 +285,15 @@
                        (km_upd pr [:pr-data :resolution]
                                (lambda (r) (+ (or r 32) 4))))))))
 
-(quote
- (list :tests
-  (defvar pr-sample-data
-    (pr-make (km :bars (list (km :beat 1 :length 4)
-                             (km :beat 1 :length 2)
-                             (km :beat 1 :length 3)
-                             (km :beat 1 :length 3))
-                 :notes (list (km :pitch 60 :position 0 :duration 2)
-                              (km :pitch 64 :position 2 :duration 4)
-                              (km :pitch 67 :position 6 :duration 1)
-                              (km :pitch 72 :position 7 :duration 1)
-                              (km :pitch 69 :position 8 :duration 3)
-                              (km :pitch 66 :position 8 :duration 3)))))
 
-  (pr-render-buffer "*pr*"
-                    (pr-make (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
 
-  (pr-render-buffer "*pr*"
-                    (pr-make (km :notes (list (km :pitch 60 :position 0 :duration 2)
-                                              (km :pitch 64 :position 2 :duration 4)
-                                              (km :pitch 67 :position 6 :duration 1)
-                                              (km :pitch 72 :position 7 :duration 1)
-                                              (km :pitch 69 :position 8 :duration 3)
-                                              (km :pitch 66 :position 8 :duration 3)))))
+(setq pr-buffers-data ())
+(pr-with-buf
+ (erase-buffer)
+ (insert (format "'%s" (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
+ (proll-mode 1))
 
-  (pb-text-properties_update-faces (get-buffer-create "*pr*")
-                                   100 200
-                                   (lambda (pl) (pb-color_walk pl (pb-color_f> (blend "red" .5)))))))
+
 
 (quote
  (list
@@ -333,28 +304,6 @@
     `(with-current-buffer (get-buffer-create "*pr*")
        ,@body))
 
-
-  (setq pr-buffers-data ())
-  (pr-with-buf
-   (erase-buffer)
-   (insert (format "'%s" (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
-   (proll-mode 1))
-
-  (defun pr-hightlight-test (buf start end)
-    (pb_let [(km_keys pr-data) (pr-get-buffer-data buf)
-             (cons pitch-min pitch-max) (km_get pr-data :pitch-range)
-             width (pr-pixel-width pr-data)]
-        (mapc (lambda (i)
-                (let ((offset (* i (+ 1 width))))
-                  (pb-text-properties_update-faces
-                   buf
-                   (+ start offset)
-                   (+ end offset)
-                   (lambda (face) (km_upd face :background (lambda (c) (pb-color (or c "black") (lighten .2))))))))
-              (sq_range 0 (+ 1 (- pitch-max pitch-min))))))
-
-  (pr-hightlight-test (get-buffer "*pr*")
-                      120 160)
 
   (defun pr-update-timerange-face (buf start end f)
     (pb_let [(km_keys pr-data) (pr-get-buffer-data buf)
@@ -397,7 +346,33 @@
 
   (pr-with-buf
    (pb_let [(km_keys pr-data) (pr-get-buffer-data)]
-       (km_get pr-data :harmony)))
+       (km_get pr-data :harmony)))))
 
+(quote
+ (list :tests
+  (defvar pr-sample-data
+    (pr-make (km :bars (list (km :beat 1 :length 4)
+                             (km :beat 1 :length 2)
+                             (km :beat 1 :length 3)
+                             (km :beat 1 :length 3))
+                 :notes (list (km :pitch 60 :position 0 :duration 2)
+                              (km :pitch 64 :position 2 :duration 4)
+                              (km :pitch 67 :position 6 :duration 1)
+                              (km :pitch 72 :position 7 :duration 1)
+                              (km :pitch 69 :position 8 :duration 3)
+                              (km :pitch 66 :position 8 :duration 3)))))
 
-  (mod (- 60 59) 12)))
+  (pr-render-buffer "*pr*"
+                    (pr-make (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
+
+  (pr-render-buffer "*pr*"
+                    (pr-make (km :notes (list (km :pitch 60 :position 0 :duration 2)
+                                              (km :pitch 64 :position 2 :duration 4)
+                                              (km :pitch 67 :position 6 :duration 1)
+                                              (km :pitch 72 :position 7 :duration 1)
+                                              (km :pitch 69 :position 8 :duration 3)
+                                              (km :pitch 66 :position 8 :duration 3)))))
+
+  (pb-text-properties_update-faces (get-buffer-create "*pr*")
+                                   100 200
+                                   (lambda (pl) (pb-color_walk pl (pb-color_f> (blend "red" .5)))))))
