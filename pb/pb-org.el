@@ -28,52 +28,70 @@
            (org-at-item-p))
        (invisible-p (point-at-eol))))
 
+(defun pb-org_top-of-narrowed-subtree-p ()
+  "Test if cursor is on the top heading of a narrowed buffer."
+  (and (buffer-narrowed-p)
+       (bobp)))
+
+(defun pb-org_semifold ()
+  "Show one level of content."
+  (interactive)
+  (org-fold-hide-subtree)
+  (org-cycle))
+
+(defun pb-org_semifolded-p ()
+  "Test if current node is semifolded."
+  (save-excursion
+    (org-next-visible-heading 1)
+    (pb-org_folded-p)))
+
+(defun pb-org_widen ()
+  "Fold and widen a narrowd subtree."
+  (interactive)
+  (org-fold-hide-subtree)
+  (widen)
+  (recenter))
+
+(defun pb-org_narrow ()
+  "Narrow a subtree and semifold it."
+  (interactive)
+  (org-narrow-to-subtree)
+  (pb-org_semifold))
+
 (defun pb-org_toggle-narrow ()
   "Toggle narrowing of current subtree, folding it accordingly."
   (interactive)
   (if (buffer-narrowed-p)
-      (org-fold-hide-subtree)
-    (org-fold-show-subtree))
-  (org-toggle-narrow-to-subtree)
-  (recenter))
+      (pb-org_widen)
+    (progn
+      (org-narrow-to-subtree)
+      (pb-org_semifold))))
 
 (defun pb-org_toggle-fold ()
   "Toggle narrowing of current subtree, folding it accordingly."
   (interactive)
-  (if (pb-org_folded-p)
-      (org-fold-show-subtree)
-    (org-fold-hide-subtree)))
+  (if (pb-org_top-of-narrowed-subtree-p)
+      (if (pb-org_semifolded-p)
+          (org-fold-show-subtree)
+        (pb-org_semifold))
+    (if (pb-org_folded-p)
+        (org-fold-show-subtree)
+      (org-fold-hide-subtree))))
 
 (defun pb-org_walk-forward ()
+  "Walk the org tree forward."
   (interactive)
   (let ((p (point)))
-    (cond ((org-at-heading-p)
-           (if (pb-org_folded-p)
-               (org-forward-heading-same-level 1)
-             (org-down-element)))
-          (t (org-forward-element)))
+    (if (org-at-heading-p)
+        (if (pb-org_folded-p)
+            (org-forward-heading-same-level 1)
+          (org-down-element))
+      (org-forward-element))
     (if (= p (point))
         (org-next-visible-heading 1))))
 
-(defun pb-org_forward ()
-  (interactive)
-  (if (and (buffer-narrowed-p)
-           (bobp))
-      (progn (pb-org_toggle-narrow)
-             (org-forward-element)
-             (pb-org_toggle-narrow))
-    (org-forward-element)))
-
-(defun pb-org_backward ()
-  (interactive)
-  (if (and (buffer-narrowed-p)
-           (bobp))
-      (progn (pb-org_toggle-narrow)
-             (org-backward-element)
-             (pb-org_toggle-narrow))
-    (org-backward-element)))
-
 (defun pb-org_walk-backward ()
+  "Walk the org tree backward."
   (interactive)
   (let ((p (point)))
     (cond ((org-at-heading-p)
@@ -81,6 +99,26 @@
           (t (org-backward-element)))
     (if (= p (point))
         (org-previous-visible-heading 1))))
+
+(defun pb-org_forward ()
+  "Move forward at the same level.
+If buffer is narrowed, widen it and narrow the next node"
+  (interactive)
+  (if (pb-org_top-of-narrowed-subtree-p)
+      (progn (pb-org_widen)
+             (org-forward-element)
+             (pb-org_narrow))
+    (org-forward-element)))
+
+(defun pb-org_backward ()
+  "Move backward at the same level.
+If buffer is narrowed, widen it and narrow the previous node"
+  (interactive)
+  (if (pb-org_top-of-narrowed-subtree-p)
+      (progn (pb-org_widen)
+             (org-backward-element)
+             (pb-org_narrow))
+    (org-backward-element)))
 
 '(progn (switch-to-buffer "scratch.org")
         (goto-char (org-find-olp (list "~/org/scratch.org" "top" "three" "3.2"))))
