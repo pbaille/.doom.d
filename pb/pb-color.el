@@ -375,6 +375,10 @@ RES is the resolution to be used for computations."
                   (pb-color_coerce c)
                 (list 'pb-color_coerce c))))
 
+(defmacro pb-color_f> (&rest transformations)
+  "Thread C through TRANSFORMATIONS prefixing them with pb-color."
+  `(lambda (c) (pb-color c ,@transformations)))
+
 (defun pb-color_test ()
   (cl-assert
    (and (equal (pb-color_triad "#ffaacf")
