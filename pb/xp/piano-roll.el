@@ -178,7 +178,7 @@
   (pr-with-timeline
    (km_upd pr
            :pitch-range (lambda (x) (or x
-                                   (pb_let [(cons min max)
+                                   (pb_let [(cons bottom top)
                                             (seq-reduce (pb_fn [(as bounds
                                                                     (cons pitch-min pitch-max))
                                                                 (as note (km pitch))]
@@ -187,8 +187,11 @@
                                                                       (< pitch pitch-min) (cons pitch pitch-max)
                                                                       bounds))
                                                         notes
-                                                        nil)]
-                                       (cons (- min 2) (+ 2 max)))))
+                                                        nil)
+                                            (cons bottom top) (cons (- bottom 2) (+ 2 top))
+                                            extra-pad (max 0 (- 12 (- top bottom)))]
+                                       (cons (- bottom (floor (/ extra-pad 2.0)))
+                                             (+ top (ceiling (/ extra-pad 2.0)))))))
            :bars (lambda (x) (or x
                             (let ((bar (or bar (km :beat 1 :length 4))))
                               (sq_repeat (ceiling (/ (pr-last-note-end-position pr)
@@ -198,7 +201,7 @@
 
 (defun pr-make (data)
   (pr-coerce
-   (km_merge (km :options (km :harmonic-grid t)
+   (km_merge (km :options (km :harmonic-grid nil)
                  :resolution 32
                  :text-scale -3
                  :faces pr-default-faces)
