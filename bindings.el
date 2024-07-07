@@ -152,7 +152,11 @@
        :n "K" #'evil-scroll-line-to-top
        :n "t" #'org-cycle
        :n "n" #'pb-org_toggle-narrow
-       :n "T" #'pb-org_toggle-fold)
+       :n "T" #'pb-org_toggle-fold
+       :i "C-h" #'evil-backward-char
+       :i "C-l" #'evil-forward-char
+       :i "C-j" #'evil-next-line
+       :i "C-k" #'evil-previous-line)
 
       (:map gptel-mode-map
        :i "C-e" #'gptel-send
