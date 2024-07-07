@@ -145,12 +145,14 @@
        :n "C-k" #'evil-previous-line
        :n "k" #'org-up-element
        :n "j" #'org-down-element
-       :n "h" #'org-previous-visible-heading
-       :n "l" #'org-next-visible-heading
+       :n "h" #'pb-org_backward
+       :n "l" #'pb-org_forward
+       :n "b" #'pb-org_walk-backward
+       :n "f" #'pb-org_walk-forward
        :n "K" #'evil-scroll-line-to-top
        :n "t" #'org-cycle
        :n "n" #'pb-org_toggle-narrow
-       :n "T" #'org-fold-hide-sublevels)
+       :n "T" #'pb-org_toggle-fold)
 
       (:map gptel-mode-map
        :i "C-e" #'gptel-send
