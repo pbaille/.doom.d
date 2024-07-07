@@ -138,7 +138,21 @@
             "e b" #'reapl-mode_send-buffer
             "c" #'reapl-mode_complete-symbol-at-point))
 
-(map! (:map gptel-mode-map
+(map! (:map evil-org-mode-map
+       :n "C-h" #'evil-backward-char
+       :n "C-l" #'evil-forward-char
+       :n "C-j" #'evil-next-line
+       :n "C-k" #'evil-previous-line
+       :n "k" #'org-up-element
+       :n "j" #'org-down-element
+       :n "h" #'org-previous-visible-heading
+       :n "l" #'org-next-visible-heading
+       :n "K" #'evil-scroll-line-to-top
+       :n "t" #'org-cycle
+       :n "n" #'pb-org_toggle-narrow
+       :n "T" #'org-fold-hide-sublevels)
+
+      (:map gptel-mode-map
        :i "C-e" #'gptel-send
        :ni "C-m" #'gptel-menu
        "C-c C-k" #'kill-buffer-and-window)

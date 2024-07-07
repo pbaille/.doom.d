@@ -22,6 +22,21 @@
 (require 'km)
 (require 'org)
 
+(defun pb-org_folded-p ()
+  "Test if point is on a folded headline or plain list item."
+  (and (or (org-at-heading-p)
+           (org-at-item-p))
+       (invisible-p (point-at-eol))))
+
+(defun pb-org_toggle-narrow ()
+  "Toggle narrowing of current subtree, folding it accordingly."
+  (interactive)
+  (if (buffer-narrowed-p)
+      (org-fold-hide-subtree)
+    (org-fold-show-subtree))
+  (org-toggle-narrow-to-subtree)
+  (recenter))
+
 '(progn (switch-to-buffer "scratch.org")
         (goto-char (org-find-olp (list "~/org/scratch.org" "top" "three" "3.2"))))
 

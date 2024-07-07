@@ -17,6 +17,9 @@
   (require 'ol-info)
   (require 'org-protocol-capture-html)
 
+  (add-hook 'org-mode-hook
+            (lambda () (interactive) (hl-line-mode -1)))
+
   (setq org-ellipsis "…")
   (setq org-clock-persist 'history)
   (org-clock-persistence-insinuate)
