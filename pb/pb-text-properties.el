@@ -51,8 +51,6 @@ therefore F has to be applied meaninfully."
             (next-change
              (or (next-single-property-change (point) 'face (current-buffer))
                  (point-max))))
-        (print (list (point) (min next-change end)
-                     (pb-text-properties_update-face-value f face-prop)) )
         (add-face-text-property (point) (min next-change end)
                                 (pb-text-properties_update-face-value f face-prop)
                                 nil
