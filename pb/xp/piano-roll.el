@@ -250,8 +250,8 @@
              (setq proll-mode t)
              (evil-normal-state 1)
              (let ((buf (current-buffer)))
-               (pb_if [(km content pr-data) (pr-get-buffer-data buf)]
-                      (pr-render-buffer buf pr-data)
+               (pb_if ;; [(km content pr-data) (pr-get-buffer-data buf)]
+                      ;; (pr-render-buffer buf pr-data)
                       [content (buffer-substring-no-properties (point-min) (point-max))
                        data (pr-make (eval (read content) t))]
                       (progn (setq pr-buffers-data
