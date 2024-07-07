@@ -186,4 +186,25 @@
    :states 'normal
    :keymaps '(clojure-mode-map)
    "g :" #'re-frame-jump-to-reg
-   ";" #'pb-symex_clj-toggle-comment))
+   ";" #'pb-symex_clj-toggle-comment)
+
+  (defface doom-modeline-evil-symex-state
+    '((t (:inherit doom-modeline-info)))
+    "Face for the symex state tag in evil indicator."
+    :group 'doom-modeline-faces)
+
+  (defun pb-doom-modeline--modal-icon (f text face help-echo &optional icon unicode)
+    "Advice around `doom-modeline--modal-icon'."
+    (if (evil-symex-state-p)
+        (funcall f
+                 (let ((tag (evil-state-property evil-state :tag t)))
+                   (if (stringp tag) tag (funcall tag)))
+                 'doom-modeline-evil-symex-state
+                 (evil-state-property evil-state :name t)
+                 "nf-md-alpha_s_circle"
+                 "🅢")
+      (funcall f text face help-echo icon unicode)))
+
+  (advice-add 'doom-modeline--modal-icon
+              :around
+              #'pb-doom-modeline--modal-icon))

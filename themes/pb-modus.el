@@ -178,6 +178,7 @@ which is tranformed to:
   (require 'symex)
   (require 'ibuffer)
   (require 'nerd-icons-ibuffer)
+  (require 'nerd-icons-dired)
 
   (defun pb-modus-theme-hook ()
 
@@ -203,7 +204,20 @@ which is tranformed to:
                         :foreground (pb-modus-get-color 'magenta-faint-lighter))
 
     (set-face-attribute 'doom-modeline-bar nil
-                        :background (pb-modus-get-color 'azure))
+                        :background (pb-modus-get-color 'fg-intense))
+
+    (set-face-attribute 'doom-modeline-buffer-modified nil
+                        :foreground (pb-modus-get-color 'rose-faint)
+                        :weight 'bold)
+
+    (set-face-attribute 'doom-modeline-evil-normal-state nil
+                        :foreground (pb-modus-get-color 'rose-faint))
+
+    (set-face-attribute 'doom-modeline-evil-symex-state nil
+                        :foreground (pb-modus-get-color 'azure-warmer-darker))
+
+    (set-face-attribute 'doom-modeline-evil-insert-state nil
+                        :foreground (pb-modus-get-color 'spring-faint))
 
     (set-face-attribute 'cider-result-overlay-face nil
                         :box (list :line-width 2 :color (pb-modus-get-color 'bg-intense))
