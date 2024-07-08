@@ -61,11 +61,9 @@
 (defun pb-org_toggle-narrow ()
   "Toggle narrowing of current subtree, folding it accordingly."
   (interactive)
-  (if (buffer-narrowed-p)
+  (if (pb-org_top-of-narrowed-subtree-p)
       (pb-org_widen)
-    (progn
-      (org-narrow-to-subtree)
-      (pb-org_semifold))))
+    (pb-org_narrow)))
 
 (defun pb-org_toggle-fold ()
   "Toggle narrowing of current subtree, folding it accordingly."
@@ -99,6 +97,29 @@
           (t (org-backward-element)))
     (if (= p (point))
         (org-previous-visible-heading 1))))
+
+(defun pb-org_move (move)
+  "Do MOVE taking care of narrowed subtree.
+If buffer is narrowed, widen it before moving then narrow back."
+  (interactive)
+  (if (pb-org_top-of-narrowed-subtree-p)
+      (progn (pb-org_widen)
+             (funcall move)
+             (pb-org_narrow))
+    (funcall move)))
+
+(defun pb-org_parent ()
+  "Move to parent heading.
+If buffer is narrowed, widen it and narrow the next node"
+  (interactive)
+  (pb-org_move #'org-up-element))
+
+(defun pb-org_down-element ()
+  "Go to first child or to next node."
+  (interactive)
+  (condition-case err
+      (org-down-element)
+    (error (org-forward-element))))
 
 (defun pb-org_forward ()
   "Move forward at the same level.
