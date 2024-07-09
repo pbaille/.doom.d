@@ -87,19 +87,93 @@
              (not (symex--point-at-initial-symex-p)))
         (progn (symex-go-down 1) (pb-symex_bw)))))
 
+(defun pb-symex_select-current ()
+  "Select the current symex if any."
+  (if (cond ((thing-at-point 'string)
+             (beginning-of-thing 'string))
+            ((thing-at-point 'symbol)
+             (beginning-of-thing 'symbol))
+            ((thing-at-point 'number)
+             (beginning-of-thing 'number))
+            ((and (not (lispy-right-p))
+                  (thing-at-point 'sexp))
+             (beginning-of-thing 'sexp)))
+      (and (symex--update-overlay)
+           (point))))
+
+(defun pb-symex_select-nearest-bw ()
+  "Select the appropriate symex nearest to point."
+  (unless (bobp)
+    (or
+     (pb-symex_select-current)
+     (progn (backward-char)
+            (pb-symex_select-nearest-bw)))))
+
+(defun pb-symex_select-nearest-fw ()
+  "Select the appropriate symex nearest to point."
+  (unless (eobp)
+    (or (pb-symex_select-current)
+        (progn (forward-char)
+               (pb-symex_select-nearest-fw)))))
+
+(defun pb-symex_select-nearest ()
+  "Select the nearest symex in current line."
+  (let ((p (point))
+        (fw (save-excursion (pb-symex_select-nearest-fw)))
+        (bw (save-excursion (pb-symex_select-nearest-bw))))
+    (cond ((and bw fw)
+           (if (> (- fw p)
+                  (- p bw))
+               (goto-char bw)
+             (goto-char fw)))
+          ((or bw fw)
+           (goto-char (or bw fw))))))
+
+(defun pb-symex_select-nearest-in-line-bw ()
+  "Select the appropriate symex nearest to point."
+  (unless (bolp)
+    (or (pb-symex_select-current)
+        (progn (backward-char)
+               (pb-symex_select-nearest-in-line-bw)))))
+
+(defun pb-symex_select-nearest-in-line-fw ()
+  "Select the appropriate symex nearest to point."
+  (unless (eolp)
+    (or (pb-symex_select-current)
+        (progn (forward-char)
+               (pb-symex_select-nearest-in-line-fw)))))
+
+(defun pb-symex_select-nearest-in-line ()
+  "Select the nearest symex in current line."
+  (let ((p (point))
+        (fw (save-excursion (pb-symex_select-nearest-in-line-fw)))
+        (bw (save-excursion (pb-symex_select-nearest-in-line-bw))))
+    (pp (kmq fw bw p) )
+    (if (cond ((and bw fw)
+            (if (> (- fw p)
+                   (- p bw))
+                (goto-char bw)
+              (goto-char fw)))
+
+           ((or fw bw)
+            (goto-char (or bw fw))))
+        (symex--update-overlay))))
+
 (defun pb-symex_next-line (&optional count)
+  "Go to next line (or nth if COUNT) and focus the nearest symex."
   (interactive)
-  (let ((p (point)))
-    (symex-next-visual-line (or count 1))
-    (if (and (<= (point) p) (<= count 10))
-        (pb-symex_next-line (+ 1 (or count 1))))))
+  (evil-next-line (or count 1))
+  (or (pb-symex_select-nearest-in-line)
+      (unless (eobp)
+        (pb-symex_next-line 1))))
 
 (defun pb-symex_previous-line (&optional count)
+  "Go to previous line (or nth if COUNT) and focus the nearest symex."
   (interactive)
-  (let ((p (point)))
-    (symex-previous-visual-line (or count 1))
-    (if (and (>= (point) p) (<= count 10))
-        (pb-symex_previous-line (+ 1 (or count 1))))))
+  (evil-previous-line (or count 1))
+  (or (pb-symex_select-nearest-in-line)
+      (unless (bobp)
+        (pb-symex_previous-line 1))))
 
 (defun pb-symex_eval-pp-clojure ()
   (interactive)

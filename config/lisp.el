@@ -123,8 +123,8 @@
           ("l" . symex-go-forward)
           ;; ("h" . pb-symex_bw)
           ;; ("l" . pb-symex_fw)
-          ("C-k" . evil-previous-line) ;; replace symex-descend-branch
-          ("C-j" . evil-next-line) ;; replace symex-climb-branch
+          ("C-k" . pb-symex_previous-line) ;; replace symex-descend-branch
+          ("C-j" . pb-symex_next-line) ;; replace symex-climb-branch
           ("C-l" . evil-forward-char)
           ("C-h" . evil-backward-char)
 
