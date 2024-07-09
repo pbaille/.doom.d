@@ -123,8 +123,11 @@
           ("l" . symex-go-forward)
           ;; ("h" . pb-symex_bw)
           ;; ("l" . pb-symex_fw)
-          ("C-k" . pb-symex_previous-line) ;; replace symex-descend-branch
-          ("C-j" . pb-symex_next-line) ;; replace symex-climb-branch
+          ("C-k" . evil-previous-line) ;; replace symex-descend-branch
+          ("C-j" . evil-next-line) ;; replace symex-climb-branch
+          ("C-l" . evil-forward-char)
+          ("C-h" . evil-backward-char)
+
 
           ;; indent, tidy
           ("<tab>" . pb-sexpr_indent)
@@ -147,7 +150,8 @@
           ;; clojure specific TO MOVE
           ("M" . +lookup/documentation)
           ("E" . symex-eval-print)
-          ("C-e" . symex-evaluate-pretty)))
+          ("C-e" . symex-evaluate-pretty)
+          ("M-l" . symex-run)))
 
   (symex-initialize)
 
