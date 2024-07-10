@@ -11,13 +11,21 @@
 
 ;;; Code:
 
+(defun pb-org-babel_strip-lisp-comments (code)
+  "Remove comments from a string of Lisp CODE.
+; (semi colon) is assumed to be the inline comment character."
+  (replace-regexp-in-string "\\(;.*$\\)" "" code nil nil 1))
+
 (defvar pb-org-babel_custom-params
   (km :clojure
       (km
        :pp (km :args (lambda (args)
                        (append '((:results . "raw pp")
                                  (:wrap . "src clojure"))
-                               args))))))
+                               args)))
+       :rm-comments (km :content
+                        (lambda (content)
+                          (replace-regexp-in-string "\\(;.*$\\)" "" content nil nil 1))))))
 
 (defun pb-org-babel_add-custom-param (name lang spec)
   (cl-assert (and (keywordp name)
@@ -31,6 +39,10 @@
 (defun pb-org-babel_execute-src-block-hook (fun &optional arg info params)
   (pb_if [(list lang content args) info
           custom-params (km_get pb-org-babel_custom-params (pb_keyword lang))
+          ;; because of inline comments bug
+          content (if (equal "clojure" lang)
+                      (pb-org-babel_strip-lisp-comments content)
+                    content)
           (cons content args) (seq-reduce (pb_fn [(cons content args) (cons k wrappers)]
                                                  (if (assoc k args)
                                                      (cons (pb_if [f (km_get wrappers :content)]
@@ -50,6 +62,10 @@
 
 (defun pb-org-babel_insert-result-hook (fun result result-params info &rest more)
   (pb_if [(list lang content args) info
+          ;; because of inline comment bug
+          (if (equal "clojure" lang)
+              (pb-org-babel_strip-lisp-comments content)
+            content)
           custom-params (km_get pb-org-babel_custom-params (pb_keyword lang))]
          (pb_if [result (seq-reduce (pb_fn [result (cons k wrappers)]
                                            (if (assoc k args)
