@@ -139,17 +139,25 @@
             "c" #'reapl-mode_complete-symbol-at-point))
 
 (map! (:map evil-org-mode-map
-       :n "k" #'pb-org_parent
-       :n "j" #'pb-org_down-element
-       :n "h" #'pb-org_backward
-       :n "l" #'pb-org_forward
+       :n "k" #'pb-org_move-up
+       :n "j" #'pb-org_move-down
+       :n "h" #'pb-org_back
+       :n "l" #'pb-org_enter
        :n "b" #'pb-org_walk-backward
        :n "f" #'pb-org_walk-forward
-       :n "K" #'org-previous-visible-heading
+       :n "K" #'pb-org_parent
        :n "J" #'org-next-visible-heading
        :n "t" #'pb-org_toggle-fold
        :n "n" #'pb-org_toggle-narrow
        :n "T" #'pb-org_toggle-fold
+       ;; edition
+       :n "x" #'pb-org_cut
+       :n "y" #'pb-org_copy
+       :n "p" #'org-paste-subtree
+       :n "L" #'pb-org_move-subtree-down
+       :n "H" #'pb-org_move-subtree-up
+       :n "S" #'org-insert-structure-template
+       ;; regular evil moves
        :ni "C-h" #'evil-backward-char
        :ni "C-l" #'evil-forward-char
        :ni "C-j" #'evil-next-line

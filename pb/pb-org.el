@@ -50,7 +50,7 @@
     (save-excursion
      (org-next-visible-heading 1)
      (let ((nxt-lvl (pb-org_current-heading-level)))
-       (and (> lvl nxt-lvl)
+       (and (< lvl nxt-lvl)
             (pb-org_folded-p))))))
 
 (defun pb-org_widen ()
@@ -65,6 +65,27 @@
   (interactive)
   (org-narrow-to-subtree)
   (pb-org_semifold))
+
+(defun pb-org_enter ()
+  "If on a folded heading, narrow buffer to it, else go to next word."
+  (interactive)
+  (if (and (org-at-heading-p)
+           (pb-org_folded-p))
+      (pb-org_narrow)
+    (forward-word)))
+
+(defun pb-org_back ()
+  "If on a the top heading of a narrowed buffer, widen it, else go to previous word."
+  (interactive)
+  (cond ((pb-org_top-of-narrowed-subtree-p)
+         (let ((p (point)))
+           (pb-org_widen)
+           (org-up-element)
+           (pb-org_narrow)
+           (goto-char p)))
+        ((org-at-heading-p)
+         (org-up-element))
+        (t (backward-word))))
 
 (defun pb-org_toggle-narrow ()
   "Toggle narrowing of current subtree, folding it accordingly."
