@@ -21,6 +21,9 @@
             (lambda () (interactive) (hl-line-mode -1)))
 
   (setq org-ellipsis "…")
+
+  ;; use current window instead of split for editing blocks
+  (setq org-src-window-setup 'current-window)
   (setq org-clock-persist 'history)
   (org-clock-persistence-insinuate)
 
