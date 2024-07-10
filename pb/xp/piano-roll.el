@@ -294,15 +294,13 @@
                        (km_upd pr [:pr-data :resolution]
                                (lambda (r) (+ (or r 32) 4))))))))
 
-
-
-(setq pr-buffers-data ())
-(pr-with-buf
- (erase-buffer)
- (insert (format "'%s" (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
- (proll-mode 1))
-
-
+(quote
+ (list
+  (setq pr-buffers-data ())
+  (pr-with-buf
+   (erase-buffer)
+   (insert (format "'%s" (pr-read-plist-from-file "~/Code/WIP/noon/src/noon/doc/sample-pr.el")))
+   (proll-mode 1))))
 
 (quote
  (list
@@ -355,7 +353,7 @@
 
   (pr-with-buf
    (pb_let [(km pr-data) (pr-get-buffer-data)]
-       (km_get pr-data :harmony)))))
+       )
 
 (quote
  (list :tests
