@@ -22,10 +22,7 @@
        :pp (km :args (lambda (args)
                        (append '((:results . "raw pp")
                                  (:wrap . "src clojure"))
-                               args)))
-       :rm-comments (km :content
-                        (lambda (content)
-                          (replace-regexp-in-string "\\(;.*$\\)" "" content nil nil 1))))))
+                               args))))))
 
 (defun pb-org-babel_add-custom-param (name lang spec)
   (cl-assert (and (keywordp name)
