@@ -39,11 +39,19 @@
   (org-fold-hide-subtree)
   (org-cycle))
 
+(defun pb-org_current-heading-level ()
+  "Get the level of current heading."
+  (and (org-at-heading-p)
+       (length (org-get-outline-path))))
+
 (defun pb-org_semifolded-p ()
   "Test if current node is semifolded."
-  (save-excursion
-    (org-next-visible-heading 1)
-    (pb-org_folded-p)))
+  (let ((lvl (pb-org_current-heading-level)))
+    (save-excursion
+     (org-next-visible-heading 1)
+     (let ((nxt-lvl (pb-org_current-heading-level)))
+       (and (> lvl nxt-lvl)
+            (pb-org_folded-p))))))
 
 (defun pb-org_widen ()
   "Fold and widen a narrowd subtree."
@@ -63,7 +71,11 @@
   (interactive)
   (if (pb-org_top-of-narrowed-subtree-p)
       (pb-org_widen)
-    (pb-org_narrow)))
+    (cond ((org-at-heading-p)
+           (pb-org_narrow))
+          ((or (org-at-block-p)
+               (org-in-src-block-p))
+           (org-edit-src-code)))))
 
 (defun pb-org_toggle-fold ()
   "Toggle narrowing of current subtree, folding it accordingly."
@@ -72,31 +84,9 @@
       (if (pb-org_semifolded-p)
           (org-fold-show-subtree)
         (pb-org_semifold))
-    (if (pb-org_folded-p)
-        (org-fold-show-subtree)
-      (org-fold-hide-subtree))))
-
-(defun pb-org_walk-forward ()
-  "Walk the org tree forward."
-  (interactive)
-  (let ((p (point)))
-    (if (org-at-heading-p)
-        (if (pb-org_folded-p)
-            (org-forward-heading-same-level 1)
-          (org-down-element))
-      (org-forward-element))
-    (if (= p (point))
-        (org-next-visible-heading 1))))
-
-(defun pb-org_walk-backward ()
-  "Walk the org tree backward."
-  (interactive)
-  (let ((p (point)))
-    (cond ((org-at-heading-p)
-           (evil-previous-line))
-          (t (org-backward-element)))
-    (if (= p (point))
-        (org-previous-visible-heading 1))))
+    (cond ((pb-org_folded-p) (org-cycle))
+          ((pb-org_semifolded-p) (org-fold-show-subtree))
+          (t (org-fold-hide-subtree)))))
 
 (defun pb-org_move (move)
   "Do MOVE taking care of narrowed subtree.
@@ -114,12 +104,41 @@ If buffer is narrowed, widen it and narrow the next node"
   (interactive)
   (pb-org_move #'org-up-element))
 
-(defun pb-org_down-element ()
+(defun pb-org_walk-forward ()
   "Go to first child or to next node."
   (interactive)
   (condition-case err
       (org-down-element)
     (error (org-forward-element))))
+
+(defun pb-org_move-down ()
+  "Move down through visible nodes."
+  (interactive)
+  (if (pb-org_folded-p)
+      (org-next-visible-heading 1)
+    (pb-org_walk-forward)))
+
+(defun pb-org_move-up ()
+  "Move up through visible nodes."
+  (interactive)
+  (let ((p (point)))
+    (cond ((org-at-heading-p)
+           (evil-previous-line)
+           (if (org--line-empty-p 1)
+               (org-backward-element)))
+          (t (org-backward-element)))
+    (if (= p (point))
+        (org-previous-visible-heading 1))))
+
+(defun pb-org_walk-backward ()
+  "Go to first child or to next node."
+  (interactive)
+  (let ((p (point)))
+    (pb-org_move-up)
+    (when (pb-org_folded-p)
+      (org-fold-show-subtree)
+      (goto-char p)
+      (pb-org_move-up))))
 
 (defun pb-org_forward ()
   "Move forward at the same level.
@@ -140,6 +159,78 @@ If buffer is narrowed, widen it and narrow the previous node"
              (org-backward-element)
              (pb-org_narrow))
     (org-backward-element)))
+
+(defun pb-org_cut ()
+  "Cut current section. if cursor on heading."
+  (interactive)
+  (if (org-at-heading-p)
+      (org-cut-subtree)
+    (call-interactively #'evil-delete)))
+
+(defun pb-org_copy ()
+  "Copy current section. if cursor on heading."
+  (interactive)
+  (if (org-at-heading-p)
+      (org-copy-subtree)
+    (call-interactively #'evil-yank)))
+
+(defun pb-org_move-subtree-up ()
+  "Move current section up."
+  (interactive)
+  (if (org-at-heading-p)
+      (org-move-subtree-up)
+    (user-error "not on a heading")))
+
+(defun pb-org_move-subtree-down ()
+  "Move current section down."
+  (interactive)
+  (if (org-at-heading-p)
+      (org-move-subtree-down)
+    (user-error "not on a heading")))
+
+(list :not-needed
+      ;; org subtree actions: cut paste etc...
+      (defun pb-org_beginning-of-section ()
+        "Go to beggining of current section."
+        (interactive)
+        (unless (org-at-heading-p)
+          (org-previous-visible-heading 1))
+        (beginning-of-line))
+
+      (defun pb-org_end-of-section ()
+        "Go to end of current section."
+        (interactive)
+        (let ((lvl (save-excursion (pb-org_beginning-of-section)
+                                   (pb-org_current-heading-level)))
+              (in t))
+          (while in
+            (org-next-visible-heading 1)
+            (when (or (<= (pb-org_current-heading-level)
+                          lvl)
+                      (eobp))
+              (setq in nil)
+              (beginning-of-line)))))
+
+      (defun pb-org_section-at-point ()
+        (cons (save-excursion (pb-org_beginning-of-section) (point))
+              (save-excursion (pb-org_end-of-section) (point))))
+
+      (defun pb-org_kill-current-section ()
+        (interactive)
+        (pb_let [(cons beg end) (pb-org_section-at-point)]
+            (kill-region beg end)))
+
+      (defun pb-org_thing-at-point ()
+        (save-excursion
+          (cond ((org-at-heading-p)
+                 (beginning-of-line)
+                 (let ((beg (point)))
+                   (org-forward-heading-same-level)
+                   (if (> (point) beg)
+                       (cons beg (progn (beginning-of-line) (point)))
+                     )))
+                ((org-at-block-p) ())
+                (t ())))))
 
 '(progn (switch-to-buffer "scratch.org")
         (goto-char (org-find-olp (list "~/org/scratch.org" "top" "three" "3.2"))))
