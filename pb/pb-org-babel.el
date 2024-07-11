@@ -60,7 +60,7 @@
 (defun pb-org-babel_insert-result-hook (fun result result-params info &rest more)
   (pb_if [(list lang content args) info
           ;; because of inline comment bug
-          (if (equal "clojure" lang)
+          content (if (equal "clojure" lang)
               (pb-org-babel_strip-lisp-comments content)
             content)
           custom-params (km_get pb-org-babel_custom-params (pb_keyword lang))]
