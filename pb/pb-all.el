@@ -28,6 +28,7 @@
 (require 'pb-gptel)
 (require 'pb-ibuffer)
 (require 'pb-misc)
+(require 'pb-org)
 (require 'pb-org-babel)
 (require 'pb-reapl)
 (require 'pb-sexpr)
