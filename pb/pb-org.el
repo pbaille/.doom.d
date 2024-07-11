@@ -71,10 +71,10 @@
 
 (defun pb-org_semifolded-p ()
   "Test if current node is semifolded."
-  (let ((lvl (pb-org_current-heading-level)))
+  (if-let ((lvl (pb-org_current-heading-level)))
     (save-excursion
      (org-next-visible-heading 1)
-     (let ((nxt-lvl (pb-org_current-heading-level)))
+     (if-let ((nxt-lvl (pb-org_current-heading-level)))
        (and (< lvl nxt-lvl)
             (pb-org_folded-p))))))
 
@@ -203,6 +203,13 @@ If buffer is narrowed, widen it before moving then narrow back."
 If buffer is narrowed, widen it and narrow the next node"
   (interactive)
   (pb-org_move #'org-up-element))
+
+(defun pb-org_previous-heading ()
+  "Go to the previous visible heading."
+  (interactive)
+  (if (pb-org_top-of-narrowed-subtree-p)
+      (pb-org_widen-one-level)
+    (org-previous-visible-heading 1)))
 
 (defun pb-org_down-element ()
   "Wrap `org-down-element' because it can do weird things, like going backward."
