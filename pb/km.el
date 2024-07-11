@@ -273,7 +273,7 @@ and BODY is the code to execute."
    (and (equal (km_parse-free-form '(a b :c 34 :d (pouet) f))
                '((:a . a) (:b . b) (:c . 34) (:d pouet) (:f . f)))
 
-        (equal (should-error (km_parse-free-form '((+ 1 2) :d (pouet))))
+        '(equal (should-error (km_parse-free-form '((+ 1 2) :d (pouet))))
                '(error "Invalid km free form args")))))
 
 (km_test)
