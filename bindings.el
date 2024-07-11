@@ -141,15 +141,14 @@
 (map! (:map evil-org-mode-map
        :n "k" #'pb-org_move-up
        :n "j" #'pb-org_move-down
-       :n "h" #'pb-org_back
-       :n "l" #'pb-org_enter
+       :n "h" #'pb-org_go-backward
+       :n "l" #'pb-org_go-forward
        :n "b" #'pb-org_walk-backward
        :n "f" #'pb-org_walk-forward
        :n "K" #'pb-org_parent
        :n "J" #'org-next-visible-heading
        :n "t" #'pb-org_toggle-fold
        :n "n" #'pb-org_toggle-narrow
-       :n "T" #'pb-org_toggle-fold
        ;; edition
        :n "x" #'pb-org_cut
        :n "y" #'pb-org_copy
@@ -162,6 +161,9 @@
        :ni "C-l" #'evil-forward-char
        :ni "C-j" #'evil-next-line
        :ni "C-k" #'evil-previous-line)
+
+      (:map org-src-mode-map
+       :n "h" #'pb-org_go-backward)
 
       (:map gptel-mode-map
        :i "C-e" #'gptel-send
