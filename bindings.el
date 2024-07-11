@@ -145,9 +145,10 @@
        :n "l" #'pb-org_go-forward
        :n "b" #'pb-org_walk-backward
        :n "f" #'pb-org_walk-forward
-       :n "K" #'pb-org_parent
+       :n "K" #'pb-org_previous-heading
        :n "J" #'org-next-visible-heading
        :n "t" #'pb-org_toggle-fold
+       :n ";" #'pb-org_toggle-fold
        :n "n" #'pb-org_toggle-narrow
        ;; edition
        :n "x" #'pb-org_cut
