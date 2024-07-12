@@ -111,8 +111,6 @@
 (defun pb-org_print-context ()
   "Prints infos on current node."
   (interactive)
-  (pp (list :first-node? (pb-org_first-node-p)
-            :last-node? (pb-org_last-node-p)))
   (pp (org-element-context)))
 
 ;; fold
@@ -168,73 +166,6 @@
            (org-edit-src-code)))))
 
 ;; moves
-
-(defun pb-org_go-forward ()
-  "Depending on cursor position, enter a node, edit src code or move forward.
-
-- cursor is on a narrowed buffer top header:
-
-  try to move to the next section of same level, narrowing it.
-  if not possible (last heading), widen one level up.
-
-- cursor is on a folded heading:
-
-  narrow the buffer to it.
-
-- cursor is on code block:
-
-  enter edit mode.
-
-- in other cases:
-
-  forward one word."
-  (interactive)
-  (cond ((pb-org_top-of-narrowed-subtree-p)
-         (if (pb-org_last-heading-p)
-             (pb-org_widen-one-level)
-           (progn (pb-org_widen)
-                 (org-forward-heading-same-level 1)
-                 (pb-org_narrow))))
-        ((and (org-at-heading-p)
-              (pb-org_folded-p))
-         (pb-org_narrow))
-        ((org-at-block-p)
-         (org-edit-src-code))
-        (t (forward-word))))
-
-(defun pb-org_go-backward ()
-  "Depending on cursor position, exit a node, exit code edition or move back.
-
-- cursor is on a narrowed buffer top header:
-
-  try to move to the previous section of same level, narrowing it.
-  if not possible (first heading), widen one level up.
-
-- cursor is on a heading:
-
-  go to parent heading.
-
-- from the first char of an org src edition buffer:
-
-  exit edit mode.
-
-- in other cases:
-
-  backward one word."
-  (interactive)
-  (cond (org-src-mode
-         (if (bobp)
-             (org-edit-src-exit)
-           (call-interactively #'evil-backward-char)))
-        ((pb-org_top-of-narrowed-subtree-p)
-         (if (pb-org_first-heading-p)
-             (pb-org_widen-one-level)
-           (progn (pb-org_widen)
-                  (org-backward-heading-same-level 1)
-                  (pb-org_narrow))))
-        ((org-at-heading-p)
-         (org-up-element))
-        (t (backward-word))))
 
 (defun pb-org_move (move)
   "Do MOVE taking care of narrowed subtree.
@@ -465,54 +396,10 @@ If buffer is narrowed, widen it and narrow the previous node"
 
 
 
-(list :not-needed
-      ;; org subtree actions: cut paste etc...
-      (defun pb-org_beginning-of-section ()
-        "Go to beggining of current section."
-        (interactive)
-        (unless (org-at-heading-p)
-          (org-previous-visible-heading 1))
-        (beginning-of-line))
-
-      (defun pb-org_end-of-section ()
-        "Go to end of current section."
-        (interactive)
-        (let ((lvl (save-excursion (pb-org_beginning-of-section)
-                                   (pb-org_current-heading-level)))
-              (in t))
-          (while in
-            (org-next-visible-heading 1)
-            (when (or (<= (pb-org_current-heading-level)
-                          lvl)
-                      (eobp))
-              (setq in nil)
-              (beginning-of-line)))))
-
-      (defun pb-org_section-at-point ()
-        (cons (save-excursion (pb-org_beginning-of-section) (point))
-              (save-excursion (pb-org_end-of-section) (point))))
-
-      (defun pb-org_kill-current-section ()
-        (interactive)
-        (pb_let [(cons beg end) (pb-org_section-at-point)]
-            (kill-region beg end)))
-
-      (defun pb-org_thing-at-point ()
-        (save-excursion
-          (cond ((org-at-heading-p)
-                 (beginning-of-line)
-                 (let ((beg (point)))
-                   (org-forward-heading-same-level)
-                   (if (> (point) beg)
-                       (cons beg (progn (beginning-of-line) (point)))
-                     )))
-                ((org-at-block-p) ())
-                (t ())))))
-
 (progn :org-xp
 
        '(progn (switch-to-buffer "scratch.org")
-               (goto-char (org-find-olp (list "~/org/scratch.org" "top" "three" "3.2"))))
+                     (goto-char (org-find-olp (list "~/org/scratch.org" "top" "three" "3.2"))))
 
        (km_defun pb-org_find-or-create-olp-aux
                  (:as opts
@@ -520,14 +407,14 @@ If buffer is narrowed, widen it and narrow the previous node"
                  (let* ((next-path (append current-path (list (car remaining-path))))
                         (next-marker (ignore-errors (org-find-olp (cons file next-path)))))
                    (if next-marker
-                       (let* ((remaining-next (cdr remaining-path))
+                           (let* ((remaining-next (cdr remaining-path))
                               (next-opts (km_put opts
                                                  :marker next-marker
                                                  :current-path next-path
                                                  :remaining-path remaining-next)))
                          (if remaining-next
-                             (pb-org_find-or-create-olp-aux next-opts)
-                           next-opts))
+                                 (pb-org_find-or-create-olp-aux next-opts)
+                             next-opts))
                      opts)))
 
        (defun pb-org_find-or-create-olp (file path)
@@ -580,8 +467,7 @@ If buffer is narrowed, widen it and narrow the previous node"
          (add-hook 'org-capture-before-finalize-hook
                    #'pb-after-capture-action)
          (remove-hook 'org-capture-before-finalize-hook
-                      #'pb-after-capture-action))
+                      #'pb-after-capture-action)))
 
-       (provide 'pb-org)
+(provide 'pb-org)
 ;;; pb-org.el ends here.
-       )
