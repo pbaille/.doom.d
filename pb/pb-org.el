@@ -22,6 +22,8 @@
 (require 'km)
 (require 'org)
 
+;; predicates
+
 (defun pb-org_folded-p ()
   "Test if point is on a folded headline or plain list item."
   (and (or (org-at-heading-p)
@@ -58,32 +60,48 @@
            (org-forward-heading-same-level 1)
            (= (point) p)))))
 
-(defun pb-org_semifold ()
-  "Show one level of content."
-  (interactive)
-  (org-fold-hide-subtree)
-  (org-cycle))
+(defun pb-org_semifolded-p ()
+  "Test if current node is semifolded."
+  (if-let ((lvl (pb-org_current-heading-level)))
+      (save-excursion
+        (org-next-visible-heading 1)
+        (if-let ((nxt-lvl (pb-org_current-heading-level)))
+            (and (< lvl nxt-lvl)
+                 (pb-org_folded-p))))))
+
+;; help
 
 (defun pb-org_current-heading-level ()
   "Get the level of current heading."
   (and (org-at-heading-p)
        (length (org-get-outline-path))))
 
-(defun pb-org_semifolded-p ()
-  "Test if current node is semifolded."
-  (if-let ((lvl (pb-org_current-heading-level)))
-    (save-excursion
-     (org-next-visible-heading 1)
-     (if-let ((nxt-lvl (pb-org_current-heading-level)))
-       (and (< lvl nxt-lvl)
-            (pb-org_folded-p))))))
+;; fold
+
+(defun pb-org_semifold ()
+  "Show one level of content."
+  (interactive)
+  (org-fold-hide-subtree)
+  (org-cycle))
+
+(defun pb-org_toggle-fold ()
+  "Toggle narrowing of current subtree, folding it accordingly."
+  (interactive)
+  (if (pb-org_top-of-narrowed-subtree-p)
+      (if (pb-org_semifolded-p)
+          (org-fold-show-subtree)
+        (pb-org_semifold))
+    (cond ((pb-org_folded-p) (org-cycle))
+          ((pb-org_semifolded-p) (org-fold-show-subtree))
+          (t (org-fold-hide-subtree)))))
+
+;; narrowing
 
 (defun pb-org_widen ()
   "Fold and widen a narrowd subtree."
   (interactive)
   (org-fold-hide-subtree)
-  (widen)
-  (recenter))
+  (widen))
 
 (defun pb-org_narrow ()
   "Narrow a subtree and semifold it."
@@ -98,6 +116,19 @@
     (org-up-element)
     (pb-org_narrow)
     (goto-char p)))
+
+(defun pb-org_toggle-narrow ()
+  "Toggle narrowing of current subtree, folding it accordingly."
+  (interactive)
+  (if (pb-org_top-of-narrowed-subtree-p)
+      (pb-org_widen)
+    (cond ((org-at-heading-p)
+           (pb-org_narrow))
+          ((or (org-at-block-p)
+               (org-in-src-block-p))
+           (org-edit-src-code)))))
+
+;; moves
 
 (defun pb-org_go-forward ()
   "Depending on cursor position, enter a node, edit src code or move forward.
@@ -165,28 +196,6 @@
         ((org-at-heading-p)
          (org-up-element))
         (t (backward-word))))
-
-(defun pb-org_toggle-narrow ()
-  "Toggle narrowing of current subtree, folding it accordingly."
-  (interactive)
-  (if (pb-org_top-of-narrowed-subtree-p)
-      (pb-org_widen)
-    (cond ((org-at-heading-p)
-           (pb-org_narrow))
-          ((or (org-at-block-p)
-               (org-in-src-block-p))
-           (org-edit-src-code)))))
-
-(defun pb-org_toggle-fold ()
-  "Toggle narrowing of current subtree, folding it accordingly."
-  (interactive)
-  (if (pb-org_top-of-narrowed-subtree-p)
-      (if (pb-org_semifolded-p)
-          (org-fold-show-subtree)
-        (pb-org_semifold))
-    (cond ((pb-org_folded-p) (org-cycle))
-          ((pb-org_semifolded-p) (org-fold-show-subtree))
-          (t (org-fold-hide-subtree)))))
 
 (defun pb-org_move (move)
   "Do MOVE taking care of narrowed subtree.
@@ -276,6 +285,8 @@ If buffer is narrowed, widen it and narrow the previous node"
              (org-backward-element)
              (pb-org_narrow))
     (org-backward-element)))
+
+;; edit
 
 (defun pb-org_cut ()
   "Cut current section. if cursor on heading."
