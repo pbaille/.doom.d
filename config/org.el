@@ -116,8 +116,9 @@
   :config
   (add-hook 'org-mode-hook #'org-modern-mode)
   (add-hook 'org-agenda-finalize-hook #'org-modern-agenda)
-  (setq org-modern-star ["◉" "○" "◈" "◇" "◉" "○" "◈" "◇"])
-  (setq org-modern-replace-stars "◉○◈◇◉○◈◇"))
+  (setq org-modern-star ["●" "◉" "⦾" "○" "◆" "◈" "◇" "•" "◦" "◦" "◦"])
+  (setq org-modern-replace-stars
+        (mapconcat #'identity org-modern-star)))
 
 (use-package org-download
   :after org
