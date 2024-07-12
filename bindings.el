@@ -138,7 +138,14 @@
             "e b" #'reapl-mode_send-buffer
             "c" #'reapl-mode_complete-symbol-at-point))
 
-(map! (:map gptel-mode-map
+(map! (:map evil-org-mode-map
+       ; regular evil moves
+       :i "C-h" #'evil-backward-char
+       :i "C-l" #'evil-forward-char
+       :i "C-j" #'evil-next-line
+       :i "C-k" #'evil-previous-line)
+
+      (:map gptel-mode-map
        :i "C-e" #'gptel-send
        :ni "C-m" #'gptel-menu
        "C-c C-k" #'kill-buffer-and-window)

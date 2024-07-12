@@ -21,6 +21,8 @@
 
 (require 'km)
 (require 'org)
+(require 'org-element)
+(require 'evil)
 
 ;; predicates
 
@@ -69,12 +71,49 @@
             (and (< lvl nxt-lvl)
                  (pb-org_folded-p))))))
 
+(defun pb-org_first-node-p ()
+  "Test if current node is the first of its parent."
+  (let* ((context (org-element-context))
+         (parent (org-element-property :parent context))
+         (node-beg (org-element-property :begin context))
+         (parent-beg (org-element-property :contents-begin parent)))
+    (if (= node-beg
+           parent-beg)
+        node-beg)))
+
+(defun pb-org_last-node-p ()
+  "Test if current node is the last of its parent."
+  (let* ((context (org-element-context))
+         (parent (org-element-property :parent context))
+         (node-end (org-element-property :contents-end context))
+         (parent-end (org-element-property :contents-end parent)))
+    (if (= node-end
+           parent-end)
+        node-end)))
+
 ;; help
 
 (defun pb-org_current-heading-level ()
   "Get the level of current heading."
   (and (org-at-heading-p)
        (length (org-get-outline-path))))
+
+(defun pb-org_node-type ()
+  "Get the type of the current node."
+  (car (org-element-context)))
+
+(defun pb-org_node-bounds ()
+  "Get the bound positions of current node."
+  (let ((elem (org-element-context)))
+    (cons (org-element-property :begin elem)
+          (org-element-property :end elem))))
+
+(defun pb-org_print-context ()
+  "Prints infos on current node."
+  (interactive)
+  (pp (list :first-node? (pb-org_first-node-p)
+            :last-node? (pb-org_last-node-p)))
+  (pp (org-element-context)))
 
 ;; fold
 
@@ -222,8 +261,9 @@ If buffer is narrowed, widen it and narrow the next node"
 
 (defun pb-org_down-element ()
   "Wrap `org-down-element' because it can do weird things, like going backward."
+  (interactive)
   (let ((p (point)))
-    (condition-case err
+    (condition-case _
         (org-down-element)
       (error (org-forward-element)))
     (if (< (point) p)
@@ -266,6 +306,31 @@ If buffer is narrowed, widen it and narrow the next node"
       (goto-char p)
       (pb-org_move-up))))
 
+(defun pb-org_first-node ()
+  "Goto first node."
+  (interactive)
+  (let* ((context (org-element-context))
+         (parent (org-element-property :parent context)))
+    (goto-char (org-element-property :contents-begin parent))))
+
+(defun pb-org_up-to-level (n)
+  "Bubble up through hierarchy until level N."
+  (interactive)
+  (let* ((context (org-element-context))
+         (level (org-element-property :level context)))
+    (when (or (not level) (< n level))
+      (pb-org_parent)
+      (pb-org_up-to-level n))))
+
+(defun pb-org_last-node ()
+  "Goto last node."
+  (interactive)
+  (let* ((context (org-element-context))
+         (parent (org-element-property :parent context)))
+    (goto-char (org-element-property :contents-end parent))
+    (goto-char (car (pb-org_node-bounds)))
+    (pb-org_up-to-level (1+ (org-element-property :level parent)))))
+
 (defun pb-org_forward ()
   "Move forward at the same level.
 If buffer is narrowed, widen it and narrow the next node"
@@ -274,7 +339,8 @@ If buffer is narrowed, widen it and narrow the next node"
       (progn (pb-org_widen)
              (org-forward-element)
              (pb-org_narrow))
-    (org-forward-element)))
+    (unless (pb-org_last-node-p)
+      (org-forward-element))))
 
 (defun pb-org_backward ()
   "Move backward at the same level.
@@ -284,26 +350,34 @@ If buffer is narrowed, widen it and narrow the previous node"
       (progn (pb-org_widen)
              (org-backward-element)
              (pb-org_narrow))
-    (org-backward-element)))
+    (unless (pb-org_first-node-p)
+      (org-backward-element))))
 
 ;; edit
 
-(defun pb-org_cut ()
-  "Cut current section. if cursor on heading."
+(defun pb-org_delete ()
+  "Delete current node, adding it to kill ring."
   (interactive)
-  (cond ((org-at-heading-p)
-         (org-cut-subtree))
-        ((or (org-at-block-p)
-             (pb-org_at-result-node-p))
-         (kill-region (point) (save-excursion (pb-org_move-down) (point))))
-        (t (call-interactively #'evil-delete))))
+  (let ((bounds (pb-org_node-bounds)))
+    (kill-region (car bounds) (cdr bounds))))
 
 (defun pb-org_copy ()
-  "Copy current section. if cursor on heading."
+  "Copy current node."
   (interactive)
-  (if (org-at-heading-p)
-      (org-copy-subtree)
-    (call-interactively #'evil-yank)))
+  (let ((bounds (pb-org_node-bounds)))
+    (copy-region-as-kill (car bounds) (cdr bounds))))
+
+(defun pb-org_paste-after ()
+  "Paste after current node."
+  (interactive)
+  (goto-char (cdr (pb-org_node-bounds)))
+  (yank))
+
+(defun pb-org_paste-before ()
+  "Paste before current node."
+  (interactive)
+  (goto-char (car (pb-org_node-bounds)))
+  (yank))
 
 (defun pb-org_move-subtree-up ()
   "Move current section up."
@@ -318,6 +392,63 @@ If buffer is narrowed, widen it and narrow the previous node"
   (if (org-at-heading-p)
       (org-move-subtree-down)
     (user-error "not on a heading")))
+
+(defun pb-org_insert-after ()
+  "Enter insert mode after current node."
+  (interactive)
+  (goto-char (cdr (pb-org_node-bounds)))
+  (insert "\n\n")
+  (backward-char 2)
+  (evil-insert-state))
+
+(defun pb-org_insert-before ()
+  "Enter insert mode before current node."
+  (interactive)
+  (goto-char (car (pb-org_node-bounds)))
+  (insert "\n\n")
+  (backward-char 2)
+  (evil-insert-state))
+
+(defun pb-org_insert-at-beginning ()
+  "Enter insert mode at beginning of current node."
+  (interactive)
+  (goto-char (car (pb-org_node-bounds)))
+  (evil-insert-state))
+
+(defun pb-org_insert-at-end ()
+  "Enter insert mode at end of current node."
+  (interactive)
+  (goto-char (cdr (pb-org_node-bounds)))
+  (skip-chars-backward " \t\n")
+  (evil-insert-state))
+
+(defun pb-org_create-code-block ()
+  "Create a code block after current node."
+  (interactive)
+  (pb-org_insert-after)
+  (insert "#+begin_src ")
+  (let ((p (point)))
+    (insert "\n\n#+end_src\n")
+    (goto-char p)))
+
+(defun pb-org_return ()
+  "Contextual action for return key."
+  (interactive)
+  (print "pb-org_return called")
+  (cond ((evil-normal-state-p) (evil-porg-state))
+        ((evil-insert-state-p) (if (save-excursion (beginning-of-line) (org-at-block-p))
+                                   (progn (org-edit-src-code)
+                                          (evil-insert-state))
+                                 (newline-and-indent)))
+        ((evil-porg-state-p) (pb-org_insert-after))))
+
+(defun pb-org_eval-block ()
+  "Eval code block."
+  (interactive)
+  (if (org-at-block-p)
+      (org-babel-execute-src-block)))
+
+
 
 
 
