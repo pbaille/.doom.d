@@ -193,6 +193,10 @@ which is tranformed to:
                                                     (pb-modus-get-color 'cyan-faint-lighter)
                                                     .9))
 
+    (set-face-attribute 'sorg--current-node-face nil
+                        :inherit nil
+                        :background (pb-modus-get-color 'bg-dim))
+
     (set-face-attribute 'default nil :foreground (pb-modus-get-color 'fg-main))
 
     (set-face-attribute 'font-lock-delimiter-face nil

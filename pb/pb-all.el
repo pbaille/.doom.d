@@ -38,6 +38,8 @@
 (require 'pb-udp)
 (require 'pb-walk)
 
+(require 'sorg)
+
 (print "pb loaded")
 (provide 'pb-all)
 ;;; pb-all.el ends here.
