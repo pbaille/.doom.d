@@ -91,6 +91,7 @@
   (("s-l" . symex-mode-interface))
 
   :config
+  (setq symex-refocus-p nil)
   (setq symex--user-evil-keyspec
 
         ;; revert k and j in symex to be more intuitive
