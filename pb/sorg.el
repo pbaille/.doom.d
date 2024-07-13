@@ -27,7 +27,7 @@
   :exit-hook (sorg-exit-mode))
 
 (defun sorg-enter-mode ()
-  "Run when on entering sorg mode"
+  "Run when on entering sorg mode."
   (goto-char (car (pb-org_node-bounds)))
   (sorg--flash-overlay))
 
@@ -75,7 +75,6 @@ it enters edition mode."
       (progn (org-edit-src-code)
              (evil-insert-state))
     (newline-and-indent)))
-
 
 ;; bindings and init
 

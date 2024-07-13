@@ -190,22 +190,27 @@ If buffer is narrowed, widen it and narrow the next node"
       (pb-org_widen-one-level)
     (org-previous-visible-heading 1)))
 
-(defun pb-org_down-element ()
+(defun pb-org_down-element-safe ()
   "Wrap `org-down-element' because it can do weird things, like going backward."
-  (interactive)
   (let ((p (point)))
     (condition-case _
         (org-down-element)
-      (error (org-forward-element)))
-    (if (< (point) p)
+      (error nil))
+    (if (<= (point) p)
         (and (goto-char p)
              nil)
       (point))))
 
+(defun pb-org_down-element ()
+  "Enter inside current element."
+  (if (org-at-block-p)
+      (org-edit-src-code)
+    (pb-org_down-element-safe)))
+
 (defun pb-org_walk-forward ()
   "Go to first child or to next node."
   (interactive)
-  (or (pb-org_down-element)
+  (or (pb-org_down-element-safe)
       (org-forward-element)))
 
 (defun pb-org_move-down ()
