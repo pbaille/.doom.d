@@ -85,7 +85,11 @@
   "Test if current node is the last of its parent."
   (let* ((context (org-element-context))
          (parent (org-element-property :parent context))
-         (node-end (org-element-property :contents-end context))
+         (parent (if (equal 'section (car parent))
+                     (org-element-property :parent parent)
+                   parent))
+         (node-end (or (org-element-property :contents-end context)
+                       (org-element-property :end context)))
          (parent-end (org-element-property :contents-end parent)))
     (if (= node-end
            parent-end)
@@ -181,7 +185,10 @@ If buffer is narrowed, widen it before moving then narrow back."
   "Move to parent heading.
 If buffer is narrowed, widen it and narrow the next node"
   (interactive)
-  (pb-org_move #'org-up-element))
+  (let ((node-beg (car (pb-org_node-bounds))))
+    (if (equal (point) node-beg)
+        (pb-org_move #'org-up-element)
+      (goto-char node-beg))))
 
 (defun pb-org_previous-heading ()
   "Go to the previous visible heading."
@@ -278,6 +285,19 @@ If buffer is narrowed, widen it and narrow the next node"
     (unless (pb-org_last-node-p)
       (org-forward-element))))
 
+(defun pb-org_backward-same-level ()
+  "Move backward at the same level."
+  (interactive)
+  (unless (pb-org_first-node-p)
+    (let ((p (point)))
+      (if (org-at-heading-p)
+          (org-backward-heading-same-level 1))
+      (if (equal (point) p)
+          (progn (backward-char 1)
+                 (goto-char (car (pb-org_node-bounds)))
+                 (point))
+        (point)))))
+
 (defun pb-org_backward ()
   "Move backward at the same level.
 If buffer is narrowed, widen it and narrow the previous node"
@@ -286,8 +306,7 @@ If buffer is narrowed, widen it and narrow the previous node"
       (progn (pb-org_widen)
              (org-backward-element)
              (pb-org_narrow))
-    (unless (pb-org_first-node-p)
-      (org-backward-element))))
+    (pb-org_backward-same-level)))
 
 ;; edit
 
