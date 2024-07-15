@@ -59,6 +59,8 @@
          :config
          (require 'flycheck-clj-kondo)
          (add-hook 'clojure-mode-hook 'lsp)
+         (setq lsp-lens-enable nil)
+         (setq lsp-enable-symbol-highlighting nil)
          (setq lsp-headerline-breadcrumb-enable nil)
          '(copilot-mode nil)))
 
