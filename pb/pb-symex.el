@@ -20,17 +20,14 @@
   (symex-mode-interface))
 
 (defun pb-symex_click ()
+  "Focus the clicked symex if possible.
+If inside string or comment, toggle insert state."
   (interactive)
   (evil-normal-state)
   (backward-char)
-  (symex-mode-interface)
-
-  ;; (evil-normal-state)
-  ;; (forward-char)
-  ;; (save-excursion (if (hs-already-hidden-p)
-  ;;                     (pb/toggle-level-hiding 1)))
-  ;; (symex-mode-interface)
-  )
+  (if (lispy--in-string-or-comment-p)
+      (evil-insert-state)
+    (symex-mode-interface)))
 
 (defun pb-symex_mark ()
   (interactive)
