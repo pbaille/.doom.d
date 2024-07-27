@@ -390,7 +390,7 @@ If buffer is narrowed, widen it and narrow the previous node"
   "Eval code block."
   (interactive)
   (if (org-at-block-p)
-      (org-babel-execute-src-block)))
+      (call-interactively #'org-ctrl-c-ctrl-c)))
 
 (provide 'pb-org)
 ;;; pb-org.el ends here.
