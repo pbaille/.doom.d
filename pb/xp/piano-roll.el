@@ -351,9 +351,7 @@
                                                                                     .7))))))))
              (km_get pr-data :harmony))))
 
-  (pr-with-buf
-   (pb_let [(km pr-data) (pr-get-buffer-data)]
-       )
+       ))
 
 (quote
  (list :tests
