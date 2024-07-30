@@ -11,6 +11,10 @@
 
 ;;; Code:
 
+(require 'km)
+(require 'pb-flow)
+(require 'cl-lib)
+
 (defun pb-org-babel_strip-lisp-comments (code)
   "Remove comments from a string of Lisp CODE.
 ; (semi colon) is assumed to be the inline comment character."
@@ -25,6 +29,8 @@
                                args))))))
 
 (defun pb-org-babel_add-custom-param (name lang spec)
+  "Add a custom param named NAME for org LANG block.
+SPEC:"
   (cl-assert (and (keywordp name)
                   (keywordp lang)
                   (km? spec)))
@@ -34,6 +40,7 @@
                 spec)))
 
 (defun pb-org-babel_execute-src-block-hook (fun &optional arg info params)
+  "Wraps org-babel-execute-src-block function."
   (pb_if [(list lang content args) info
           custom-params (km_get pb-org-babel_custom-params (pb_keyword lang))
           ;; because of inline comments bug
@@ -55,14 +62,13 @@
          (funcall fun arg info params)
          (funcall fun arg info params)))
 
-(advice-add 'org-babel-execute-src-block :around #'pb-org-babel_execute-src-block-hook)
-
 (defun pb-org-babel_insert-result-hook (fun result result-params info &rest more)
+  "Wraps org-babel-insert-result function."
   (pb_if [(list lang content args) info
           ;; because of inline comment bug
           content (if (equal "clojure" lang)
-              (pb-org-babel_strip-lisp-comments content)
-            content)
+                      (pb-org-babel_strip-lisp-comments content)
+                    content)
           custom-params (km_get pb-org-babel_custom-params (pb_keyword lang))]
          (pb_if [result (seq-reduce (pb_fn [result (cons k wrappers)]
                                            (if (assoc k args)
@@ -77,6 +83,8 @@
                        info
                        more))
          (apply fun result result-params info more)))
+
+(advice-add 'org-babel-execute-src-block :around #'pb-org-babel_execute-src-block-hook)
 
 (advice-add 'org-babel-insert-result :around #'pb-org-babel_insert-result-hook)
 
