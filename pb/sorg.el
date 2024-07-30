@@ -106,7 +106,7 @@ it enters edition mode."
         "a" #'pb-org_insert-at-end
         "i" #'pb-org_insert-at-beginning
         "c" #'pb-org_create-code-block
-        "<return>" #'pb-org_insert-after
+        "<return>" #'sorg--return
         ;; misc
         "?" #'pb-org_print-context
         ))
@@ -118,9 +118,18 @@ it enters edition mode."
   (advice-add (cadr binding) :after #'sorg--flash-overlay))
 
 
+(defun sorg--return ()
+  "Hit return."
+  (interactive)
+  (print "sorg ret")
+  (cond ((evil-normal-state-p) (evil-sorg-state))
+        ((evil-insert-state) (sorg--maybe-enter-code-block))
+        (t (evil-sorg-state)
+           (pb-org_maybe-edit-block))))
+
 (map! (:map evil-org-mode-map
-       :n "<return>" #'evil-sorg-state
-       :i "<return>" #'sorg--maybe-enter-code-block))
+       :ni "<return>" #'sorg--return
+       :ni "<mouse-1>" #'pb-org_click))
 
 (setq evil-sorg-state-cursor `(box "orange"))
 
