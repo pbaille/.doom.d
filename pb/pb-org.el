@@ -392,5 +392,18 @@ If buffer is narrowed, widen it and narrow the previous node"
   (if (org-at-block-p)
       (call-interactively #'org-ctrl-c-ctrl-c)))
 
+(defun pb-org_maybe-edit-block ()
+  "Enter src edition if in a source block."
+  (interactive)
+  (when (org-in-block-p (list "src"))
+    (org-edit-src-code)
+    t))
+
+(defun pb-org_click ()
+  "Click mouse 1 action."
+  (interactive)
+  (or (pb-org_maybe-edit-block)
+      (call-interactively #'evil-mouse-start-end)))
+
 (provide 'pb-org)
 ;;; pb-org.el ends here.
