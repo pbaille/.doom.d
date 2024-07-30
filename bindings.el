@@ -139,9 +139,9 @@
             "c" #'reapl-mode_complete-symbol-at-point))
 
 (map! (:map evil-org-mode-map
-       ; regular evil moves
-       :i "C-h" #'evil-backward-char
-       :i "C-l" #'evil-forward-char
+                                        ; regular evil moves
+       :i "C-h" #'backward-char
+       :i "C-l" #'forward-char
        :i "C-j" #'evil-next-line
        :i "C-k" #'evil-previous-line)
 
