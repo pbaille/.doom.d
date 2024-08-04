@@ -197,6 +197,11 @@ which is tranformed to:
                         :inherit nil
                         :background (pb-modus-get-color 'bg-dim))
 
+    (set-face-attribute 'auto-dim-other-buffers-face nil
+                        :inherit nil
+                        :background (pb-color_darken (pb-modus-get-color 'bg-main)
+                                                     0.01))
+
     (set-face-attribute 'default nil :foreground (pb-modus-get-color 'fg-main))
 
     (set-face-attribute 'font-lock-delimiter-face nil
