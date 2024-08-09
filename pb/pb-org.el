@@ -377,6 +377,20 @@ If buffer is narrowed, widen it and narrow the previous node"
   (skip-chars-backward " \t\n")
   (evil-insert-state))
 
+(defun pb-org_shift-one-line-down ()
+  "Move the current down one line."
+  (interactive)
+  (goto-char (car (pb-org_node-bounds)))
+  (insert "\n"))
+
+(defun pb-org_shift-one-line-up ()
+  "Move the current up one line."
+  (interactive)
+  (save-excursion
+    (forward-line -1)
+    (when (looking-at-p "^\\s-*$")
+      (kill-whole-line))))
+
 (defun pb-org_create-code-block ()
   "Create a code block after current node."
   (interactive)

@@ -33,7 +33,7 @@
 
 (defun sorg-exit-mode ()
   "Run on exiting sorg mode."
-  (print "exit sorg"))
+  '(print "exit sorg"))
 
 ;; overlay
 
@@ -106,10 +106,11 @@ it enters edition mode."
         "a" #'pb-org_insert-at-end
         "i" #'pb-org_insert-at-beginning
         "c" #'pb-org_create-code-block
+        ">" #'pb-org_shift-one-line-down
+        "<" #'pb-org_shift-one-line-up
         "<return>" #'sorg--return
         ;; misc
-        "?" #'pb-org_print-context
-        ))
+        "?" #'pb-org_print-context))
 
 (dolist (binding (sq_partition 2 2 sorg-bindings))
   (define-key evil-sorg-state-map
@@ -121,9 +122,9 @@ it enters edition mode."
 (defun sorg--return ()
   "Hit return."
   (interactive)
-  (print "sorg ret")
+  '(print "sorg ret")
   (cond ((evil-normal-state-p) (evil-sorg-state))
-        ((evil-insert-state) (sorg--maybe-enter-code-block))
+        ((evil-insert-state-p) (newline-and-indent) '(sorg--maybe-enter-code-block))
         (t (evil-sorg-state)
            (pb-org_maybe-edit-block))))
 
