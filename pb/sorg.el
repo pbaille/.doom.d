@@ -101,6 +101,8 @@ it enters edition mode."
         "L" #'pb-org_move-subtree-down
         "H" #'pb-org_move-subtree-up
         "S" #'org-insert-structure-template
+        "J" #'org-demote-subtree
+        "K" #'org-promote-subtree
         "o" #'pb-org_insert-after
         "O" #'pb-org_insert-before
         "a" #'pb-org_insert-at-end
@@ -132,7 +134,30 @@ it enters edition mode."
        :ni "<return>" #'sorg--return
        :ni "<mouse-1>" #'pb-org_click))
 
-(setq evil-sorg-state-cursor `(box "orange"))
+(progn :theming
+
+       (setq evil-sorg-state-cursor `(box "orange"))
+
+       (defface doom-modeline-evil-sorg-state
+         '((t (:inherit doom-modeline-info)))
+         "Face for the symex state tag in evil indicator."
+         :group 'doom-modeline-faces)
+
+       (defun pb-doom-modeline--sorg-modal-icon (f text face help-echo &optional icon unicode)
+         "Advice around `doom-modeline--modal-icon'."
+         (if (evil-sorg-state-p)
+             (funcall f
+                      (let ((tag (evil-state-property evil-state :tag t)))
+                        (if (stringp tag) tag (funcall tag)))
+                      'doom-modeline-evil-sorg-state
+                      (evil-state-property evil-state :name t)
+                      "nf-md-alpha_o_circle"
+                      "🅞")
+           (funcall f text face help-echo icon unicode)))
+
+       (advice-add 'doom-modeline--modal-icon
+                   :around
+                   #'pb-doom-modeline--sorg-modal-icon))
 
 '(:map org-src-mode-map
   :n "h" #'pb-org_go-backward)
