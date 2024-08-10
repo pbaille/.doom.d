@@ -76,6 +76,20 @@ it enters edition mode."
              (evil-insert-state))
     (newline-and-indent)))
 
+(defun sorg--return ()
+  "Hit return."
+  (interactive)
+  '(print "sorg ret")
+  (cond ((evil-normal-state-p) (evil-sorg-state))
+        ((evil-insert-state-p) (newline-and-indent) '(sorg--maybe-enter-code-block))
+        (t (evil-sorg-state)
+           (pb-org_maybe-edit-block))))
+
+(defun sorg--click ()
+  "Click mouse 1 action."
+  (interactive)
+  (sorg-enter-mode))
+
 ;; bindings and init
 
 (defvar sorg-bindings
@@ -111,6 +125,7 @@ it enters edition mode."
         ">" #'pb-org_shift-one-line-down
         "<" #'pb-org_shift-one-line-up
         "<return>" #'sorg--return
+        "<mouse-1>" #'sorg--click
         ;; misc
         "?" #'pb-org_print-context))
 
@@ -121,25 +136,8 @@ it enters edition mode."
   (advice-add (cadr binding) :after #'sorg--flash-overlay))
 
 
-(defun sorg--return ()
-  "Hit return."
-  (interactive)
-  '(print "sorg ret")
-  (cond ((evil-normal-state-p) (evil-sorg-state))
-        ((evil-insert-state-p) (newline-and-indent) '(sorg--maybe-enter-code-block))
-        (t (evil-sorg-state)
-           (pb-org_maybe-edit-block))))
-
-(defun sorg--click ()
-  "Click mouse 1 action."
-  (interactive)
-  (if (evil-sorg-state-p)
-      (goto-char (car (pb-org_node-bounds)))
-    (call-interactively #'evil-mouse-start-end)))
-
 (map! (:map evil-org-mode-map
-       :ni "<return>" #'sorg--return
-       :ni "<mouse-1>" #'sorg--click))
+       :ni "<return>" #'sorg--return))
 
 (progn :theming
 
@@ -165,10 +163,6 @@ it enters edition mode."
        (advice-add 'doom-modeline--modal-icon
                    :around
                    #'pb-doom-modeline--sorg-modal-icon))
-
-'(:map org-src-mode-map
-  :n "h" #'pb-org_go-backward)
-
 
 (provide 'sorg)
 ;;; sorg.el ends here
