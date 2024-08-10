@@ -23,11 +23,11 @@
   "Focus the clicked symex if possible.
 If inside string or comment, toggle insert state."
   (interactive)
-  (evil-normal-state)
-  (backward-char)
   (if (lispy--in-string-or-comment-p)
       (evil-insert-state)
-    (symex-mode-interface)))
+    (progn (evil-normal-state)
+           (backward-char)
+           (symex-mode-interface))))
 
 (defun pb-symex_mark ()
   (interactive)
