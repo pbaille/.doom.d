@@ -136,25 +136,22 @@ it enters edition mode."
   (advice-add (cadr binding) :after #'sorg--flash-overlay))
 
 
-(map! (:map evil-org-mode-map
-       :ni "<return>" #'sorg--return))
-
 (progn :theming
 
        (setq evil-sorg-state-cursor `(box "orange"))
 
-       (defface doom-modeline-evil-sorg-state
+       (defface sorg-doom-modeline-evil-state
          '((t (:inherit doom-modeline-info)))
          "Face for the symex state tag in evil indicator."
          :group 'doom-modeline-faces)
 
-       (defun pb-doom-modeline--sorg-modal-icon (f text face help-echo &optional icon unicode)
+       (defun sorg-doom-modeline-modal-icon (f text face help-echo &optional icon unicode)
          "Advice around `doom-modeline--modal-icon'."
          (if (evil-sorg-state-p)
              (funcall f
                       (let ((tag (evil-state-property evil-state :tag t)))
                         (if (stringp tag) tag (funcall tag)))
-                      'doom-modeline-evil-sorg-state
+                      'sorg-doom-modeline-evil-state
                       (evil-state-property evil-state :name t)
                       "nf-md-alpha_o_circle"
                       "🅞")
@@ -162,7 +159,7 @@ it enters edition mode."
 
        (advice-add 'doom-modeline--modal-icon
                    :around
-                   #'pb-doom-modeline--sorg-modal-icon))
+                   #'sorg-doom-modeline-modal-icon))
 
 (provide 'sorg)
 ;;; sorg.el ends here

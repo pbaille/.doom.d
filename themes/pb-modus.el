@@ -176,6 +176,7 @@ which is tranformed to:
 
 
   (require 'symex)
+  (require 'sorg)
   (require 'ibuffer)
   (require 'nerd-icons-ibuffer)
   (require 'nerd-icons-dired)
@@ -226,7 +227,7 @@ which is tranformed to:
     (set-face-attribute 'doom-modeline-evil-symex-state nil
                         :foreground (pb-modus-get-color 'azure-warmer-darker))
 
-    (set-face-attribute 'doom-modeline-evil-sorg-state nil
+    (set-face-attribute 'sorg-doom-modeline-evil-state nil
                         :foreground (pb-modus-get-color 'orange-lighter))
 
     (set-face-attribute 'doom-modeline-evil-insert-state nil

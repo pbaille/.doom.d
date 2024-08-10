@@ -30,6 +30,7 @@
 (require 'pb-misc)
 (require 'pb-org)
 (require 'pb-org-babel)
+(require 'pb-org-clojure)
 (require 'pb-reapl)
 (require 'pb-sexpr)
 (require 'pb-symex)

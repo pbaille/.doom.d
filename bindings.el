@@ -139,11 +139,13 @@
             "c" #'reapl-mode_complete-symbol-at-point))
 
 (map! (:map evil-org-mode-map
-                                        ; regular evil moves
+       ;; regular evil moves
        :i "C-h" #'backward-char
        :i "C-l" #'forward-char
        :i "C-j" #'evil-next-line
-       :i "C-k" #'evil-previous-line)
+       :i "C-k" #'evil-previous-line
+       ;; trigger sorg mode
+       :ni "<return>" #'sorg--return)
 
       (:map gptel-mode-map
        :i "C-e" #'gptel-send

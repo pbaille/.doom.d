@@ -1,8 +1,21 @@
-;;; -*- lexical-binding: t; -*-
+;;; pb-org-clojure.el --- org clojure utils -*- lexical-binding: t; -*-
+
+;; Author: Pierre Baille
+;; URL: https://github.com/pbaille
+;; Version: 0.0.1
+;; Package-Requires: ((emacs "29.1"))
+
+;;; Commentary:
+
+;; org clojure utils.
+
+;;; Code:
 
 (require 'cider)
+(require 'org-element)
 (require 'pb-org-babel)
 (require 'pb-cider)
+(require 'sorg)
 
 (defun pb-org-clojure_refresh-dynamic-font-lock-keywords (buffer ns)
   "Install font-lock rules according to NS for BUFFER.
@@ -69,16 +82,5 @@ The ns declaration is assumed to be the first clojure block of the file."
                     ns-name)
                    (revert-buffer buffer)))))))
 
-
-(pb-org-babel_add-custom-param
- :proll :clojure
- (km :content (lambda (content)
-                (format "((requiring-resolve 'noon.doc.utils/->piano-roll) %s)"
-                        content))
-     :result (lambda (result)
-               ;; (pp (cons :proll result))
-               (with-current-buffer (get-buffer-create "*pr*")
-                 (erase-buffer)
-                 (insert (format "'%s" result))
-                 (proll-mode 1))
-               nil)))
+(provide 'pb-org-clojure)
+;;; pb-org-clojure.el ends here
