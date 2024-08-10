@@ -130,9 +130,16 @@ it enters edition mode."
         (t (evil-sorg-state)
            (pb-org_maybe-edit-block))))
 
+(defun sorg--click ()
+  "Click mouse 1 action."
+  (interactive)
+  (if (evil-sorg-state-p)
+      (goto-char (car (pb-org_node-bounds)))
+    (call-interactively #'evil-mouse-start-end)))
+
 (map! (:map evil-org-mode-map
        :ni "<return>" #'sorg--return
-       :ni "<mouse-1>" #'pb-org_click))
+       :ni "<mouse-1>" #'sorg--click))
 
 (progn :theming
 
