@@ -185,7 +185,8 @@ which is tranformed to:
     (setq evil-normal-state-cursor `(box ,(pb-modus-get-color 'red-lighter))
           evil-insert-state-cursor `((bar . 3) ,(pb-modus-get-color 'cyan-intense-darker))
           evil-visual-state-cursor `(box ,(pb-modus-get-color 'yellow-warmer-intense-lighter))
-          evil-symex-state-cursor (list 'box (pb-modus-get-color 'cyan)))
+          evil-symex-state-cursor (list 'box (pb-modus-get-color 'cyan))
+          evil-sorg-state-cursor `(box "orange"))
 
     (set-face-attribute 'symex--current-node-face nil
                         :inherit nil
