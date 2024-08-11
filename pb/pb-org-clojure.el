@@ -46,12 +46,13 @@ The ns declaration is assumed to be the first clojure block of the file."
                   :ns-form block-content)))))))
 
 (defun pb-org-clojure_edit-src-code-hook (fun &optional code buf-name)
+  "Code to run when around `org-edit-src-code'."
   (let ((clojure-ns (km_get (pb-org-clojure_get-clojure-namespace)
                             :ns-name)))
     (funcall fun code buf-name)
     (when clojure-ns
       (pb-org-clojure_refresh-dynamic-font-lock-keywords
-       (concat "*Org Src " (buffer-name (current-buffer)) "[ clojure ]*")
+       (buffer-name (current-buffer))
        clojure-ns)
       (flycheck-mode -1)
       (symex-mode-interface))))
