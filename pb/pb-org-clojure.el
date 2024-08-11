@@ -16,6 +16,8 @@
 (require 'pb-org-babel)
 (require 'pb-cider)
 (require 'sorg)
+(require 'flycheck)
+(require 'symex)
 
 (defun pb-org-clojure_refresh-dynamic-font-lock-keywords (buffer ns)
   "Install font-lock rules according to NS for BUFFER.
@@ -46,7 +48,10 @@ The ns declaration is assumed to be the first clojure block of the file."
                   :ns-form block-content)))))))
 
 (defun pb-org-clojure_edit-src-code-hook (fun &optional code buf-name)
-  "Code to run when around `org-edit-src-code'."
+  "Code to run when around `org-edit-src-code'.
+Threads CODE and BUF-NAME arguments directly to `org-edit-src-code' FUN.
+Refresh fontification of the edit src buffer according to the corresponding
+org file clojure namespace."
   (let ((clojure-ns (km_get (pb-org-clojure_get-clojure-namespace)
                             :ns-name)))
     (funcall fun code buf-name)
