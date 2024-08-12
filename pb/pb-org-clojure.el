@@ -38,14 +38,16 @@ For blocks to be correctly fontified, we need to install those using cider."
   "Retreive the clojure namespace of the current org buffer.
 The ns declaration is assumed to be the first clojure block of the file."
   (save-excursion
-    (goto-char (point-min))
-    (when (re-search-forward "#\\+begin_src clojure" nil t)
-      (let* ((element (org-element-context)))
-        (when (eq (org-element-type element) 'src-block)
-          (let ((block-content (org-element-property :value element)))
-            (string-match "(ns \\([^ ]+\\)" block-content)
-            (list :ns-name (string-trim-right (match-string 1 block-content))
-                  :ns-form block-content)))))))
+    (save-restriction
+      (widen)
+      (goto-char (point-min))
+      (when (re-search-forward "#\\+begin_src clojure" nil t)
+        (let* ((element (org-element-context)))
+          (when (eq (org-element-type element) 'src-block)
+            (let ((block-content (org-element-property :value element)))
+              (string-match "(ns \\([^ ]+\\)" block-content)
+              (list :ns-name (string-trim-right (match-string 1 block-content))
+                    :ns-form block-content))))))))
 
 (defun pb-org-clojure_edit-src-code-hook (fun &optional code buf-name)
   "Code to run when around `org-edit-src-code'.
