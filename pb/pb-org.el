@@ -208,11 +208,32 @@ If buffer is narrowed, widen it and narrow the next node"
              nil)
       (point))))
 
+(defvar pb-org_lisp-flavors
+  (list "clojure" "racket" "emacs-lisp" "scheme" "fennel"))
+
+(defun pb-org_at-lisp-block-p ()
+  "Check if point is at the start of a Clojure src block in org mode."
+  (let ((element (org-element-context)))
+    (and (eq (org-element-type element) 'src-block)
+         (member (org-element-property :language element)
+                 pb-org_lisp-flavors)
+         (= (org-element-property :begin element) (point)))))
+
+(defun pb-org_enter-lisp-block ()
+  "Toggle symex mode if cursor is at the beginning of a clojure block."
+  (interactive)
+  (when (pb-org_at-lisp-block-p)
+    (forward-line)
+    (symex-enter-mode)
+    (point)))
+
 (defun pb-org_down-element ()
   "Enter inside current element."
-  (if (org-at-block-p)
-      (org-edit-src-code)
-    (pb-org_down-element-safe)))
+  (cond ((pb-org_at-lisp-block-p)
+         (forward-line) (symex-enter-mode))
+        ((org-at-block-p)
+         (org-edit-src-code))
+        (t (pb-org_down-element-safe))))
 
 (defun pb-org_walk-forward ()
   "Go to first child or to next node."
