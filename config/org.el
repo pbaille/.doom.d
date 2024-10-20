@@ -20,6 +20,11 @@
   (add-hook 'org-mode-hook
             (lambda () (interactive) (hl-line-mode -1)))
 
+  ;; those syntax entries are messing with symex editing in src block
+  (add-hook 'org-mode-hook (lambda ()
+                             (modify-syntax-entry ?< ".")
+                             (modify-syntax-entry ?> ".")))
+
   (setq org-ellipsis "…")
 
   ;; use current window instead of split for editing blocks

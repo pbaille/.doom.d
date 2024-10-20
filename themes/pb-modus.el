@@ -238,7 +238,13 @@ which is tranformed to:
                         :background (pb-modus-get-color 'bg-intense))
 
     (set-face-attribute 'org-block-begin-line nil
-                        :foreground (pb-modus-get-color 'fg-faint))
+                        :foreground (pb-modus-get-color 'fg-faint)
+                        :background (pb-color (pb-modus-get-color 'bg-dim)
+                                              (lighten .15)))
+
+    (set-face-attribute 'org-block nil
+                        :background (pb-color (pb-modus-get-color 'bg-dim)
+                                              (lighten .35)))
 
     (set-face-attribute 'org-level-1 nil :inherit 'outline-1 :height 1.3 :box (list :line-width 8 :color (pb-modus-get-color 'bg-main)))
     (set-face-attribute 'org-level-2 nil :inherit 'outline-2 :height 1.15 :box (list :line-width 6 :color (pb-modus-get-color 'bg-main)))

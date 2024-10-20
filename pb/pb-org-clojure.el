@@ -67,6 +67,12 @@ org file clojure namespace."
 (advice-add 'org-edit-src-code :around #'pb-org-clojure_edit-src-code-hook)
 (advice-add 'org-edit-src-exit :after #'sorg-enter-mode)
 
+(defun pb-org-clojure_set-local-vars ()
+  (interactive)
+  (pb_let [(km ns-name ) (pb-org-clojure_get-clojure-namespace)]
+      (setq-local cider-buffer-ns ns-name)
+    (setq-local indent-line-function #'pb-org-clojure_indent-line-function)))
+
 (defun pb-org-clojure_jack-in ()
   "Setup clojure literate org buffer.
 - cider-jack-in-clj if necessary,
@@ -81,18 +87,32 @@ org file clojure namespace."
               (call-interactively #'cider-jack-in-clj)))
       (with-current-buffer buffer
         (pb_let [(km ns-name ns-form) (pb-org-clojure_get-clojure-namespace)]
-            (nrepl-request:eval ns-form
-                                (lambda (res)
-                                  '(print (list "ns form evaluated"
-                                                :ns ns-name
-                                                :status (nrepl-dict-get res "status")))
-                                  (when (equal "state" (car (nrepl-dict-get res "status")))
-                                    (pb-org-clojure_refresh-dynamic-font-lock-keywords
-                                     " *org-src-fontification:clojure-mode*"
-                                     ns-name)
-                                    (with-current-buffer buffer (revert-buffer))))
-                                (cider-current-repl nil 'ensure)
-                                nil nil nil))))))
+            (progn (print (list "set local vars"
+                                buffer
+                                ns-name))
+                   (setq-local cider-buffer-ns ns-name)
+                   (setq-local indent-line-function #'pb-org-clojure_indent-line-function)
+                   (nrepl-request:eval ns-form
+                                       (lambda (res)
+                                         '(print (list "ns form evaluated"
+                                                       :ns ns-name
+                                                       :status (nrepl-dict-get res "status")))
+                                         (setq-local cider-buffer-ns ns-name)
+                                         (when (equal "state" (car (nrepl-dict-get res "status")))
+                                           (pb-org-clojure_refresh-dynamic-font-lock-keywords
+                                            " *org-src-fontification:clojure-mode*"
+                                            ns-name)
+                                           (with-current-buffer buffer
+                                             (revert-buffer))))
+                                       (cider-current-repl nil 'ensure)
+                                       nil nil nil)))))))
+
+(defun pb-org-clojure_indent-line-function ()
+  "Default org-indent-line funtion used in source blocks is openning the edit src buffer.
+This is not what we want."
+  (if (org-in-block-p (list "SRC"))
+      (evil-insert-state)
+    (funcall #'org-indent-line)))
 
 (provide 'pb-org-clojure)
 ;;; pb-org-clojure.el ends here
