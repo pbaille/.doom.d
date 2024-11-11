@@ -304,7 +304,8 @@ If buffer is narrowed, widen it and narrow the next node"
              (org-forward-element)
              (pb-org_narrow))
     (unless (pb-org_last-node-p)
-      (org-forward-element))))
+      (org-forward-element)
+      (point))))
 
 (defun pb-org_backward-same-level ()
   "Move backward at the same level."
@@ -441,4 +442,4 @@ If buffer is narrowed, widen it and narrow the previous node"
       (call-interactively #'evil-mouse-start-end)))
 
 (provide 'pb-org)
-;;; pb-org.el ends here.
+;;; pb-org.el ends here
