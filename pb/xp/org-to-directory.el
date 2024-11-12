@@ -18,9 +18,7 @@
   (with-current-buffer (find-file-noselect file)
     (goto-char (point-min))
     (pb-org_first-node)
-    (let* ((title (org-get-heading t t t t))
-           (dir-name (sanitize-filename title))
-           (base-dir (file-name-as-directory (concat default-directory dir-name))))
+    (let* ((base-dir (file-name-as-directory (file-name-sans-extension file))))
       (pb-org_down-element)
 
       ;; go to the first subheading
@@ -30,9 +28,10 @@
 
       (when (eq 'headline (pb-org_node-type))
         (make-directory base-dir t)
-        (cl-loop do
+        (cl-loop for i upfrom 1
+                 do
                  (let* ((node-title (org-get-heading t t t t))
-                        (file-name (concat base-dir (sanitize-filename node-title) ".org"))
+                        (file-name (concat base-dir (format "%02d-" i) (sanitize-filename node-title) ".org"))
                         (bounds (pb-org_node-bounds))
                         (content (buffer-substring-no-properties
                                   (car bounds) (cdr bounds))))
@@ -68,19 +67,40 @@
    (pb-org_file-split "~/.doom.d/pb/xp/split-xp.org"
                       2))
 
+(defun pb-org_convert-to-md-recursively (dir)
+  "Recursively export all org files in DIR to markdown."
+  (dolist (file (directory-files-recursively dir "\\.org$"))
+    (with-current-buffer (find-file-noselect file)
+      (org-md-export-to-markdown)
+      (delete-file file))))
+
 (defun pb-org_mk-cljdoc (org-file output-dir depth)
-  (unless (file-exists-p output-dir)
-    (make-directory output-dir t))
-  (let ((entry-point (expand-file-name (file-name-nondirectory org-file)
-                                       output-dir)))
-    (copy-file org-file entry-point)
-    (pb-org_file-split entry-point depth)))
+  (if (file-exists-p output-dir)
+      (delete-directory output-dir t t))
+  (make-directory output-dir t)
+  (with-current-buffer (find-file-noselect org-file)
+    (org-mode)
+    (goto-char (point-min))
+    (pb-org_first-node)
+    (let* ((title (org-get-heading t t t t))
+           (entry-point (expand-file-name (concat (sanitize-filename title) ".org") output-dir)))
+      (copy-file org-file entry-point)
+      (pb-org_file-split entry-point depth)))
+  '(let ((entry-point (expand-file-name (file-name-nondirectory org-file)
+                                        output-dir)))
+     (copy-file org-file entry-point)
+     (pb-org_file-split entry-point depth))
+  (pb-org_convert-to-md-recursively
+   output-dir))
 
 '(progn
    (pb-org_mk-cljdoc
     "~/Code/WIP/noon/src/noon/doc/guide.org"
-    "~/Code/WIP/noon/doc/guide"
-    2))
+    "~/Code/WIP/noon/doc"
+    2)
+   (pb-org_convert-to-md-recursively
+    "~/Code/WIP/noon/doc/guide")
+   )
 
 (provide 'org-to-directory)
 
