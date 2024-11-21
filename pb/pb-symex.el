@@ -194,5 +194,18 @@ If inside string or comment, toggle insert state."
     (progn (insert "#_")
            (backward-char 2))))
 
+(defun pb-symex_toggle-comment ()
+  (interactive)
+  ;; this is really badly writen, should find a better way to match #_ under cursor
+  (if (or (eq 'clojure-mode major-mode)
+          (eq 'clojurescript-mode major-mode))
+      (if (looking-at "#_")
+          ;; (and (string-equal (string (following-char)) "#")
+          ;;         (save-excursion (forward-char 1) (string-equal (string (following-char)) "_")))
+          (delete-char 2)
+        (progn (insert "#_")
+               (backward-char 2)))
+    (symex-comment 1)))
+
 (provide 'pb-symex)
 ;;; pb-symex.el ends here.

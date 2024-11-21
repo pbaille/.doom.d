@@ -13,6 +13,9 @@
                     nil
                   (apply orig-fun args)))))
 
+(use-package hideshow
+  :config (set-face-attribute '+fold-hideshow-folded-face nil :box nil))
+
 (use-package spacious-padding
   :config
   (setq spacious-padding-widths
@@ -182,7 +185,7 @@
   (setq gptel-default-mode 'org-mode)
   (setq gptel-use-header-line nil)
   ;; bindings
-  (setq-default gptel-model "gpt-4")
+  (setq-default gptel-model "gpt-4o")
   ;; the only way I found for redefining the broken RET key of the menu to C-RET
   ;; the problem is that gptel-menu is autoloaded,
   ;; it has to be called once before the rebinding is possible.

@@ -154,7 +154,8 @@
           ("M" . +lookup/documentation)
           ("E" . symex-eval-print)
           ("C-e" . symex-evaluate-pretty)
-          ("M-l" . symex-run)))
+          ("M-l" . symex-run)
+          (";" . pb-symex_toggle-comment)))
 
   (symex-initialize)
 
@@ -192,8 +193,7 @@
   (general-define-key
    :states 'normal
    :keymaps '(clojure-mode-map)
-   "g :" #'re-frame-jump-to-reg
-   ";" #'pb-symex_clj-toggle-comment)
+   "g :" #'re-frame-jump-to-reg)
 
   (defface doom-modeline-evil-symex-state
     '((t (:inherit doom-modeline-info)))
