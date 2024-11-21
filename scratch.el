@@ -76,3 +76,29 @@ This only takes care of filling docstring correctly."
            (shell-command (concat "standard-clj fix " buffer-file-name))))
 
        (add-hook 'after-save-hook #'format-clojure-file-on-save))
+
+(progn :audio-export
+       (defun my/export-audio-block (code-result)
+         "Generate an HTML audio block from the Clojure result."
+         (print code-result)
+         (let ((mp3-file (gethash :mp3-file (parseedn-read-str code-result))))
+           (format "#+BEGIN_EXPORT html\n<audio src=\"%s\" controls>\nYour browser does not support the audio element.\n</audio>\n#+END_EXPORT" mp3-file)))
+
+       (defun my/handle-export-audio (&rest xs)
+         "Process and insert audio export blocks before exporting."
+         (print xs)
+         (org-babel-map-src-blocks nil
+           (let* ((info (org-babel-get-src-block-info))
+                  (params (nth 2 info))
+                  (audio-export (alist-get :export-audio params)))
+             (when audio-export
+               (let ((result (org-babel-execute-src-block)))
+                 ;; Move point to the end of the current block
+                 (goto-char (org-babel-where-is-src-block-result))
+                 ;; Insert after the result block
+                 (forward-line 1)
+                 ;; Insert the processed result
+                 (insert (concat "\n" (my/export-audio-block result) "\n")))))))
+
+       (add-hook 'org-export-before-processing-hook #'my/handle-export-audio)
+       )
