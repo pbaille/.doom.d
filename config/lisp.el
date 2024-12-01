@@ -101,10 +101,12 @@
 
         '(("s-r" . symex-repl)
           ("C-d" . +lookup/documentation )
+          ("g d" . pb-symex_lookup-definition)
+          ("g r" . pb-symex_lookup-references)
 
           ;; nav
-          ("M-k" . symex-goto-lowest)
-          ("M-j" . symex-goto-highest)
+          ("M-k" . scroll-up-with-cursor) ;; symex-goto-lowest
+          ("M-j" . scroll-down-with-cursor) ;; symex-goto-highest
           ("j" . pb-symex_go-up)
           ("k" . symex-go-down)
           ("J" . symex-join-lines)

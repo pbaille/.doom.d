@@ -78,6 +78,7 @@ This only takes care of filling docstring correctly."
        (add-hook 'after-save-hook #'format-clojure-file-on-save))
 
 (progn :audio-export
+
        (defun my/export-audio-block (code-result)
          "Generate an HTML audio block from the Clojure result."
          (print code-result)

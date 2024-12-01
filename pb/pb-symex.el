@@ -214,5 +214,21 @@ If inside string or comment, toggle insert state."
                (backward-char 2)))
     (symex-comment 1)))
 
+(defun pb-symex_lookup-definition ()
+  (interactive)
+  (if (or (eq 'clojure-mode major-mode)
+          (eq 'clojurec-mode major-mode)
+          (eq 'clojurescript-mode major-mode))
+      (lsp-find-definition)
+    (+lookup/definition)))
+
+(defun pb-symex_lookup-references ()
+  (interactive)
+  (if (or (eq 'clojure-mode major-mode)
+          (eq 'clojurec-mode major-mode)
+          (eq 'clojurescript-mode major-mode))
+      (lsp-find-references)
+    (+lookup/references)))
+
 (provide 'pb-symex)
 ;;; pb-symex.el ends here.

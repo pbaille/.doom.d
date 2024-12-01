@@ -100,5 +100,19 @@
           (evil-window-split (* 2 (/ (window-body-height) 3)) nil)
           (switch-to-buffer b1)))))
 
+(progn :scrolling
+
+       (defun scroll-up-with-cursor ()
+         "Scroll up one line and keep cursor on the same visual line."
+         (interactive)
+         (scroll-up-line 1)
+         (next-line 1))
+
+       (defun scroll-down-with-cursor ()
+         "Scroll down one line and keep cursor on the same visual line."
+         (interactive)
+         (scroll-down-line 1)
+         (previous-line 1)))
+
 (provide 'pb-misc)
 ;;; pb-misc.el ends here.
