@@ -37,6 +37,12 @@ If inside string or comment, toggle insert state."
   (deactivate-mark)
   (symex-mode-interface))
 
+(defun pb-symex_undo (&rest _)
+  (interactive)
+  (evil-undo 1)
+  (progn (evil-normal-state)
+         (symex-mode-interface)))
+
 (defun pb-symex_cider-macroexpand ()
   (interactive)
   (save-excursion

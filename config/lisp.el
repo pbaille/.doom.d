@@ -113,6 +113,7 @@
           ;; edit
           ("r" . paredit-raise-sexp)
           ("x" . symex-delete)
+          ("u" . pb-symex_undo)
           ("R" . pb-symex_replace)
           ("-" . sp-unwrap-sexp)
 
