@@ -116,6 +116,7 @@
           ("u" . pb-symex_undo)
           ("R" . pb-symex_replace)
           ("-" . sp-unwrap-sexp)
+          ("s" . sp-unwrap-sexp)
 
           ("}" . symex-wrap-curly)
           ("{" . symex-create-curly)
