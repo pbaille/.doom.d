@@ -204,6 +204,7 @@ If inside string or comment, toggle insert state."
   (interactive)
   ;; this is really badly writen, should find a better way to match #_ under cursor
   (if (or (eq 'clojure-mode major-mode)
+          (eq 'clojurec-mode major-mode)
           (eq 'clojurescript-mode major-mode))
       (if (looking-at "#_")
           ;; (and (string-equal (string (following-char)) "#")
