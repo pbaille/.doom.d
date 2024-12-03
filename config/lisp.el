@@ -103,6 +103,7 @@
           ("C-d" . +lookup/documentation )
           ("g d" . pb-symex_lookup-definition)
           ("g r" . pb-symex_lookup-references)
+          ("g h" . recenter)
 
           ;; nav
           ("M-k" . scroll-up-with-cursor) ;; symex-goto-lowest
