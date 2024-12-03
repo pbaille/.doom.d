@@ -10,7 +10,7 @@
       org-export-with-toc nil
       org-md-headline-style 'atx)
 
-(defun sanitize-filename (filename depth)
+(defun sanitize-filename (filename)
   "Sanitize filename by replacing invalid characters with underscores."
   (replace-regexp-in-string "[^a-zA-Z0-9-_.]" "-" filename))
 
@@ -65,7 +65,9 @@
 
 '(progn
    (pb-org_file-split "~/.doom.d/pb/xp/split-xp.org"
-                      2))
+                      2)
+   (pb-org_file-split "~/Code/WIP/noon/src/noon/doc/core.org"
+                      1))
 
 (defun pb-org_convert-to-md-recursively (dir)
   "Recursively export all org files in DIR to markdown."
