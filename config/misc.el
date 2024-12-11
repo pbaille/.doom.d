@@ -1,5 +1,7 @@
 ;;; config/misc.el -*- lexical-binding: t; -*-
 
+(setq warning-minimum-log-level :error)
+
 (setq user-script-dir
       (concat doom-user-dir "pb/"))
 
