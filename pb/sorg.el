@@ -28,8 +28,9 @@
 
 (defun sorg-enter-mode ()
   "Run when on entering sorg mode."
-  (goto-char (car (pb-org_node-bounds)))
-  (sorg--flash-overlay))
+  (when (eq major-mode 'org-mode)
+    (goto-char (car (pb-org_node-bounds)))
+    (sorg--flash-overlay)))
 
 (defun sorg-exit-mode ()
   "Run on exiting sorg mode."

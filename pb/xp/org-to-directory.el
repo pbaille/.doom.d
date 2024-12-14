@@ -11,7 +11,8 @@
 
 (setq org-export-with-broken-links t
       org-export-with-toc nil
-      org-md-headline-style 'atx)
+      org-md-headline-style 'atx
+      org-export-headline-levels 10)
 
 (defun sanitize-filename (filename)
   "Sanitize FILENAME by replacing invalid characters with underscores."
@@ -142,6 +143,9 @@
                   2)
                  (pb-org_convert-to-html-recursively
                   "~/Code/WIP/noon/public/guide"))))
+
+'(progn
+   (org-md-export-to-markdown ))
 
 (provide 'org-to-directory)
 

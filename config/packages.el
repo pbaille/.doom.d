@@ -57,7 +57,7 @@
 
     (setq delete-by-moving-to-trash t)
 
-    (setq dired-omit-files "\\|^\\.[^.]")
+    '(setq dired-omit-files "\\|^\\.[^.]")
     '(setq dired-omit-files
       (concat dired-omit-files "\\|^\\.[^.]"))
     (add-hook 'dired-mode-hook

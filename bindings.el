@@ -152,6 +152,9 @@
        :ni "C-m" #'gptel-menu
        "C-c C-k" #'kill-buffer-and-window)
 
+      (:map dired-mode-map
+       :nv "H" #'dired-omit-mode)
+
       (:map messages-buffer-mode-map
             "s-k" #'pb-misc_clear-message-buffer)
 
