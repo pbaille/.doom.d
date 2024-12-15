@@ -251,6 +251,9 @@
   (ligature-set-ligatures 'org-mode-hook '())
   (global-ligature-mode t))
 
+(use-package gleam-ts-mode
+  :mode (rx ".gleam" eos))
+
 
 
 
