@@ -100,6 +100,7 @@
         ;; by default j goes to the root of the tree, but the root of a symex are higher in the buffer...
 
         '(("s-r" . symex-repl)
+          ("s-R" . query-replace)
           ("C-d" . +lookup/documentation )
           ("g d" . pb-symex_lookup-definition)
           ("g r" . pb-symex_lookup-references)

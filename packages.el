@@ -75,6 +75,7 @@
            :files ("*.el")))
 
 (package! ligature)
+
 (package! gleam-ts-mode)
 
 (progn :not-used
