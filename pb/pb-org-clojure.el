@@ -34,6 +34,10 @@ For blocks to be correctly fontified, we need to install those using cider."
     (font-lock-add-keywords nil cider--dynamic-font-lock-keywords 'end)
     (font-lock-flush)))
 
+(defvar-local pb-org-clojure_default-clojure-namespace
+    (list :ns-name "user"
+          :ns-form "(ns user)"))
+
 (defun pb-org-clojure_get-clojure-namespace ()
   "Retreive the clojure namespace of the current org buffer.
 The ns declaration is assumed to be the first clojure block of the file."
@@ -47,8 +51,11 @@ The ns declaration is assumed to be the first clojure block of the file."
             (when (eq (org-element-type element) 'src-block)
               (let ((block-content (org-element-property :value element)))
                 (string-match "(ns \\([^ ]+\\)" block-content)
-                (list :ns-name (string-trim-right (match-string 1 block-content))
-                      :ns-form block-content)))))))))
+                ;; (print block-content)
+                (if-let ((matched (match-string 1 block-content)))
+                  (list :ns-name (string-trim-right matched)
+                        :ns-form block-content)
+                  pb-org-clojure_default-clojure-namespace)))))))))
 
 (defun pb-org-clojure_edit-src-code-hook (fun &optional code buf-name)
   "Code to run when around `org-edit-src-code'.
@@ -67,6 +74,7 @@ org file clojure namespace."
     t))
 
 (advice-add 'org-edit-src-code :around #'pb-org-clojure_edit-src-code-hook)
+
 (advice-add 'org-edit-src-exit :after #'sorg-enter-mode)
 
 (defun pb-org-clojure_set-local-vars ()
