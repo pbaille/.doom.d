@@ -51,7 +51,7 @@
       ;; some extras
       :i "C-S-h" #'paredit-backward-delete
       :i "C-S-l" #'paredit-forward-delete
-      :i "C-w" #'pb-misc_insert-open-paren
+      ;; :i "C-w" #'pb-misc_insert-open-paren
       :i "TAB" #'consult-company)
 
 (map! :i "s-1" #'+workspace/switch-to-0

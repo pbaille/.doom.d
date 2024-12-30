@@ -189,14 +189,15 @@
    ";" (lambda () (interactive) (insert "-"))
    "M-;" (lambda () (interactive) (insert ";"))
    "C-y" #'racket-insert-lambda
-   "C-w" #'pb-misc_insert-open-paren)
+   ;; "C-w" #'pb-misc_insert-open-paren
+   )
 
   (general-define-key
    :states 'normal
    :keymaps pb-config_lisp-modes
    [mouse-1] #'pb-symex_click
    [mouse-3] (lambda (event) (interactive "e") (posn-set-point (event-end event)) (evil-insert-state))
-   "C-w" (lambda () (interactive) (evil-insert 1) (pb-misc_insert-open-paren))
+   ;; "C-w" (lambda () (interactive) (evil-insert 1) (pb-misc_insert-open-paren))
    "RET" #'symex-mode-interface)
 
   (general-define-key
