@@ -85,9 +85,12 @@
 
 (use-package symex
 
+  :hook (symex-mode . hs-minor-mode)
   :custom
   (symex-modal-backend 'evil)
   (symex-highlight-p t)
+  (symex-quote-prefix-list (list "'" "`"))
+  (symex-unquote-prefix-list (list "," ",@" "~" "~@" "#'" "#_" "#" "#\\?"))
 
   :bind
   (("s-l" . symex-mode-interface))
