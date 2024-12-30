@@ -146,6 +146,16 @@ If inside string or comment, toggle insert state."
         (progn (forward-char)
                (pb-symex_select-nearest-in-line-fw)))))
 
+(defun pb-symex_multiline-string-p ()
+  "Return t if point is inside a multiline string."
+  (let ((ppss (syntax-ppss)))
+    (when (nth 3 ppss)  ; Inside a string
+      (let ((string-start (nth 8 ppss))
+            (string-end (or (scan-sexps (nth 8 ppss) 1) (point-max))))
+        (save-excursion
+          (goto-char string-start)
+          (re-search-forward "\n" string-end t))))))
+
 (defun pb-symex_select-nearest-in-line ()
   "Select the nearest symex in current line."
   (let ((p (point))
@@ -165,7 +175,8 @@ If inside string or comment, toggle insert state."
   "Go to next line (or nth if COUNT) and focus the nearest symex."
   (interactive)
   (evil-next-line (or count 1))
-  (or (pb-symex_select-nearest-in-line)
+  (or (pb-symex_multiline-string-p)
+      (pb-symex_select-nearest-in-line)
       (unless (eobp)
         (pb-symex_next-line 1))))
 
