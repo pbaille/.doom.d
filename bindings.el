@@ -47,6 +47,7 @@
       :i "C-j" #'evil-next-line
       :i "C-k" #'evil-previous-line
       :i "C-l" #'forward-char
+      :i "C-w" evil-window-map
 
       ;; some extras
       :i "C-S-h" #'paredit-backward-delete
