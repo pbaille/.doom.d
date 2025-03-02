@@ -104,72 +104,76 @@ If inside string or comment, toggle insert state."
       (and (symex--update-overlay)
            (point))))
 
-(defun pb-symex_select-nearest-bw ()
-  "Select the appropriate symex nearest to point."
-  (unless (bobp)
-    (or
-     (pb-symex_select-current)
-     (progn (backward-char)
-            (pb-symex_select-nearest-bw)))))
+(progn :nearest
 
-(defun pb-symex_select-nearest-fw ()
-  "Select the appropriate symex nearest to point."
-  (unless (eobp)
-    (or (pb-symex_select-current)
-        (progn (forward-char)
-               (pb-symex_select-nearest-fw)))))
+       (defun pb-symex_select-nearest-bw ()
+         "Select the appropriate symex nearest to point."
+         (unless (bobp)
+           (or
+            (pb-symex_select-current)
+            (progn (backward-char)
+                   (pb-symex_select-nearest-bw)))))
 
-(defun pb-symex_select-nearest ()
-  "Select the nearest symex in current line."
-  (let ((p (point))
-        (fw (save-excursion (pb-symex_select-nearest-fw)))
-        (bw (save-excursion (pb-symex_select-nearest-bw))))
-    (cond ((and bw fw)
-           (if (> (- fw p)
-                  (- p bw))
-               (goto-char bw)
-             (goto-char fw)))
-          ((or bw fw)
-           (goto-char (or bw fw))))))
+       (defun pb-symex_select-nearest-fw ()
+         "Select the appropriate symex nearest to point."
+         (unless (eobp)
+           (or (pb-symex_select-current)
+               (progn (forward-char)
+                      (pb-symex_select-nearest-fw)))))
 
-(defun pb-symex_select-nearest-in-line-bw ()
-  "Select the appropriate symex nearest to point."
-  (unless (bolp)
-    (or (pb-symex_select-current)
-        (progn (backward-char)
-               (pb-symex_select-nearest-in-line-bw)))))
+       (defun pb-symex_select-nearest ()
+         "Select the nearest symex in current line."
+         (let ((p (point))
+               (fw (save-excursion (pb-symex_select-nearest-fw)))
+               (bw (save-excursion (pb-symex_select-nearest-bw))))
+           (cond ((and bw fw)
+                  (if (> (- fw p)
+                         (- p bw))
+                      (goto-char bw)
+                    (goto-char fw)))
+                 ((or bw fw)
+                  (goto-char (or bw fw))))))
 
-(defun pb-symex_select-nearest-in-line-fw ()
-  "Select the appropriate symex nearest to point."
-  (unless (eolp)
-    (or (pb-symex_select-current)
-        (progn (forward-char)
-               (pb-symex_select-nearest-in-line-fw)))))
+       (progn :nearest-in-line
 
-(defun pb-symex_multiline-string-p ()
-  "Return t if point is inside a multiline string."
-  (let ((ppss (syntax-ppss)))
-    (when (nth 3 ppss)  ; Inside a string
-      (let ((string-start (nth 8 ppss))
-            (string-end (or (scan-sexps (nth 8 ppss) 1) (point-max))))
-        (save-excursion
-          (goto-char string-start)
-          (re-search-forward "\n" string-end t))))))
+              (defun pb-symex_select-nearest-in-line-bw ()
+                "Select the appropriate symex nearest to point."
+                (unless (bolp)
+                  (or (pb-symex_select-current)
+                      (progn (backward-char)
+                             (pb-symex_select-nearest-in-line-bw)))))
 
-(defun pb-symex_select-nearest-in-line ()
-  "Select the nearest symex in current line."
-  (let ((p (point))
-        (fw (save-excursion (pb-symex_select-nearest-in-line-fw)))
-        (bw (save-excursion (pb-symex_select-nearest-in-line-bw))))
-    (if (cond ((and bw fw)
-               (if (> (- fw p)
-                      (- p bw))
-                   (goto-char bw)
-                 (goto-char fw)))
+              (defun pb-symex_select-nearest-in-line-fw ()
+                "Select the appropriate symex nearest to point."
+                (unless (eolp)
+                  (or (pb-symex_select-current)
+                      (progn (forward-char)
+                             (pb-symex_select-nearest-in-line-fw)))))
 
-              ((or fw bw)
-               (goto-char (or bw fw))))
-        (symex--update-overlay))))
+              (defun pb-symex_multiline-string-p ()
+                "Return t if point is inside a multiline string."
+                (let ((ppss (syntax-ppss)))
+                  (when (nth 3 ppss)    ; Inside a string
+                    (let ((string-start (nth 8 ppss))
+                          (string-end (or (scan-sexps (nth 8 ppss) 1) (point-max))))
+                      (save-excursion
+                        (goto-char string-start)
+                        (re-search-forward "\n" string-end t))))))
+
+              (defun pb-symex_select-nearest-in-line ()
+                "Select the nearest symex in current line."
+                (let ((p (point))
+                      (fw (save-excursion (pb-symex_select-nearest-in-line-fw)))
+                      (bw (save-excursion (pb-symex_select-nearest-in-line-bw))))
+                  (if (cond ((and bw fw)
+                             (if (> (- fw p)
+                                    (- p bw))
+                                 (goto-char bw)
+                               (goto-char fw)))
+
+                            ((or fw bw)
+                             (goto-char (or bw fw))))
+                      (symex--update-overlay))))))
 
 (defun pb-symex_next-line (&optional count)
   "Go to next line (or nth if COUNT) and focus the nearest symex."
@@ -230,16 +234,24 @@ If inside string or comment, toggle insert state."
   (if (or (eq 'clojure-mode major-mode)
           (eq 'clojurec-mode major-mode)
           (eq 'clojurescript-mode major-mode))
-      (lsp-find-definition)
-    (+lookup/definition)))
+      (if lsp-mode
+          (call-interactively #'lsp-find-definition)
+        (call-interactively #'+lookup/definition))
+    (call-interactively #'+lookup/definition)))
 
 (defun pb-symex_lookup-references ()
   (interactive)
   (if (or (eq 'clojure-mode major-mode)
           (eq 'clojurec-mode major-mode)
           (eq 'clojurescript-mode major-mode))
-      (lsp-find-references)
-    (+lookup/references)))
+      (if lsp-mode
+          (call-interactively #'lsp-find-references)
+        (call-interactively #'+lookup/references))
+    (call-interactively #'+lookup/references)))
+
+(defun pb-symex_current-as-string ()
+  (buffer-substring-no-properties (point) (symex--get-end-point 1)))
+
 
 (provide 'pb-symex)
 ;;; pb-symex.el ends here.

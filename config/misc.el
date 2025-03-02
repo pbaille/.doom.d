@@ -42,6 +42,9 @@
         ((shift)
          . hscroll)))
 
+;; pop-up-frames: If you want new buffers to always appear in the current window (unless another window is specifically requested), you can set this variable to nil
+(setq pop-up-frames nil)
+
 (progn :shorthand-bug-fix
 
        "In my current version (emacs-mac) the 'elisp-shorthand-font-lock-face was taking an extra char."

@@ -43,13 +43,17 @@
 
        (use-package cider
          :config
+         (setq cider-repl-reuse-dead-buffers nil)
          (setq cider-show-error-buffer nil)
+         (setq cider-repl-display-in-current-window t)
+         (setq cider-result-buffer "pb-cider_results")
          (setq cider-use-overlays t)
          (setq cider-print-fn 'pprint)
          (setq cider-print-options '(("length" 50) ("right-margin" 70)))
          (setq cider-eldoc-display-for-symbol-at-point nil)
          (setq evil-shift-round nil
-               evil-shift-width 1))
+               evil-shift-width 1)
+         (add-hook 'cider-repl-mode-hook #'pb-cider_kill-dead-buffers))
 
        (use-package flycheck-clj-kondo)
 
@@ -104,7 +108,7 @@
 
         '(("s-r" . symex-repl)
           ("s-R" . query-replace)
-          ("C-d" . +lookup/documentation )
+          ; ("C-d" . +lookup/documentation )
           ("g d" . pb-symex_lookup-definition)
           ("g r" . pb-symex_lookup-references)
           ("g h" . recenter)
@@ -116,6 +120,9 @@
           ("k" . symex-go-down)
           ("J" . symex-join-lines)
           ("K" . pb-symex_go-down-folding)
+
+          ;; yank
+          ("Y" . consult-yank-from-kill-ring)
 
           ;; edit
           ("r" . paredit-raise-sexp)
@@ -189,7 +196,7 @@
    ";" (lambda () (interactive) (insert "-"))
    "M-;" (lambda () (interactive) (insert ";"))
    "C-y" #'racket-insert-lambda
-   ;; "C-w" #'pb-misc_insert-open-paren
+   "C-w" #'pb-misc_insert-open-paren
    )
 
   (general-define-key

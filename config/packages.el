@@ -16,6 +16,11 @@
 (use-package hideshow
   :config (set-face-attribute '+fold-hideshow-folded-face nil :box nil))
 
+(use-package lsp-mode
+  :hook
+  (lsp-mode . (lambda ()
+                (setq lsp-graphql-target-file-extensions ()))))
+
 (use-package spacious-padding
   :config
   (setq spacious-padding-widths
@@ -34,13 +39,14 @@
   (set-company-backend! 'org-mode nil)
   (setq company-idle-delay 1))
 
-(use-package nerd-icons-dired
+'(use-package nerd-icons-dired
   :hook
   (dired-mode . nerd-icons-dired-mode))
 
 (use-package nerd-icons-ibuffer
   :ensure t
   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
+
 
 (use-package dired
   :commands (dired dired-jump)
@@ -60,17 +66,34 @@
     '(setq dired-omit-files "\\|^\\.[^.]")
     '(setq dired-omit-files
       (concat dired-omit-files "\\|^\\.[^.]"))
+
     (add-hook 'dired-mode-hook
               (lambda ()
+                ;; (setq dirvish-hide-details t)
+                ;; (dired-hide-details-mode 1)
+                ;; (diredfl-mode nil)
                 (dired-omit-mode)
-                (dired-hide-details-mode)
-                (nerd-icons-dired-mode)
+                ;; (nerd-icons-dired-mode)
                 (dired-sort-toggle-or-edit)))))
+
+(use-package dirvish
+  :config
+  (setq dirvish-hide-details t))
+
+
 
 (use-package dired-sidebar
   :config
   (add-hook 'dired-sidebar-mode-hook
             'nerd-icons-dired-mode))
+
+(use-package! vterm
+  :config
+  (add-hook 'vterm-mode-hook
+            (lambda ()
+              (setq-local mode-line-format
+                          (default-value 'mode-line-format)))))
+
 
 (use-package consult
   :config

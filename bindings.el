@@ -1,14 +1,59 @@
 ;;; bindings.el -*- lexical-binding: t; -*- :emacs: :emacs:
 
-
 (map! "H-C-`" #'+popup/toggle
       "s-f" #'find-file
-      "s-d" #'dired-jump
-      "s-w" #'ace-window
+      "s-d" #'dirvish-dwim
+
+      ;; `s-w' windows
+      :desc "delete" "s-w d" #'evil-window-delete
+      :desc "kill buffer & window" "s-w C-d" #'kill-buffer-and-window
+      ;; moving
+      :desc "move left" "s-w h" #'windmove-left
+      :desc "move right" "s-w l" #'windmove-right
+      :desc "move down" "s-w j" #'windmove-down
+      :desc "move up" "s-w k" #'windmove-up
+      ;; splitting
+      :desc "split down" "s-w C-j" (lambda () (interactive) (evil-window-split) (windmove-down))
+      :desc "split right" "s-w C-l" (lambda () (interactive) (evil-window-vsplit) (windmove-right))
+      :desc "split up" "s-w C-h" #'evil-window-vsplit
+      :desc "split left" "s-w C-k" #'evil-window-split
+      ;; swapping
+      :desc "swap up" "s-w K" #'+evil/window-move-up
+      :desc "swap right" "s-w L" #'+evil/window-move-right
+      :desc "swap left" "s-w H" #'+evil/window-move-left
+      :desc "swap down" "s-w J" #'+evil/window-move-down
+      ;; where am I
+      :desc "flash current position" "s-w s-w" #'+nav-flash/blink-cursor
+
+
+      ;; `s-p' project
+      :desc "switch persp" "s-p s-p" #'persp-switch
+      :desc "project buffers" "s-p p" #'projectile-ibuffer
+      :desc "find file" "s-p f" #'projectile-find-file
+      :desc "recent file" "s-p r" #'projectile-recentf
+      :desc "add buffer" "s-p a" #'persp-add-buffer
+      :desc "search in project" "s-p s" #'+default/search-project
+      :desc "kill buffer" "s-p k" #'persp-kill-buffer
+      :desc "remove buffer" "s-p d" #'persp-remove-buffer
+      :desc "project dired" "s-p s-d" #'project-dired
+
+      ;; `s-i' help
+      :desc "doom help menu" "s-i s-i" help-map
+      :desc "describe function" "s-i f" #'helpful-callable
+      :desc "describe variable" "s-i v" #'helpful-variable
+      :desc "describe symbol" "s-i o" #'describe-symbol
+      :desc "describe command" "s-i x" #'helpful-command
+      :desc "describe key" "s-i k" #'helpful-key
+      :desc "describe mode" "s-i m" #'describe-mode
+      :desc "describe active minor mode" "s-i M" #'doom/describe-active-minor-mode
+
+
+
 
       "s-b" #'ibuffer
       "s-B" #'projectile-ibuffer
-      "s-j" #'consult-buffer
+      "s-j" #'+vertico/switch-workspace-buffer
+      "s-J" #'consult-buffer
       "s-k" #'ibuffer
 
       "s-C-s" #'dired-sidebar-toggle-sidebar
@@ -67,7 +112,12 @@
 ;; gptel
 (map! :ni "s-g b" #'gptel
       :ni "s-g n" #'pb-gptel_new-session-above
-      :ni "s-g g" #'gptel-menu)
+      :ni "s-g g" #'gptel-menu
+      :ni "s-? i" #'pb-gptel_current-buffer-request-inlined
+      :ni "s-? r" #'pb-gptel_current-buffer-request-replace
+      :ni "s-? b" #'pb-gptel_current-buffer-request-new-buffer)
+
+
 
 (map! :leader
 
@@ -161,7 +211,8 @@
 
       (:map symex-mode-map
        :n "s-e" (lambda () (interactive) (symex-goto-lowest) (symex-evaluate 1))
-       :n "s-i" #'cider-inspect-last-result)
+       ;; :n "s-i" #'cider-inspect-last-result
+       )
 
       (:map emacs-lisp-mode-map
        :i "C-p" #'pb-elisp_insert-package-prefix
@@ -178,7 +229,9 @@
 
       (:map cider-mode-map
        :n "ö" (lambda () (interactive) (save-buffer) (cider-load-buffer))
-       :n "s-r" (lambda () (interactive) (save-buffer) (cider-ns-refresh)))
+       :n "s-r" (lambda () (interactive) (save-buffer) (cider-ns-refresh))
+       :n "C-s-r" (lambda () (interactive) (save-buffer) (call-interactively #'cider-jack-in-clj))
+       :n "C-s-R" (lambda () (interactive) (save-buffer) (call-interactively #'cider-jack-in-cljs)))
 
       (:map reapl-mode-map
        :i "TAB" #'reapl-mode_complete)

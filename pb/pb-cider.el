@@ -20,5 +20,14 @@ The `current-buffer' has to be a buffer recognized by cider for this to work,"
                           nil nil
                           (cider--nrepl-pr-request-map)))
 
+(defun pb-cider_kill-dead-buffers ()
+  "Kill all dead cider repl buffers."
+  (princ "killing dead cider repl buffers")
+  (dolist (buffer (buffer-list))
+    (when (and (buffer-live-p buffer)
+               (string-match-p "^\\*cider-repl" (buffer-name buffer))
+               (not (process-live-p (get-buffer-process buffer))))
+      (kill-buffer buffer))))
+
 (provide 'pb-cider)
 ;;; pb-cider.el ends here.

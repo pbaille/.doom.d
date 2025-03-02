@@ -10,7 +10,11 @@
       evil-insert-state-cursor '(bar "#09f7a0") ;; green
       evil-visual-state-cursor '(hollow "#f09383")) ;; orange
 
-(load-theme 'doom-horizon-tweaked t)
+(use-package doom-themes
+  :ensure t
+  :config
+  (load-theme 'doom-horizon-tweaked t)
+  (setq doom-theme 'doom-horizon-tweaked))
 
 (progn :remove-magic-paren
        (turn-off-show-smartparens-mode)

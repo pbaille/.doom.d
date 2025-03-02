@@ -31,7 +31,7 @@
   :recipe (:local-repo "/Users/pierrebaille/Code/forks/modus-themes"
            :files ("*.el")))
 (package! dired-sidebar)
-(package! nerd-icons-dired)
+;; (package! nerd-icons-dired)
 (package! spacious-padding)
 (package! nerd-icons-ibuffer) ;; replace keywords or regular expression with SVG tags.
 
@@ -77,6 +77,9 @@
 (package! ligature)
 
 (package! gleam-ts-mode)
+
+;; (package! diredfl :disable t)
+;; (package! dired+)
 
 (progn :not-used
        '(package! codeium
