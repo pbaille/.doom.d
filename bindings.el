@@ -47,6 +47,14 @@
       :desc "describe mode" "s-i m" #'describe-mode
       :desc "describe active minor mode" "s-i M" #'doom/describe-active-minor-mode
 
+      ;; `s-q' LLMs
+      :desc "gptel" "s-q s-q" #'gptel
+      :desc "new session above" "s-q n" #'pb-gptel_new-session-above
+      :desc "gptel menu" "s-q m" #'gptel-menu
+      :desc "XP request insert" "s-q b i" #'pb-gptel_current-buffer-request-inlined
+      :desc "XP request replace" "s-q b r" #'pb-gptel_current-buffer-request-replace
+      :desc "XP request to new buffer" "s-q b b" #'pb-gptel_current-buffer-request-new-buffer
+
 
 
 
@@ -109,13 +117,10 @@
 (map! :n "g f" #'dired-sidebar-jump-to-sidebar
       :n "g b" #'pb-ibuffer_sidebar-focus)
 
-;; gptel
+;; gptel TODO remove when new `s-q' is learnt
 (map! :ni "s-g b" #'gptel
       :ni "s-g n" #'pb-gptel_new-session-above
-      :ni "s-g g" #'gptel-menu
-      :ni "s-? i" #'pb-gptel_current-buffer-request-inlined
-      :ni "s-? r" #'pb-gptel_current-buffer-request-replace
-      :ni "s-? b" #'pb-gptel_current-buffer-request-new-buffer)
+      :ni "s-g g" #'gptel-menu)
 
 
 

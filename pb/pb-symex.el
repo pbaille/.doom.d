@@ -252,6 +252,32 @@ If inside string or comment, toggle insert state."
 (defun pb-symex_current-as-string ()
   (buffer-substring-no-properties (point) (symex--get-end-point 1)))
 
+(defun pb-symex_yank-from-ring ()
+  "Replace current symex using consult-yank-from-kill-ring"
+  (interactive)
+  (evil-insert-state)
+  (call-interactively #'consult-yank-from-kill-ring)
+  (pb-symex_escape-insert-mode)
+  (symex-tidy))
+
+(defun pb-symex_ring-replace ()
+  "Replace current symex using consult-yank-from-kill-ring"
+  (interactive)
+  (undo-boundary)
+  (symex-change 1)
+  (pb-symex_yank-from-ring))
+
+(defun pb-symex_ring-append ()
+  "Replace current symex using consult-yank-from-kill-ring"
+  (interactive)
+  (symex-append-after)
+  (pb-symex_yank-from-ring))
+
+(defun pb-symex_ring-prepend ()
+  "Replace current symex using consult-yank-from-kill-ring"
+  (interactive)
+  (symex-insert-before)
+  (pb-symex_yank-from-ring))
 
 (provide 'pb-symex)
 ;;; pb-symex.el ends here.

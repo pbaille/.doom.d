@@ -108,7 +108,7 @@
 
         '(("s-r" . symex-repl)
           ("s-R" . query-replace)
-          ; ("C-d" . +lookup/documentation )
+                                        ; ("C-d" . +lookup/documentation )
           ("g d" . pb-symex_lookup-definition)
           ("g r" . pb-symex_lookup-references)
           ("g h" . recenter)
@@ -134,6 +134,14 @@
 
           ("}" . symex-wrap-curly)
           ("{" . symex-create-curly)
+
+          ("R" . pb-symex_ring-replace)
+          ("C-p" . pb-symex_ring-append)
+          ("C-P" . pb-symex_ring-prepend)
+
+          ;; llm
+          ("q r" . pb-gptel_current-symex-request-replace)
+          ("q f" . pb-gptel_fill-holes)
 
           ;; non structural nav
           ("F" . pb-misc_goto-next-opening-delimiter)
@@ -174,9 +182,6 @@
           (";" . pb-symex_toggle-comment)))
 
   (symex-initialize)
-
-  (add-hook 'evil-symex-state-entry-hook
-            (lambda () (hl-line-mode 0)))
 
   (add-hook 'evil-symex-state-exit-hook
             (lambda () (hl-line-mode 1)))

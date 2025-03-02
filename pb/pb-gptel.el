@@ -108,6 +108,12 @@ The GPT response will be inserted at the current cursor position."
          (pb-gptel_mk-prompt content)
          options))
 
+(defun pb-gptel_replace-current-symex-request-callback (res info)
+  (symex-change 1)
+  (insert res)
+  (symex-mode-interface)
+  (symex-tidy))
+
 (defun pb-gptel_fill-holes ()
   ""
   (interactive)
@@ -126,10 +132,7 @@ The GPT response will be inserted at the current cursor position."
            :expression (pb-symex_current-as-string)))
 
    (km :callback
-       (lambda (res info)
-         (symex-change 1)
-         (insert res)
-         (symex-mode-interface)))))
+       #'pb-gptel_replace-current-symex-request-callback)))
 
 (defun pb-gptel_current-symex-request-replace ()
   ""
@@ -150,24 +153,7 @@ The GPT response will be inserted at the current cursor position."
             :expression (pb-symex_current-as-string)))
 
     (km :callback
-        (lambda (res info)
-          (symex-change 1)
-          (insert res)
-          (symex-mode-interface))))))
-
-'(= 3 (+ 1 __))
-
-(defun pb-gptel_current-symex-request-replace ()
-  "Send the current symex to GPT with user-provided instructions.
-Prompts for instructions, then sends the current symex as context to GPT.
-The GPT response will replace the current symex."
-  (interactive)
-  (let* ((instructions (read-string "Instruction for GPT: "))
-         (symex-str (pb-symex_current-as-string)))
-    (gptel-request (pb-gptel_km->prompt-str
-                    (km :code symex-str
-                        :base-instructions "Rewrite or complete the given `code' according to `user-instructions'"
-                        :user-instructions instructions)))))
+        #'pb-gptel_replace-current-symex-request-callback))))
 
 (defun pb-gptel_current-buffer-request-replace ()
   "Replace buffer contents with GPT's response to user instructions.
@@ -199,9 +185,7 @@ This is useful for code refactoring or complete file transformations."
         (when response
           (save-excursion
             (erase-buffer)
-            (insert response)))))))
-
-
+            )
 
 (defun pb-gptel_current-buffer-request-new-buffer ()
   "Send the current buffer to GPT with user-provided instructions.
@@ -228,10 +212,10 @@ as the current buffer."
                                  (file-name-base (buffer-file-name)))))
          (gptel-max-tokens 10000))
     (gptel-request (concat file-context
-                          "\n\n"
-                          syntax-info
-                          "\n\n"
-                          instructions)
+                           "\n\n"
+                           syntax-info
+                           "\n\n"
+                           instructions)
       :callback
       (lambda (response info)
         (when response
