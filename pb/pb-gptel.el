@@ -102,84 +102,84 @@
           (pb-gptel_mk-prompt content)
           options))
 
+(defvar pb-gptel_request-tree
+  (km :lisp "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+      :code (concat "Your response should be valid code, intended to replace the current expression in a source code file.\n"
+                    "Don't use markdown code block syntax or any non-valid code in your output.")
+      :fill "Complete the holes (denoted by __) in the given expression, do not change anything else!"))
+
  (defun pb-gptel_replace-current-symex-request-callback (res info)
    (symex-change 1)
    (insert res)
    (symex-mode-interface)
    (symex-tidy))
 
- (defun pb-gptel_fill-holes ()
-   ""
-   (interactive)
-   (pb-gptel_request
+(defun pb-gptel_current-symex-request-replace (&optional instruction)
+  "Request GPT to modify the current symbolic expression based on provided instruction.
+When called interactively, prompts for an instruction to guide the modification.
+If INSTRUCTION is provided as an argument, uses that instead of prompting.
+Uses the current expression context to send a formatted request to GPT,
+and replaces the current expression with GPT's response when received."
+  (interactive)
+  (unless instruction
+    (setq instruction (read-string "Edit current expression: ")))
+  (pb-gptel_request
 
-    (km :context
-        (km :editor "emacs"
-            :buffer-name (buffer-file-name)
-            :major-mode (symbol-name major-mode)
-            :file-content (buffer-substring (point-min) (point-max)))
-        :instructions
-        (km :base "You are a usefull code assistant, you really like lisp like languages and you know how to balance parenthesis correctly."
-            :response-format ["Your response should be valid code, intended to be inserted in source code file."
-                              "Don't use markdown code block syntax or any non valid code in your output."]
-            :task "Complete the holes (denoted by __) in the given expression, do not change anything else!"
-            :expression (pb-symex_current-as-string)))
+   (km :context
+       (km :editor "emacs"
+           :buffer-name (buffer-file-name)
+           :major-mode (symbol-name major-mode)
+           :file-content (buffer-substring (point-min) (point-max)))
+       :instructions
+       (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+           :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
+                             "Don't use markdown code block syntax or any non-valid code in your output."]
+           :task instruction
+           :expression (pb-symex_current-as-string)))
 
-    (km :callback
-        #'pb-gptel_replace-current-symex-request-callback)))
+   (km :callback
+       #'pb-gptel_replace-current-symex-request-callback)))
 
- (defun pb-gptel_current-symex-request-replace ()
-   ""
-   (interactive)
-   (let ((instruction (read-string "Edit current expression: ")))
-     (pb-gptel_request
+(= 5 (+ 3 2))
 
-      (km :context
-          (km :editor "emacs"
-              :buffer-name (buffer-file-name)
-              :major-mode (symbol-name major-mode)
-              :file-content (buffer-substring (point-min) (point-max)))
-          :instructions
-          (km :base "You are a usefull code assistant, you really like lisp like languages and you know how to balance parenthesis correctly."
-              :response-format ["Your response should be valid code, intended to replace the current expression in source code file."
-                                "Don't use markdown code block syntax or any non valid code in your output."]
-              :task instruction
-              :expression (pb-symex_current-as-string)))
+(defun pb-gptel_fill-holes ()
+  ""
+  (interactive)
+  (pb-gptel_current-symex-request-replace
+   "Complete the holes (denoted by __) in the given expression, do not change anything else!"))
 
-      (km :callback
-          #'pb-gptel_replace-current-symex-request-callback))))
 
- (defun pb-gptel_current-buffer-request-replace ()
-   "Replace buffer contents with GPT's response to user instructions.
+(defun pb-gptel_current-buffer-request-replace ()
+  "Replace buffer contents with GPT's response to user instructions.
  Prompts for instructions, sends the current buffer as context to GPT,
  and replaces the entire buffer content with GPT's response.
  This is useful for code refactoring or complete file transformations."
-   (interactive)
-   (let* ((instruction (read-string "Instruction for GPT: "))
-          (syntax-info (format (concat "SYNTAX_INSTRUCTIONS_START\n\n Format your response as valid code that will replace the content of CURRENT_FILE which has extension %s and is in %s mode."
-                                       "\nDo not use markdown code blocks, just pure valid code for the CURRENT_FILE."
-                                       "\n\nSYNTAX_INSTRUCTIONS_END")
-                               (file-name-extension (buffer-file-name) t)
-                               (symbol-name major-mode)))
-          (file-context (concat "CURRENT_FILE_START\n\n"
-                                (buffer-string)
-                                "\n\nCURRENT_FILE_END\n\n"))
-          (instructions (concat "\n\nMAIN_INSTRUCTIONS_START\n\n"
-                                instruction
-                                "\n\nMAIN_INSTRUCTIONS_END\n\n"))
-          (gptel-max-tokens 10000))
+  (interactive)
+  (let* ((instruction (read-string "Instruction for GPT: "))
+         (syntax-info (format (concat "SYNTAX_INSTRUCTIONS_START\n\n Format your response as valid code that will replace the content of CURRENT_FILE which has extension %s and is in %s mode."
+                                      "\nDo not use markdown code blocks, just pure valid code for the CURRENT_FILE."
+                                      "\n\nSYNTAX_INSTRUCTIONS_END")
+                              (file-name-extension (buffer-file-name) t)
+                              (symbol-name major-mode)))
+         (file-context (concat "CURRENT_FILE_START\n\n"
+                               (buffer-string)
+                               "\n\nCURRENT_FILE_END\n\n"))
+         (instructions (concat "\n\nMAIN_INSTRUCTIONS_START\n\n"
+                               instruction
+                               "\n\nMAIN_INSTRUCTIONS_END\n\n"))
+         (gptel-max-tokens 10000))
 
-     (gptel-request (concat file-context
-                            "\n\n"
-                            syntax-info
-                            "\n\n"
-                            instructions)
-       :callback
-       (lambda (response info)
-         (when response
-           (save-excursion
-             (erase-buffer)
-             (insert response)))))))
+    (gptel-request (concat file-context
+                           "\n\n"
+                           syntax-info
+                           "\n\n"
+                           instructions)
+      :callback
+      (lambda (response info)
+        (when response
+          (save-excursion
+            (erase-buffer)
+            (insert response)))))))
 
  (defun pb-gptel_current-buffer-request-new-buffer ()
    "Send the current buffer to GPT with user-provided instructions.

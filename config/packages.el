@@ -212,7 +212,7 @@
   (setq gptel-default-mode 'org-mode)
   (setq gptel-use-header-line nil)
   ;; bindings
-  (setq-default gptel-model "gpt-4o")
+  (setq-default gptel-model "claude-3-7-sonnet-20250219")
   ;; the only way I found for redefining the broken RET key of the menu to C-RET
   ;; the problem is that gptel-menu is autoloaded,
   ;; it has to be called once before the rebinding is possible.
