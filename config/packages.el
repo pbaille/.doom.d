@@ -21,6 +21,8 @@
   (lsp-mode . (lambda ()
                 (setq lsp-graphql-target-file-extensions ()))))
 
+(use-package lsp-modeline)
+
 (use-package spacious-padding
   :config
   (setq spacious-padding-widths
