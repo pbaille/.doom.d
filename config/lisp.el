@@ -116,21 +116,23 @@
           ;; nav
           ("M-k" . scroll-up-with-cursor) ;; symex-goto-lowest
           ("M-j" . scroll-down-with-cursor) ;; symex-goto-highest
+          ("h" . symex-go-backward)
+          ("l" . symex-go-forward)
           ("j" . pb-symex_go-up)
           ("k" . symex-go-down)
-          ("J" . symex-join-lines)
-          ("K" . pb-symex_go-down-folding)
 
-          ;; yank
-          ("Y" . consult-yank-from-kill-ring)
+          ;; move current symex
+          ("J" . pb-symex_wrap)
+          ("K" . pb-symex_raise)
 
           ;; edit
           ("r" . paredit-raise-sexp)
-          ("x" . symex-delete)
+          ("x" . pb-symex_delete)
           ("u" . pb-symex_undo)
           ("R" . pb-symex_replace)
           ("-" . sp-unwrap-sexp)
           ("s" . sp-unwrap-sexp)
+          ("x" . pb-symex_delete)
 
           ("}" . symex-wrap-curly)
           ("{" . symex-create-curly)
@@ -146,8 +148,6 @@
           ;; non structural nav
           ("F" . pb-misc_goto-next-opening-delimiter)
           ("B" . pb-misc_goto-prev-opening-delimiter)
-          ("h" . symex-go-backward)
-          ("l" . symex-go-forward)
           ;; ("h" . pb-symex_bw)
           ;; ("l" . pb-symex_fw)
           ("C-k" . pb-symex_previous-line) ;; replace symex-descend-branch

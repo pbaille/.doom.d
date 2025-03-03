@@ -279,5 +279,26 @@ If inside string or comment, toggle insert state."
   (symex-insert-before)
   (pb-symex_yank-from-ring))
 
+(defun pb-symex_wrap ()
+  (interactive)
+  (symex-wrap)
+  (pb-symex_escape-insert-mode))
+
+(defun pb-symex_raise ()
+  (interactive)
+  (paredit-raise-sexp)
+  (symex--update-overlay))
+
+(defun pb-symex_delete ()
+  (interactive)
+  ;; this is taking care of deleting the last symex without poping selection to parent symex
+  ;; (going to previous symex instead)
+  (if (and (symex--point-at-last-symex-p)
+           (not (symex--point-at-first-symex-p)))
+      (progn (symex-delete 1)
+             (symex-go-up 1)
+             (symex-goto-last))
+    (symex-delete 1)))
+
 (provide 'pb-symex)
 ;;; pb-symex.el ends here.
