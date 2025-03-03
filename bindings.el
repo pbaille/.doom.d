@@ -36,6 +36,7 @@
       :desc "kill buffer" "s-p k" #'persp-kill-buffer
       :desc "remove buffer" "s-p d" #'persp-remove-buffer
       :desc "project dired" "s-p s-d" #'project-dired
+      :desc "kill presp" "s-p s-k" #'+workspace/kill
 
       ;; `s-i' help
       :desc "doom help menu" "s-i s-i" help-map
