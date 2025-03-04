@@ -88,25 +88,52 @@
                           (cond
                            ((stringp val) val)
                            ((km? val) (pb-gptel_mk-prompt val))
+                           ((functionp val) (pb-gptel_mk-prompt (funcall val)))
                            ((listp val) (prin1-to-string val))
                            ((vectorp val) (mapconcat #'identity val "\n")))
                           "\n</" key-str ">")))
               (km_entries pl)
               "\n\n"))
 
-
- (defun pb-gptel_request (content options)
-   ""
-   (interactive)
-   (apply #'gptel-request
-          (pb-gptel_mk-prompt content)
-          options))
+(defun pb-gptel_request (content options)
+  ""
+  (interactive)
+  (apply #'gptel-request
+         (pb-gptel_mk-prompt content)
+         options))
 
 (defvar pb-gptel_request-tree
   (km :lisp "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+      :clj "You are a Clojure expert who understands functional programming concepts and persistent data structures."
+      :cljs "You are a ClojureScript expert who understands both Clojure concepts and JavaScript interoperability. You're familiar with the React paradigm and modern frontend development patterns."
+      :refactor "You are a code refactoring expert. Improve the given code while preserving its functionality. Focus on clarity, efficiency, and maintainability."
+      :fix "Change the parts surrounded by angle brackets ex: <CONTENT_TO_CHANGE> -> CONTENT_CHANGED"
       :code (concat "Your response should be valid code, intended to replace the current expression in a source code file.\n"
                     "Don't use markdown code block syntax or any non-valid code in your output.")
-      :fill "Complete the holes (denoted by __) in the given expression, do not change anything else!"))
+      :fill "Complete the holes (denoted by __) in the given expression, do not change anything else!"
+      :emacs (km :write-defun "Write an Emacs Lisp function with proper documentation, error handling, and optional interactive capabilities. Follow Emacs conventions for naming and structure.")
+      :buffer (lambda ()
+                (km :editor "emacs"
+                    :buffer-name (buffer-file-name)
+                    :major-mode (symbol-name major-mode)
+                    :file-content (buffer-substring-no-properties (point-min) (point-max))))))
+
+(defun pb-gptel_select-paths (prompt m)
+  (interactive)
+  (let* ((path-strs (mapcar (lambda (p)
+                              (intern (mapconcat #'pb_keyword-name (car p) ".")))
+                            (km_all-paths m))))
+    (mapcar (lambda (k)
+              (mapcar #'intern
+                      (mapcar (lambda (s) (concat ":" s))
+                              (split-string k "\\."))))
+            (completing-read-multiple prompt path-strs))))
+
+(defun pb-gptel_sub-request-tree ()
+  (interactive)
+  (let* ((selected-paths (pb-gptel_select-paths "Select request-tree paths:" pb-gptel_request-tree)))
+    (pb-gptel_mk-prompt
+     (km_select-paths* pb-gptel_request-tree selected-paths))))
 
  (defun pb-gptel_replace-current-symex-request-callback (res info)
    (symex-change 1)
@@ -139,8 +166,6 @@ and replaces the current expression with GPT's response when received."
 
    (km :callback
        #'pb-gptel_replace-current-symex-request-callback)))
-
-(= 5 (+ 3 2))
 
 (defun pb-gptel_fill-holes ()
   ""
