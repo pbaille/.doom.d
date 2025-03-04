@@ -155,6 +155,9 @@ in this case V is added at the end of the LST."
         (equal (sq_drop (list 1 2 3 4) 2)
                (list 3 4))
 
+        (equal (sq_drop (list 1 2 3 4) 10)
+               (list))
+
         (equal (sq_drop (list 1 2 3 4) 0)
                (list 1 2 3 4))
 
