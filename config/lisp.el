@@ -122,12 +122,13 @@
           ("k" . symex-go-down)
 
           ;; move current symex
-          ("J" . pb-symex_wrap)
+          ("J" . symex-join-lines ;; pb-symex_wrap
+           )
           ("K" . pb-symex_raise)
 
           ;; edit
           ("r" . paredit-raise-sexp)
-          ("x" . pb-symex_delete)
+          ("x" . symex-delete)
           ("u" . pb-symex_undo)
           ("R" . pb-symex_replace)
           ("-" . sp-unwrap-sexp)
