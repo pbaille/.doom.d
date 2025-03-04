@@ -148,6 +148,17 @@ XS is a list alternating paths and update-fns."
              (km_entries m)
              :initial-value ()))
 
+(defun km_select-paths* (m paths)
+  "aggregate all given PATHS with their corresponding value in M."
+  (let* ((path-value-pairs (mapcar (lambda (path) (cons path (km_get m path))) paths)))
+    ;; (print path-value-pairs)
+    (cl-reduce (pb_fn (m (cons k v)) (km_put m k v)) path-value-pairs
+               :initial-value ())))
+
+(defun km_select-paths (m &rest paths)
+  "aggregate all given PATHS with their corresponding value in M."
+  (km_select-paths m paths))
+
 (defmacro km_let (binding &rest body)
   "Let binding for keyword maps.
 BINDING specifies variables to be bound from a keyword map,
