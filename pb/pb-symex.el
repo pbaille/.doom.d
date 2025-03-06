@@ -289,16 +289,20 @@ If inside string or comment, toggle insert state."
   (paredit-raise-sexp)
   (symex--update-overlay))
 
-(defun pb-symex_delete ()
-  (interactive)
+(defun pb-symex_delete (&optional count)
+  (interactive "p")
   ;; this is taking care of deleting the last symex without poping selection to parent symex
   ;; (going to previous symex instead)
-  (if (and (symex--point-at-last-symex-p)
-           (not (symex--point-at-first-symex-p)))
-      (progn (symex-delete 1)
-             (symex-go-up 1)
-             (symex-goto-last))
-    (symex-delete 1)))
+  (let ((count (or count 1)))
+    (if (and (symex--point-at-last-symex-p)
+             (not (symex--point-at-first-symex-p)))
+        (progn (symex-delete count)
+               (symex-go-up 1)
+               (symex-goto-last))
+      (symex-delete count))))
+
+(quote
+ (a))
 
 (provide 'pb-symex)
 ;;; pb-symex.el ends here.
