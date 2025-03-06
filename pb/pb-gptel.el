@@ -102,6 +102,7 @@
          (pb-gptel_mk-prompt content)
          options))
 
+
 (defvar pb-gptel_request-tree
   (km :lisp "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
       :clj "You are a Clojure expert who understands functional programming concepts and persistent data structures."
@@ -112,13 +113,16 @@
                     "Don't use markdown code block syntax or any non-valid code in your output.")
       :fill "Complete the holes (denoted by __) in the given expression, do not change anything else!"
       :emacs (km :write-defun "Write an Emacs Lisp function with proper documentation, error handling, and optional interactive capabilities. Follow Emacs conventions for naming and structure.")
-      :buffer (lambda ()
-                (km :editor "emacs"
-                    :buffer-name (buffer-file-name)
-                    :major-mode (symbol-name major-mode)
-                    :file-content (buffer-substring-no-properties (point-min) (point-max))))))
+      :code-context (lambda ()
+                      (km :editor "emacs"
+                          :buffer-name (buffer-file-name)
+                          :major-mode (symbol-name major-mode)
+                          :file-content (buffer-substring-no-properties (point-min) (point-max))
+                          :current-expression (pb-symex_current-as-string)))
+      :task (lambda ()
+              (read-string "main task: "))))
 
-(defun pb-gptel_select-paths (prompt m)
+(defun pb-gptel_simple-select-paths (prompt m)
   (interactive)
   (let* ((path-strs (mapcar (lambda (p)
                               (intern (mapconcat #'pb_keyword-name (car p) ".")))
@@ -129,17 +133,68 @@
                               (split-string k "\\."))))
             (completing-read-multiple prompt path-strs))))
 
+(seq-reduce (pb_fn [result path]
+                   (km_put result path "io"))
+            (mapcar #'car (km_all-paths pb-gptel_request-tree))
+            ())
+
+
+(defun pb-gptel_select-paths (prompt m)
+  "Select paths from a map M using PROMPT with aligned annotations.
+Provides completion with vertically aligned hints showing each path's content."
+  (interactive)
+  (let* ((flatten-tree
+          (seq-reduce (pb_fn [m (cons path content)]
+                             (km_put m
+                                     (pb_keyword (mapconcat #'pb_keyword-name path "."))
+                                     (pb_if
+                                      (stringp content) (truncate-string-to-width content 100 nil nil "...")
+                                      (functionp content) "#<function>"
+                                      (listp content) "#<plist>"
+                                      (format "%s" content))))
+                      (km_all-paths m)
+                      ()))
+         (completion-extra-properties
+          (km :affixation-function
+              (lambda (candidates)
+                (let ((max-len (apply #'max (mapcar #'length candidates))))
+                  (mapcar (lambda (cand)
+                            ;; (print cand)
+                            (let ((content (km_get flatten-tree (intern cand))))
+                              (list cand
+                                    ""
+                                    (when content
+                                      (concat (make-string (- max-len (length cand) -2) ?\s)
+                                              (propertize content 'face 'font-lock-comment-face))))))
+                          candidates))))))
+    (mapcar (lambda (k)
+              (mapcar #'pb_keyword
+                      (split-string (substring k 1) "\\.")))
+            (completing-read-multiple prompt (km_keys flatten-tree)))))
+
 (defun pb-gptel_sub-request-tree ()
   (interactive)
-  (let* ((selected-paths (pb-gptel_select-paths "Select request-tree paths:" pb-gptel_request-tree)))
-    (pb-gptel_mk-prompt
-     (km_select-paths* pb-gptel_request-tree selected-paths))))
+  (let* ((selected-paths (pb-gptel_select-paths "Select request-tree paths: " pb-gptel_request-tree)))
+    (km_select-paths* pb-gptel_request-tree selected-paths)))
 
- (defun pb-gptel_replace-current-symex-request-callback (res info)
-   (symex-change 1)
-   (insert res)
-   (symex-mode-interface)
-   (symex-tidy))
+(defun pb-gptel_interactive-request ()
+  (interactive)
+  (pb-gptel_request (pb-gptel_sub-request-tree)
+                    (km :callback
+                        (lambda (res info)
+                          (let ((result-buffer (generate-new-buffer "*GPT Response*")))
+                            (with-current-buffer result-buffer
+                              (insert res)
+                              (goto-char (point-min))
+                              (when (fboundp 'org-mode)
+                                (org-mode)))
+                            (switch-to-buffer result-buffer))))))
+
+(defun pb-gptel_replace-current-symex-request-callback (res info)
+  (symex-change 1)
+  (insert res)
+  (symex-mode-interface)
+  (symex-tidy))
 
 (defun pb-gptel_current-symex-request-replace (&optional instruction)
   "Request GPT to modify the current symbolic expression based on provided instruction.
