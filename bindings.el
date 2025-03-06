@@ -37,7 +37,8 @@
  :desc "new persp" "s-p n" #'+workspace/new-named
 
  ;; `s-i' info/help
- :desc "doom help menu" "s-i s-i" help-map
+ :desc "doom help menu" "s-i h" help-map
+ :desc "imenu" "s-i s-i" #'consult-imenu
  :desc "describe function" "s-i f" #'helpful-callable
  :desc "describe variable" "s-i v" #'helpful-variable
  :desc "describe symbol" "s-i o" #'describe-symbol
