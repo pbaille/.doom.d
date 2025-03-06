@@ -13,10 +13,16 @@
 
 (require 'symex)
 
+
 (defun pb-symex_escape-insert-mode ()
+  "Exit evil insert state and enter symex mode.
+Adjust cursor position for better navigation when exiting near word boundaries."
   (interactive)
   (evil-normal-state)
   (forward-char)
+  (if (and (not (looking-at "\\w"))
+           (looking-back "\\w" 1))
+      (backward-char))
   (symex-mode-interface))
 
 (defun pb-symex_click ()
@@ -302,7 +308,8 @@ If inside string or comment, toggle insert state."
       (symex-delete count))))
 
 (quote
- (a))
+ (a)
+ (wer er))
 
 (provide 'pb-symex)
 ;;; pb-symex.el ends here.

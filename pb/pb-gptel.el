@@ -102,7 +102,6 @@
          (pb-gptel_mk-prompt content)
          options))
 
-
 (defvar pb-gptel_request-tree
   (km :lisp "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
       :clj "You are a Clojure expert who understands functional programming concepts and persistent data structures."
