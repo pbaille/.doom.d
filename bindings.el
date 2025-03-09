@@ -50,10 +50,15 @@
  ;; `s-q' LLMs
  :desc "gptel" "s-q s-q" #'gptel
  :desc "new session above" "s-q n" #'pb-gptel_new-session-above
+ :desc "interactive request" "s-q i" #'gptel-menu
  :desc "gptel menu" "s-q m" #'gptel-menu
- :desc "XP request insert" "s-q b i" #'pb-gptel_current-buffer-request-inlined
- :desc "XP request replace" "s-q b r" #'pb-gptel_current-buffer-request-replace
- :desc "XP request to new buffer" "s-q b b" #'pb-gptel_current-buffer-request-new-buffer)
+ :desc "add file to context" "s-q f" #'gptel-context-add-file
+ :desc "remove file from context" "s-q d" #'pb-gptel_remove-context-file
+ :desc "remove all context" "s-q D" #'gptel-context-remove-all
+ ;; :desc "XP request insert" "s-q b i" #'pb-gptel_current-buffer-request-inlined
+ ;; :desc "XP request replace" "s-q b r" #'pb-gptel_current-buffer-request-replace
+ ;; :desc "XP request to new buffer" "s-q b b" #'pb-gptel_current-buffer-request-new-buffer
+ )
 
 (map! "H-C-`" #'+popup/toggle
       "s-f" #'find-file
