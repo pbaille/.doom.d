@@ -61,6 +61,13 @@ Throws an error if XS does not form a valid keyword map."
   "Map F over values of M."
   (km_map m (lambda (e) (cons (car e) (funcall f (cdr e))))))
 
+(defun km_remove (m f)
+  "Remove all entries of M for which F return nil or false."
+  (let ((entries (km_entries m)))
+    (km_into
+     ()
+     (cl-remove-if-not f entries))))
+
 (defun km_keys (m)
   "Return the keys of the keyword map M."
   (and (km? m)
@@ -285,7 +292,12 @@ and BODY is the code to execute."
                '((:a . a) (:b . b) (:c . 34) (:d pouet) (:f . f)))
 
         '(equal (should-error (km_parse-free-form '((+ 1 2) :d (pouet))))
-               '(error "Invalid km free form args")))))
+          '(error "Invalid km free form args"))))
+
+  (cl-assert
+   (equal (km_remove (km :a 1 :b -1)
+                     (lambda (e) (> (cdr e) 0)))
+          '(:a 1))))
 
 (km_test)
 
