@@ -21,12 +21,17 @@
            (and (keywordp (car m))
                 (km? (cddr m))))))
 
-(defun km (&rest xs)
+(defun km* (xs)
   "Build a keyword map from XS.
 Throws an error if XS does not form a valid keyword map."
   (if (km? xs)
       xs
     (error (format "Bad argument to km: %s" xs))))
+
+(defun km (&rest xs)
+  "Build a keyword map from XS.
+Throws an error if XS does not form a valid keyword map."
+  (km* xs))
 
 (defun km_entries (m)
   "Return the entries of the keyword map M as pairs (key . value)."
@@ -61,12 +66,19 @@ Throws an error if XS does not form a valid keyword map."
   "Map F over values of M."
   (km_map m (lambda (e) (cons (car e) (funcall f (cdr e))))))
 
-(defun km_remove (m f)
+(defun km_filter (m f)
   "Remove all entries of M for which F return nil or false."
   (let ((entries (km_entries m)))
     (km_into
      ()
      (cl-remove-if-not f entries))))
+
+(defun km_remove (m f)
+  "Remove all entries of M for which F return truthy value."
+  (let ((entries (km_entries m)))
+    (km_into
+     ()
+     (cl-remove-if f entries))))
 
 (defun km_keys (m)
   "Return the keys of the keyword map M."
@@ -295,9 +307,14 @@ and BODY is the code to execute."
           '(error "Invalid km free form args"))))
 
   (cl-assert
+   (equal (km_filter (km :a 1 :b -1)
+                     (lambda (e) (> (cdr e) 0)))
+          '(:a 1)))
+
+  (cl-assert
    (equal (km_remove (km :a 1 :b -1)
                      (lambda (e) (> (cdr e) 0)))
-          '(:a 1))))
+          '(:b -1))))
 
 (km_test)
 
