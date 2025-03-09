@@ -104,6 +104,10 @@ using the _ placeholder to determine threaded value positioning."
              (list))
        ,ret)))
 
+(defmacro pb_comment (&rest _)
+  "A macro that always expands to nil."
+  ())
+
 (defun pb_test ()
   "Run some assertions about this file."
   (cl-assert
@@ -113,7 +117,8 @@ using the _ placeholder to determine threaded value positioning."
         (equal :foo-bar (pb_keyword "foo" "bar"))
         (equal 'foo-bar (pb_symbol "foo" "bar"))
         (equal :foo_bar (pb_join-keyword (list "foo" "bar") "_"))
-        (equal 'foo_bar (pb_join-symbol (list "foo" "bar") "_")))))
+        (equal 'foo_bar (pb_join-symbol (list "foo" "bar") "_"))
+        (not (pb_comment non sense)))))
 
 (pb_test)
 
