@@ -2,6 +2,8 @@
 
 ;;; Code
 
+;;; * constructor
+
 (defun pb-tree_node (value &rest children)
   (km :value value
       :children (km* children)))
@@ -17,6 +19,19 @@ BODY should be a node expression, which can contain nested node expressions."
                                   `(pb-tree ,(cadr val) ,@(cddr val))
                                 val))))
     `(pb-tree_node ,value ,@child-nodes)))
+
+;;; * accessors
+
+(defun pb-tree? (x)
+  (and (km? x)
+       (km_contains? x :value)
+       (km_contains? x :children)))
+
+(defun pb-tree_value (x)
+  (km_get x :value))
+
+(defun pb-tree_children (tree)
+  (km_get tree :children))
 
 (defun pb-tree_path (path)
   "Generate a path for traversing a tree structure.
@@ -41,15 +56,23 @@ Interleaves :children with elements of PATH to create the path."
 
 (defun pb-tree_get-path-values (tree path)
   "Traverse the TREE with PATH, accumulating intermediate values and returning a list of them."
-  (seq-reduce (pb_fn [(km :values values :tree tree) path-segment]
-                     (pb_if [sub-tree (pb-tree_get tree path-segment)]
-                            (km :values (cons (km_get tree :value)
-                                              values)
-                                :tree sub-tree)))
-              path
-              (km :values () :tree tree)))
-
-
+  (pb_if (not path)
+         (list (if (pb-tree? tree)
+                   (pb-tree_value tree)
+                 tree))
+         [(km_keys values tree)
+          (seq-reduce (pb_fn [(km_keys values tree) path-segment]
+                             (pb_if [sub-tree (pb-tree_get tree path-segment)]
+                                    (km :values (cons (km_get tree :value)
+                                                      values)
+                                        :tree sub-tree)))
+                      path
+                      (km :values () :tree tree))]
+         (seq-reverse
+          (cons (if (pb-tree? tree)
+                    (pb-tree_value tree)
+                  tree)
+                values))))
 
 ;;; Testing
 
@@ -88,29 +111,27 @@ structure and that the resulting tree structure matches the desired nested forma
        (:value "child2" :children
                (:grandchild-2-1 "foo2" :grandchild-2-2 "bar2"))))))
 
-  (let ((tree (pb-tree "root node"
-                       :child1 (node "child1"
-                                     :grandchild-1-1 "foo"
-                                     :grandchild-1-2 "bar")
-                       :child2 (node "child2"
-                                     :grandchild-2-1 "foo2"
-                                     :grandchild-2-2 "bar2"))))
-    (cl-assert
-     (equal
-      (pb-tree_get tree '(:child2 :grandchild-2-1))
-      "foo2"))
+  (cl-assert
+   (let ((tree (pb-tree "root node"
+                        :child1 (node "child1"
+                                      :grandchild-1-1 "foo"
+                                      :grandchild-1-2 "bar")
+                        :child2 (node "child2"
+                                      :grandchild-2-1 "foo2"
+                                      :grandchild-2-2 "bar2"))))
+     (and (equal
+           (pb-tree_get tree '(:child2 :grandchild-2-1))
+           "foo2")
 
-    (cl-assert
-     (equal
-      (pb-tree_get tree '(:child1))
-      (pb-tree "child1"
-               :grandchild-1-1 "foo"
-               :grandchild-1-2 "bar")))
+          (equal
+           (pb-tree_get tree '(:child1))
+           (pb-tree "child1"
+                    :grandchild-1-1 "foo"
+                    :grandchild-1-2 "bar"))
 
-    (cl-assert
-     (equal
-      (pb-tree_get tree ())
-      tree)))
+          (equal
+           (pb-tree_get tree ())
+           tree))))
 
   (cl-assert
    (let ((tree (pb-tree "root node"
@@ -122,12 +143,11 @@ structure and that the resulting tree structure matches the desired nested forma
                                       :grandchild-2-2 "bar2"))))
      (and
 
-      (equal (km :values () :tree tree)
+      (equal (list "root node")
              (pb-tree_get-path-values
               tree ()))
 
-      (equal (km :values (list "child1" "root node")
-                 :tree "foo")
+      (equal (list "root node" "child1" "foo")
              (pb-tree_get-path-values
               tree [:child1 :grandchild-1-1]))
 
