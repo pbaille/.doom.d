@@ -103,6 +103,14 @@ If AT is a list, get the value in a nested map."
         ((vectorp at) (km_get-in m (append at ())))
         ((keywordp at) (plist-get m at))))
 
+(defun km_contains? (m path)
+  "Return t if PATH exist in M."
+  (if (keywordp path)
+      (km_contains? m (list path))
+    (or (not path)
+        (and (plist-member m (car path))
+             (km_contains? (plist-get m (car path)) (cdr path))))))
+
 (defun km_put-in (m path v)
   "Associate PATH in the nested keyword map M with value V."
   (if path
@@ -236,6 +244,13 @@ and BODY is the code to execute."
         (not (or (km? (list :e 2 :d 4 90))
                  (km? 2)
                  (km? (list 4))))))
+
+  (cl-assert
+   (and (km_contains? () ())
+        (km_contains? (km :a (km :b 1 :c 2) :d 3) '(:a :b))
+        (not (km_contains? (km :a (km :b 1 :c 2) :d 3) '(:a :e)))
+        (km_contains? (km :a (km :b 1 :c 2) :d 3) '(:d))
+        (not (km_contains? (km :a (km :b 1 :c 2) :d 3) '(:f)))))
 
   (cl-assert
    (and (eq (km_get (km :a (km :b 45))
