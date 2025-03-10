@@ -16,6 +16,7 @@
 (require 'pb-misc)
 (require 'gptel)
 (require 'gptel-context)
+(require 'pb-tree)
 (require 'km)
 
 (defvar pb-gptel_history-dir
@@ -24,41 +25,40 @@
 (defvar pb-gptel_buffer-name-prefix
   "GPTEL_")
 
-(defun pb-gptel_mk-prompt (pl)
-  "Convert a keyword map (plist) into an XML-like formatted prompt string.
+(defun pb-gptel_mk-prompt (x)
+  "Generate a formatted prompt based on input X.
 
-Each key-value pair in PL becomes an XML-like tag structure where:
-- Keys become tag names (with ':' prefix removed)
-- Values are processed based on their type:
-  - Strings are used directly
-  - Nested keyword maps are recursively processed
-  - Functions are executed and their results processed
-  - Lists are converted to strings using `prin1-to-string`
-  - Vectors are joined with newlines
+This function processes X, which can be a string, function,
+keyword map, vector, or list, and returns a formatted string
+accordingly:
 
-The content within tags is indented for better readability when it contains
-multiple lines."
-  ;; Process each key-value pair in the plist and join with newlines
-  (mapconcat (lambda (entry)
-               (let* ((key-str (substring (symbol-name (car entry)) 1))
-                      (val (cdr entry))
-                      ;; Recursively convert nested structures based on their type
-                      (content (cond
-                                ((stringp val) val)
-                                ((km? val) (pb-gptel_mk-prompt val)) ; Recursively process nested km maps
-                                ((functionp val) (pb-gptel_mk-prompt (funcall val))) ; Execute functions to get their content
-                                ((listp val) (prin1-to-string val))
-                                ((vectorp val) (mapconcat #'identity val "\n")))))
-                 ;; Format each entry as XML-like tags with indented content
-                 (concat "<" key-str ">\n"
-                         (if (string-match-p "\n" content)
-                             (replace-regexp-in-string
-                              "^\\(.\\)" "  \\1"
-                              content) ; Indent multiline content for better readability
-                           content)
-                         "\n</" key-str ">")))
-             (km_entries pl)
-             "\n\n"))
+- If X is a string, it returns X as-is.
+- If X is a function, it calls the function and processes the
+  result recursively.
+- If X is a keyword map, it formats each key-value pair into
+  XML-like tags, with multiline content indented for better
+  readability.
+- If X is a vector, it concatenates the elements separated by
+  newlines.
+- If X is a list, it converts the list to a string representation."
+  (cond ((stringp x) x)
+        ((functionp x) (pb-gptel_mk-prompt (funcall x)))
+        ((km? x)
+         (mapconcat (lambda (entry)
+                      (let* ((key-str (substring (symbol-name (car entry)) 1))
+                             (content (pb-gptel_mk-prompt (cdr entry))))
+                        ;; Format each entry as XML-like tags with indented content
+                        (concat "<" key-str ">\n"
+                                (if (string-match-p "\n" content)
+                                    (replace-regexp-in-string
+                                     "^\\(.\\)" "  \\1"
+                                     content) ; Indent multiline content for better readability
+                                  content)
+                                "\n</" key-str ">")))
+                    (km_entries x)
+                    "\n\n")) ; Execute functions to get their content
+        ((vectorp x) (mapconcat #'identity x "\n"))
+        ((listp x) (prin1-to-string x))))
 
 (defun pb-gptel_request (content options)
   "Send GPT request with formatted CONTENT and OPTIONS.
@@ -74,53 +74,51 @@ When called interactively, this prompts for the necessary inputs."
 
 (defvar pb-gptel_tree
 
-  (km :lisp
-      "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+  (pb-tree "You are a useful assistant that lives in the holly emacs editor."
+           :code
+           (node ["You are a useful code assistant."
+                  "Your response should be valid code, intended to replace the current expression in a source code file."
+                  "Don't use markdown code block syntax or any non-valid code in your output."]
 
-      :clj
-      "You are a Clojure expert who understands functional programming concepts and persistent data structures."
+                 :lisp
+                 (node "You really like lisp-like languages and you know how to balance parentheses correctly."
 
-      :cljs
-      "You are a ClojureScript expert who understands both Clojure concepts and JavaScript interoperability. You're familiar with the React paradigm and modern frontend development patterns."
+                       :clj
+                       "You are a Clojure expert who understands functional programming concepts and persistent data structures."
 
-      :code
-      ["Your response should be valid code, intended to replace the current expression in a source code file."
-       "Don't use markdown code block syntax or any non-valid code in your output."]
+                       :cljs
+                       ["You are a ClojureScript expert who understands both Clojure concepts and JavaScript interoperability."
+                        "You're familiar with the React paradigm and modern frontend development patterns."]
 
-      :fill
-      "Complete the holes (denoted by __) in the given expression, do not change anything else!"
+                       :elisp
+                       ["Guide the Emacs Lisp code assistant to write efficient, clean, and idiomatic code, including implementing functions, leveraging built-in Emacs Lisp libraries, and optimizing for readability and maintainability."
+                        "Encourage balancing parentheses and ensuring syntactic correctness throughout the code. Promote using docstrings and comments where necessary to enhance code clarity and understanding."]
 
-      :code
-      (km :symex-context
-          (lambda ()
-            "Include code context, whole file, current-expression and more..."
-            (km :editor "emacs"
-                :buffer-name (buffer-file-name)
-                :major-mode (symbol-name major-mode)
-                :file-content (buffer-substring-no-properties (point-min) (point-max))
-                :current-expression (pb-symex_current-as-string))))
+                       :context
+                       (lambda ()
+                         "Include code context, whole file, current-expression and more..."
+                         (km :buffer-name (buffer-file-name)
+                             :major-mode (symbol-name major-mode)
+                             :file-content (buffer-substring-no-properties (point-min) (point-max))
+                             :current-expression (pb-symex_current-as-string))))
 
-      :task (lambda ()
-              "Enter main instructions."
-              (read-string "main task: "))))
+                 :fill
+                 "Complete the holes (denoted by __) in the given expression, do not change anything else!")
 
-(defun pb-gptel_get (&rest path)
-  "Retrieve a value from the request tree using the given PATH.
-PATH is a sequence of keys to navigate `pb-gptel_request-tree`.
-Each element in PATH represents a level in the tree hierarchy.
+           :task (lambda ()
+                   "Enter main instructions."
+                   (read-string "main task: "))))
 
-Returns the value at the specified path or nil if not found."
-  (km_get pb-gptel_tree path))
+(defun pb-gptel_mk-request-prompt (path)
+  ""
+  (pb_let [values (pb-tree_get-path-values pb-gptel_tree path)]
+      (mapconcat #'pb-gptel_mk-prompt values "\n\n")))
 
-(defun pb-gptel_put (&rest put-args)
-  "Update the GPT request tree with the given key-value pairs.
-PUT-ARGS are arguments to be passed to `km_put` to update `pb-gptel_tree`.
-This function follows the same pattern as `km_put`:
-- First arguments are path elements (keys)
-- Last argument is the value to set
-Returns the updated `pb-gptel_tree`."
-  (setq pb-gptel_tree
-        (apply #'km_put pb-gptel_tree put-args)))
+(pb_comment
+ (pp (pb-gptel_mk-request-prompt [:code :lisp :context]))
+
+ (pb_let [(km_keys values) (pb-tree_get-path-values pb-gptel_tree [:code :lisp :context])]
+     values))
 
 (progn :interactive-request
 
