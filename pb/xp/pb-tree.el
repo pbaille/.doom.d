@@ -93,6 +93,40 @@ Returns a new tree with the merged structure."
                       (pb-tree_children tree1)
                       (pb-tree_children tree2)))))
 
+(defun pb-tree_select (tree x)
+  "Select a subset of TREE according to the selector X.
+TREE is a tree created with `pb-tree` or `pb-tree*`.
+X can be:
+- A keyword: selects only the subtree at that key path
+- A vector: selects a nested path through the tree
+- A keyword map: for each key in the map, selects corresponding subtrees
+  where values determine further selection in those subtrees
+- nil or empty: returns the entire tree
+
+Returns a new tree containing only the selected parts of the original tree."
+  (pb_if
+   (keywordp x) (pb-tree* (pb-tree_value tree)
+                          (km x (pb-tree_get tree x)))
+
+   (or (null x)
+       (seq-empty-p x)
+       (eq t x)) tree
+
+   (km? x)
+   (seq-reduce (pb_fn [ret (cons k v)]
+                      (pb-tree_merge ret
+                                     (km_upd (pb-tree_select tree k)
+                                             (list :children k)
+                                             (pb_fn [subtree] (pb-tree_select subtree v)))))
+               (km_entries x) ())
+
+   (vectorp x)
+   (let ((k (aref x 0))
+         (x (vconcat (cdr (append x nil)))))
+     (km_upd (pb-tree_select tree k)
+             (list :children k)
+             (pb_fn [subtree] (pb-tree_select subtree x))))))
+
 ;;; Testing
 
 (defun pb-tree_run-tests ()
@@ -217,6 +251,53 @@ structure and that the resulting tree structure matches the desired nested forma
                                :y "y1")
                       :b "B"
                       :c "C")))))
+
+  (progn :pb-tree_select
+
+         (defvar pb-tree_ex1
+           (pb-tree "root node"
+                    :child1 (node "child1"
+                                  :grandchild-1-1 "foo"
+                                  :grandchild-1-2 "bar")
+                    :child2 (node "child2"
+                                  :grandchild-2-1 "foo2"
+                                  :grandchild-2-2 (node "bar2"
+                                                        :nested "nested"))))
+
+         (cl-assert
+          (and (km_eq (pb-tree_select pb-tree_ex1
+                                      ())
+                      pb-tree_ex1)
+
+               (km_eq (pb-tree_select pb-tree_ex1
+                                      :child1)
+                      '(:value "root node"
+                        :children (:child1 (:value "child1"
+                                            :children (:grandchild-1-1 (:value "foo" :children nil)
+                                                       :grandchild-1-2 (:value "bar" :children nil))))))
+
+               (km_eq (pb-tree_select pb-tree_ex1
+                                      [:child1 :grandchild-1-1])
+                      '(:value "root node"
+                        :children (:child1 (:value "child1"
+                                            :children (:grandchild-1-1 (:value "foo" :children nil))))))
+
+               (km_eq (pb-tree_select pb-tree_ex1
+                                      [:child2 :grandchild-2-2 :nested])
+                      '(:value "root node"
+                        :children (:child2 (:value "child2"
+                                            :children (:grandchild-2-2 (:value "bar2"
+                                                                        :children (:nested (:value "nested"
+                                                                                            :children nil))))))))
+
+               (km_eq (pb-tree_select pb-tree_ex1
+                                      (km :child1 :grandchild-1-1
+                                          :child2 [:grandchild-2-2 :nested]))
+                      '(:value "root node"
+                        :children (:child1 (:value "child1" :children (:grandchild-1-1 (:value "foo" :children nil)))
+                                   :child2 (:value "child2"
+                                            :children (:grandchild-2-2 (:value "bar2"
+                                                                        :children (:nested (:value "nested" :children nil)))))))))))
 
   :ok)
 
