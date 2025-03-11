@@ -39,6 +39,24 @@ Throws an error if XS does not form a valid keyword map."
       (cons (cons (car m) (cadr m))
             (km_entries (cddr m)))))
 
+(defun km_eq (km1 km2)
+  "Check if two keyword maps KM1 and KM2 are equal.
+Keyword maps are considered equal if they contain the same keys with the same associated values."
+  (and (km? km1)
+       (km? km2)
+       (let ((keys1 (km_keys km1))
+             (keys2 (km_keys km2)))
+         (and (null (set-difference keys1 keys2))
+              (null (set-difference keys2 keys1))
+              (cl-every (lambda (entry1)
+                          (let* ((key (car entry1))
+                                 (val1 (cdr entry1))
+                                 (val2 (plist-get km2 key)))
+                            (if (km? val1)
+                                (km_eq val1 val2)
+                              (equal val1 val2))))
+                        (km_entries km1))))))
+
 (defun km_into (m entries)
   "Add some ENTRIES to M (plist/keyword-map)."
   (cl-reduce (lambda (m entry)
@@ -51,6 +69,17 @@ Throws an error if XS does not form a valid keyword map."
   (cl-reduce (lambda (ret x) (km_into ret (km_entries x)))
              kms
              :initial-value ()))
+
+(defun km_merge-with (f km1 km2)
+  "Merge KM1 and KM2 using F to merge values."
+  (km_into km1
+           (mapcar (lambda (entry)
+                     (let* ((k (car entry))
+                            (v2 (cdr entry))
+                            (v1 (plist-get km1 k))
+                            (v (if v1 (funcall f v1 v2) v2)))
+                       (cons k v)))
+                   (km_entries km2))))
 
 (defun km_map (m f)
   "Map F over M. F takes and return an entry (a cons of keyword and value)."
@@ -105,11 +134,12 @@ If AT is a list, get the value in a nested map."
 
 (defun km_contains? (m path)
   "Return t if PATH exist in M."
-  (if (keywordp path)
-      (km_contains? m (list path))
-    (or (not path)
-        (and (plist-member m (car path))
-             (km_contains? (plist-get m (car path)) (cdr path))))))
+  (cond ((not path) t)
+        ((keywordp path)
+         (km_contains? m (list path)))
+        ((listp m)
+         (and (plist-member m (car path))
+              (km_contains? (plist-get m (car path)) (cdr path))))))
 
 (defun km_put-in (m path v)
   "Associate PATH in the nested keyword map M with value V."
@@ -293,6 +323,23 @@ and BODY is the code to execute."
    (equal (funcall (km_lambda (a b) (+ a b))
                    (km :a 1 :b 3))
           4))
+
+  (progn :km_merge-with
+         (cl-assert
+          (km_eq (km_merge-with #'+ (km :a 1 :b 2)
+                                (km :b 3 :c 4))
+                 '(:a 1 :b 5 :c 4)))
+
+         (cl-assert
+          (km_eq (km_merge-with #'max (km :x 7 :y 8 :z 9)
+                                (km :x 10 :y 0 :w 5))
+                 '(:x 10 :y 8 :z 9 :w 5)))
+
+         (cl-assert
+          (km_eq (km_merge-with #'cons
+                                (km :x 9 :p 3)
+                                (km :p (list 1 2)))
+                 '(:p (3 1 2) :x 9))))
 
   (cl-assert
    (equal (km_into (km :a 2)
