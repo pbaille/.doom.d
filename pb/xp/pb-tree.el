@@ -42,6 +42,10 @@ Interleaves :children with elements of PATH to create the path."
     (sq_interleave (sq_repeat (length path) :children)
                    path)))
 
+(defun pb-tree_contains? (tree path)
+  "Check that TREE has a node at PATH."
+  (km_contains? tree (pb-tree_path path)))
+
 (defun pb-tree_get (tree path)
   "Get the node at PATH in TREE."
   (km_get tree (pb-tree_path path)))
@@ -54,25 +58,43 @@ Interleaves :children with elements of PATH to create the path."
   "Get the children of the node at PATH in TREE."
   (km_get (pb-tree_get tree path) :children))
 
+(defun pb-tree_traverse (tree path)
+  "Traverse the TREE with PATH, accumulating intermediate node values."
+  (seq-reduce (pb_fn [(km_keys values node) child-path]
+                     (pb_if [child-node (pb-tree_get node child-path)]
+                            (km :values (cons (km_get node :value)
+                                              values)
+                                :node child-node)))
+              path
+              (km :values () :node tree)))
+
 (defun pb-tree_get-path-values (tree path)
   "Traverse the TREE with PATH, accumulating intermediate values and returning a list of them."
-  (pb_if (not path)
-         (list (if (pb-tree? tree)
-                   (pb-tree_value tree)
-                 tree))
-         [(km_keys values tree)
-          (seq-reduce (pb_fn [(km_keys values tree) path-segment]
-                             (pb_if [sub-tree (pb-tree_get tree path-segment)]
-                                    (km :values (cons (km_get tree :value)
-                                                      values)
-                                        :tree sub-tree)))
-                      path
-                      (km :values () :tree tree))]
-         (seq-reverse
-          (cons (if (pb-tree? tree)
-                    (pb-tree_value tree)
-                  tree)
-                values))))
+  (if (pb-tree_contains? tree path)
+      (pb_let [(km_keys values node) (pb-tree_traverse tree path)]
+          (seq-reverse
+           (cons (if (pb-tree? node)
+                     (pb-tree_value node)
+                   node)
+                 values)))))
+
+(defun pb-tree_merge (tree1 tree2)
+  "Merge two trees TREE1 and TREE2 into a new tree.
+Starts with the value of TREE2 as the root value and recursively
+merges the children of TREE1 and TREE2 recursively.
+
+TREE1 and TREE2 are expected to be trees created by `pb-tree` or `pb-tree_node`.
+
+Returns a new tree with the merged structure."
+  (pb_if
+   (not (pb-tree? tree1)) tree2
+   (not (pb-tree? tree2)) tree1
+   (km :value
+       (pb-tree_value tree2)
+       :children
+       (km_merge-with #'pb-tree_merge
+                      (pb-tree_children tree1)
+                      (pb-tree_children tree2)))))
 
 ;;; Testing
 
@@ -160,6 +182,41 @@ structure and that the resulting tree structure matches the desired nested forma
 
            (pb-tree_get-path-values
             tree [:child1 :grandchild-1-1 :non-existant]))))))
+
+  (progn :pb-tree_merge
+         (cl-assert
+          (let* ((tree1 (pb-tree "Root One"
+                                 :child1 "A"
+                                 :child2 "B"))
+                 (tree2 (pb-tree "Root Two"
+                                 :child2 "C"
+                                 :child3 "D")))
+            ;; Test merging two trees where tree2 has priority at the root level
+            (km_eq
+             (pb-tree_merge tree1 tree2)
+             (pb-tree "Root Two"
+                      :child1 "A"
+                      :child2 "C"
+                      :child3 "D"))))
+
+         (cl-assert
+          (let* ((tree1 (pb-tree "R1"
+                                 :a (node "A1"
+                                          :x "x1")
+                                 :b "B"))
+                 (tree2 (pb-tree "R2"
+                                 :a (node "A2"
+                                          :y "y1")
+                                 :c "C")))
+            ;; Test deeper merging where children are merged
+            (km_eq
+             (pb-tree_merge tree1 tree2)
+             (pb-tree "R2"
+                      :a (node "A2"
+                               :x "x1"
+                               :y "y1")
+                      :b "B"
+                      :c "C")))))
 
   :ok)
 
