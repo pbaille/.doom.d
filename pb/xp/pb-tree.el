@@ -4,21 +4,20 @@
 
 ;;; * constructor
 
-(defun pb-tree_node (value &rest children)
+(defun pb-tree* (value &optional children)
   (km :value value
-      :children (km* children)))
+      :children children))
 
 (defmacro pb-tree (value &rest children)
   "Create a tree structure from nested node expressions.
 BODY should be a node expression, which can contain nested node expressions."
-  (let ((child-nodes
-         (cl-loop for (key val) on children by #'cddr
-                  when (and key val)
-                  collect key
-                  and collect (if (and (listp val) (eq (car val) 'node))
-                                  `(pb-tree ,(cadr val) ,@(cddr val))
-                                val))))
-    `(pb-tree_node ,value ,@child-nodes)))
+  `(km
+    :value ,value
+    :children (km ,@(km_map-vals children
+                                 (lambda (v)
+                                   (if (and (listp v) (eq (car v) 'node))
+                                       `(pb-tree ,@(cdr v))
+                                     `(pb-tree* ,v)))))))
 
 ;;; * accessors
 
@@ -62,7 +61,7 @@ Interleaves :children with elements of PATH to create the path."
   "Traverse the TREE with PATH, accumulating intermediate node values."
   (seq-reduce (pb_fn [(km_keys values node) child-path]
                      (pb_if [child-node (pb-tree_get node child-path)]
-                            (km :values (cons (km_get node :value)
+                            (km :values (cons (pb-tree_value node)
                                               values)
                                 :node child-node)))
               path
@@ -73,9 +72,7 @@ Interleaves :children with elements of PATH to create the path."
   (if (pb-tree_contains? tree path)
       (pb_let [(km_keys values node) (pb-tree_traverse tree path)]
           (seq-reverse
-           (cons (if (pb-tree? node)
-                     (pb-tree_value node)
-                   node)
+           (cons (pb-tree_value node)
                  values)))))
 
 (defun pb-tree_merge (tree1 tree2)
@@ -111,9 +108,10 @@ structure and that the resulting tree structure matches the desired nested forma
                            :child2 (node "child2"
                                          :grandchild-2-1 "foo2"
                                          :grandchild-2-2 "bar2")))
-    '(pb-tree_node "root node"
-      :child1 (pb-tree "child1" :grandchild-1-1 "foo" :grandchild-1-2 "bar")
-      :child2 (pb-tree "child2" :grandchild-2-1 "foo2" :grandchild-2-2 "bar2"))))
+    '(km
+      :value "root node"
+      :children (km :child1 (pb-tree "child1" :grandchild-1-1 "foo" :grandchild-1-2 "bar")
+                    :child2 (pb-tree "child2" :grandchild-2-1 "foo2" :grandchild-2-2 "bar2")))))
 
   (cl-assert
    (equal
@@ -124,14 +122,16 @@ structure and that the resulting tree structure matches the desired nested forma
              :child2 (node "child2"
                            :grandchild-2-1 "foo2"
                            :grandchild-2-2 "bar2"))
+    '(:value "root node"
+      :children (:child1
+                 (:value "child1"
+                  :children (:grandchild-1-1 (:value "foo" :children nil)
+                             :grandchild-1-2 (:value "bar" :children nil)))
 
-    '(:value "root node" :children
-      (:child1
-       (:value "child1" :children
-               (:grandchild-1-1 "foo" :grandchild-1-2 "bar"))
-       :child2
-       (:value "child2" :children
-               (:grandchild-2-1 "foo2" :grandchild-2-2 "bar2"))))))
+                 :child2
+                 (:value "child2"
+                  :children (:grandchild-2-1 (:value "foo2" :children nil)
+                             :grandchild-2-2 (:value "bar2" :children nil)))))))
 
   (cl-assert
    (let ((tree (pb-tree "root node"
@@ -143,7 +143,7 @@ structure and that the resulting tree structure matches the desired nested forma
                                       :grandchild-2-2 "bar2"))))
      (and (equal
            (pb-tree_get tree '(:child2 :grandchild-2-1))
-           "foo2")
+           (pb-tree* "foo2"))
 
           (equal
            (pb-tree_get tree '(:child1))
