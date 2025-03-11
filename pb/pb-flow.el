@@ -81,6 +81,7 @@ The resulting form is either a single return value or a `cl-labels' expression."
 
 (defmacro pb-flow (&rest body)
   "Emit a flow control form from the provided BODY code blocks."
+  (declare (indent nil))
   (pb-flow_emit-form body))
 
 (defmacro pb-flow_fn (&rest decl)
