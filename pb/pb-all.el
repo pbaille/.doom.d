@@ -27,6 +27,7 @@
 (require 'pb-fennel)
 (require 'pb-fold)
 (require 'pb-gptel)
+(require 'pb-llm)
 (require 'pb-ibuffer)
 (require 'pb-misc)
 (require 'pb-org)
