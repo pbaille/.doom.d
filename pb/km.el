@@ -41,13 +41,14 @@ Throws an error if XS does not form a valid keyword map."
 
 (defun km_eq (km1 km2)
   "Check if two keyword maps KM1 and KM2 are equal.
-Keyword maps are considered equal if they contain the same keys with the same associated values."
+Keyword maps are considered equal if they contain the same keys
+with the same associated values."
   (and (km? km1)
        (km? km2)
        (let ((keys1 (km_keys km1))
              (keys2 (km_keys km2)))
-         (and (null (set-difference keys1 keys2))
-              (null (set-difference keys2 keys1))
+         (and (null (cl-set-difference keys1 keys2))
+              (null (cl-set-difference keys2 keys1))
               (cl-every (lambda (entry1)
                           (let* ((key (car entry1))
                                  (val1 (cdr entry1))
@@ -206,14 +207,14 @@ XS is a list alternating paths and update-fns."
              :initial-value ()))
 
 (defun km_select-paths* (m paths)
-  "aggregate all given PATHS with their corresponding value in M."
+  "Aggregate all given PATHS with their corresponding value in M."
   (let* ((path-value-pairs (mapcar (lambda (path) (cons path (km_get m path))) paths)))
     ;; (print path-value-pairs)
-    (cl-reduce (pb_fn (m (cons k v)) (km_put m k v)) path-value-pairs
+    (cl-reduce (lambda (m e) (km_put m (car e) (cdr e))) path-value-pairs
                :initial-value ())))
 
 (defun km_select-paths (m &rest paths)
-  "aggregate all given PATHS with their corresponding value in M."
+  "Aggregate all given PATHS with their corresponding value in M."
   (km_select-paths* m paths))
 
 (defmacro km_let (binding &rest body)
