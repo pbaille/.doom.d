@@ -2,6 +2,10 @@
 
 ;;; Code
 
+(require 'pb)
+(require 'km)
+(require 'sq)
+
 ;;; * constructor
 
 (defun pb-tree* (value &optional children)
@@ -302,3 +306,5 @@ structure and that the resulting tree structure matches the desired nested forma
   :ok)
 
 (pb-tree_run-tests)
+
+(provide 'pb-tree)
