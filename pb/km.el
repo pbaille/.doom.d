@@ -214,7 +214,7 @@ XS is a list alternating paths and update-fns."
 
 (defun km_select-paths (m &rest paths)
   "aggregate all given PATHS with their corresponding value in M."
-  (km_select-paths m paths))
+  (km_select-paths* m paths))
 
 (defmacro km_let (binding &rest body)
   "Let binding for keyword maps.
