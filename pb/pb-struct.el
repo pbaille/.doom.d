@@ -24,25 +24,27 @@
   "Defines a struct NAME with given MEMBERS.
 It is a simple list holding the name symbol as car and members as cdr.
 MEMBERS can hold substrctures that will be recursively created"
-  (let* ((struct-name (symbol-name name))
-         (pred-name (concat struct-name "?"))
-         (pred-sym (intern pred-name))
-         (constr-sym name))
+  (let* ((pred-sym (pb_symbol name "?")))
     `(progn
        (defun ,pred-sym (x)
-         ,(format "Check if X is a %s struct." struct-name)
-         (and (listp x)
-              (eq ',name (car-safe x))))
+         ,(format "Check if X is a %s struct."
+                  (pb_name name))
+         (when (listp x)
+           (eq ',name (car-safe x))))
 
-       ,@(seq-map-indexed (lambda (m i)
-                            (let ((name (intern (concat struct-name "." (symbol-name m)))))
-                              `(defun ,name (x)
-                                 (when (,(intern pred-name) x)
-                                   (nth ,(1+ i) x)))))
-                          members)
+       ,@(seq-map-indexed
+          (lambda (m i)
+            `(defun ,(pb_symbol name "." m) (x)
+               ,(format "Get the %s field from the %s struct."
+                        (pb_name m)
+                        (pb_name name))
+               (when (,pred-sym x)
+                 (nth ,(1+ i) x))))
+          members)
 
-       (defun ,constr-sym ,members
-         ,(format "Create a new %s struct with the given fields." struct-name)
+       (defun ,name ,members
+         ,(format "Create a new %s struct with the given fields."
+                  (pb_name name))
          (list ',name ,@members))
 
        (pb-destructure_extend ',name
