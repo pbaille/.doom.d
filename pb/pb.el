@@ -108,6 +108,15 @@ using the _ placeholder to determine threaded value positioning."
   "A macro that always expands to nil."
   ())
 
+(defun pb_slurp (file-path)
+  "Return the contents of FILE-PATH as a string.
+Returns nil if the file doesn't exist or can't be read."
+  (condition-case nil
+      (with-temp-buffer
+        (insert-file-contents file-path)
+        (buffer-string))
+    (file-error nil)))
+
 (defun pb_test ()
   "Run some assertions about this file."
   (cl-assert
@@ -116,9 +125,11 @@ using the _ placeholder to determine threaded value positioning."
         (equal :pierre (pb_symbol-to-keyword 'pierre))
         (equal :foo-bar (pb_keyword "foo" "bar"))
         (equal 'foo-bar (pb_symbol "foo" "bar"))
+        (equal 'foo-bar (pb_symbol "foo" 'bar))
         (equal :foo_bar (pb_join-keyword (list "foo" "bar") "_"))
         (equal 'foo_bar (pb_join-symbol (list "foo" "bar") "_"))
-        (not (pb_comment non sense)))))
+        (not (pb_comment non sense))
+        (stringp (pb_slurp "~/.doom.d/pb/pb.el")))))
 
 (pb_test)
 
