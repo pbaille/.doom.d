@@ -26,6 +26,9 @@ and the seed it has to destructure against."
         (cons (cons op implementation)
               (assq-delete-all op pb-destructure_implementations))))
 
+(defun pb-destructure_guard-symbol? (x)
+  (string-suffix-p "?" (pb_name x)))
+
 (defun pb-destructure (pat seed)
   "Produce a list of bindings from PAT and SEED."
   (cond ((and (symbolp pat)
@@ -37,10 +40,12 @@ and the seed it has to destructure against."
          (let* ((op (car pat))
                 (args (cdr pat))
                 (f (alist-get op pb-destructure_implementations)))
-           (if f
-               (funcall f args seed)
-             (error (format "No destructuring implementation for: %s"
-                            op)))))
+           (cond (f
+                  (funcall f args seed))
+                 ((pb-destructure_guard-symbol? (car pat))
+                  (pb-destructure (cons 'guard pat) seed))
+                 (t (error (format "No destructuring implementation for: %s"
+                                   op))))))
         (t (list (list (gensym "equal-check_") (list 'equal pat seed))))))
 
 (defun pb-destructure_seed-sym (seed prefix)
@@ -84,6 +89,11 @@ If seed is a symbol, gensym is not used and the symbol is returned."
   (pb-destructure_extend
    'as (lambda (args seed)
          (pb-destructure (cons 'and args) seed)))
+
+  (pb-destructure_extend
+   'guard (lambda (args seed)
+            (pb-destructure (cadr args)
+                            `(if (,(car args) ,seed) ,seed))))
 
   (pb-destructure_extend
    'km (lambda (args seed)
@@ -143,6 +153,14 @@ FN-DECL is the same kind of arguments `pb-destructure_fn' expects."
 
 (defun pb-destructure_test ()
   "Test some of the functionalities."
+
+  (cl-assert
+   (and (pb-destructure_guard-symbol? 'poi?)
+        (null (pb-destructure_guard-symbol? 'poi))))
+
+  (cl-assert
+   (equal (pb-destructure '(pop? x) 'io)
+          '((x (if (pop? io) io)))))
 
   (cl-assert
    (and (equal (pb-destructure_let [(cons a b) (list 1 2 3 4)
