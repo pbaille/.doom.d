@@ -21,9 +21,18 @@
                        (list x y)))))
 
 (defmacro pb-struct (name &rest members)
-  "Defines a struct NAME with given MEMBERS.
-It is a simple list holding the name symbol as car and members as cdr.
-MEMBERS can hold substrctures that will be recursively created"
+  "Define a struct NAME with given MEMBERS.
+A struct is a simple list with the NAME symbol as its car and MEMBERS as cdr.
+For each member M, a function NAME.M is defined to access that field.
+A predicate function NAME? is also defined to check if a value is an instance of this struct.
+The struct type can be used with pb's destructuring facilities.
+
+Example:
+  (pb-struct person name age)
+  (setq p (person \"John\" 30))
+  (person? p)         ; => t
+  (person.name p)     ; => \"John\"
+  (pb_let [(person name age) p] name) ; => \"John\""
   (let* ((pred-sym (pb_symbol name "?")))
     `(progn
        (defun ,pred-sym (x)
@@ -49,19 +58,29 @@ MEMBERS can hold substrctures that will be recursively created"
 
        (pb-destructure_extend ',name
                               (lambda (args seed)
-                                (pb-destructure `(cons _ (list ,@args))
+                                (pb-destructure (list 'cons
+                                                      (list 'eq '_ '',name)
+                                                      (cons 'list args))
                                                 seed))))))
 
 (defun pb-struct_run-tests ()
 
   (pb-struct person name age)
 
+  (pb-destructure '(person a b c) '(x z y))
   (cl-assert
    (equal
-    (pb_let [x (person "Pierre" 43)]
-        (list (person? x)
-              (person.name x)))
-    '(t "Pierre")))
+    (pb_if [(person a b c) '(x z y)]
+           (list a b c)
+           :ok)
+    :ok))
+
+  (cl-assert
+    (equal
+     (pb_let [x (person "Pierre" 43)]
+         (list (person? x)
+               (person.name x)))
+     '(t "Pierre")))
 
   (cl-assert
    (equal
@@ -75,17 +94,15 @@ MEMBERS can hold substrctures that will be recursively created"
   (cl-assert
    (equal
     (pb_let [(as emp
-                 (employee x y (address z u)))
+                 (employee x y (and (address? a)
+                                    (address ))))
              (employee "Pierre"
                        43
                        (address
                         "821 Chemin de la chèvre d'or"
                         "Biot"))]
-        (list
-         (employee.address emp)
-         (list x y z u)))
-    (list
-     (address "821 Chemin de la chèvre d'or" "Biot")
-     (list "Pierre" 43 "821 Chemin de la chèvre d'or" "Biot")))))
+        (list x y a))
+    '("Pierre" 43
+      (address "821 Chemin de la chèvre d'or" "Biot")))))
 
 (pb-struct_run-tests)
