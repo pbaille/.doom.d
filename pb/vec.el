@@ -99,6 +99,12 @@ XS can be a list or vector. Returns a new vector with the items added."
                        (t (error "Cannot convert %S to vector items" xs)))))
       (vconcat v items))))
 
+(defun vec_conj (v x)
+  "Add element X to the end of vector V.
+Returns a new vector with X appended. If V is not a vector, throws an error."
+  (when (vec? v)
+    (vconcat v (list x))))
+
 (defun vec_split (v idx)
   "Split V in 2 at IDX.
 Returns a cons cell (left . right) where left contains elements [0..idx-1]
@@ -203,6 +209,17 @@ Returns nil if V is not a vector or if IDX is out of bounds."
         (equal (vec_split [1 2 3] -3) '([1] . [2 3]))
         (equal (vec_split [1 2 3] -4) '([] . [1 2 3]))
         (null (vec_split [1 2 3] 4))
-        (equal (vec_split [] 0) '([] . [])))))
+        (equal (vec_split [] 0) '([] . []))))
+
+  (cl-assert
+   (and (equal (vec_conj [1 2 3] 4) [1 2 3 4])
+        (equal (vec_conj [] 1) [1])
+        (equal (vec_conj [1] 2) [1 2])
+        (equal (vec_conj [1 2] "a") [1 2 "a"])
+        (equal (vec_conj [1 2] [3 4]) [1 2 [3 4]])
+        (null (vec_conj nil 1))
+        (null (vec_conj "not-a-vector" 1)))))
 
 (vec_test)
+
+(provide 'vec)
