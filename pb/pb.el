@@ -117,6 +117,17 @@ Returns nil if the file doesn't exist or can't be read."
         (buffer-string))
     (file-error nil)))
 
+(defmacro pb_setq (var expr)
+  `(setq ,var (let ((_ ,var)) ,expr)))
+
+(defun pb_eq (&rest xs)
+  "Compares every element of XS for equality using `equal'."
+  (if xs
+    (let ((first (car xs)))
+      (cl-every (lambda (x) (equal first x))
+                (cdr xs)))
+    t))
+
 (defun pb_test ()
   "Run some assertions about this file."
   (cl-assert
@@ -129,7 +140,27 @@ Returns nil if the file doesn't exist or can't be read."
         (equal :foo_bar (pb_join-keyword (list "foo" "bar") "_"))
         (equal 'foo_bar (pb_join-symbol (list "foo" "bar") "_"))
         (not (pb_comment non sense))
-        (stringp (pb_slurp "~/.doom.d/pb/pb.el")))))
+        (stringp (pb_slurp "~/.doom.d/pb/pb.el"))))
+
+  (progn (defvar pb_swap-testvar 0)
+         (setq pb_swap-testvar 0)
+         (pb_setq pb_swap-testvar (1+ _))
+         (cl-assert (equal pb_swap-testvar 1)))
+
+  (cl-assert
+   (and (pb_eq 1 1)
+        (pb_eq "hello" "hello")
+        (pb_eq '(1 2 3) '(1 2 3))
+        (pb_eq :keyword :keyword)
+        (pb_eq 'symbol 'symbol)
+        (not (pb_eq 1 2))
+        (not (pb_eq "hello" "world"))
+        (not (pb_eq '(1 2 3) '(1 2)))
+        (not (pb_eq :keyword :other))
+        (pb_eq) ; empty call returns t
+        (pb_eq 42) ; single element returns t
+        (pb_eq 42 42 42) ; multiple equal elements
+        (not (pb_eq 42 42 43)))))
 
 (pb_test)
 
