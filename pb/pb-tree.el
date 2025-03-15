@@ -3,6 +3,8 @@
 ;;; Code
 
 (require 'pb)
+(require 'pb-destructure)
+(require 'pb-flow)
 (require 'km)
 (require 'sq)
 
