@@ -44,6 +44,8 @@ and the seed it has to destructure against."
                   (funcall f args seed))
                  ((pb-destructure_guard-symbol? (car pat))
                   (pb-destructure (cons 'guard pat) seed))
+                 ((equal 'quote (car pat))
+                  (list (list (gensym "equal-check_") (list 'equal pat seed))))
                  (t (error (format "No destructuring implementation for: %s"
                                    op))))))
         (t (list (list (gensym "equal-check_") (list 'equal pat seed))))))
@@ -182,21 +184,25 @@ FN-DECL is the same kind of arguments `pb-destructure_fn' expects."
                         (list 1 2 3 4))
                (list 1 2 (list 3 4)))
 
+        (equal (pb-destructure_let [(list 'io x y) (list 'io 2 3)]
+                 (list x y))
+               (list 2 3))
+
         (equal (pb-destructure_let [(list* a b c xs) (list 2 3)]
-                   (list a b c xs))
+                 (list a b c xs))
                (list nil nil nil nil))
 
         (equal (pb-destructure_let [(list* a b xs) (list 2 3)]
-                   (list a b xs))
+                 (list a b xs))
                '(2 3 nil))
 
         (equal (pb-destructure_let [(eq a 2) (+ 1 1)]
-                   a)
+                 a)
                2)
 
         (equal (pb-destructure_let [x 2
                                       (eq a (list 1 x 3)) (list 1 2 3)]
-                                   (list a x))
+                 (list a x))
                (list (list 1 2 3) 2))
 
         (equal (pb-destructure_let [x 3
@@ -205,31 +211,31 @@ FN-DECL is the same kind of arguments `pb-destructure_fn' expects."
                (list nil 3))
 
         (equal (pb-destructure_let [(km :a (list* a b xs) :c c) (km :a (list 1 2 3) :c 34)]
-                   (list a b c xs))
+                 (list a b c xs))
                '(1 2 34 (3)))
 
         (equal (pb-destructure_let [(km c :a (list* a b xs)) (km :a (list 1 2 3) :c 34)]
-                   (list a b c xs))
+                 (list a b c xs))
                '(1 2 34 (3)))
 
         (equal (pb-destructure_let [(km a b c :extra d) (km :a 1 :b 2 :c 3 :extra 4)]
-                   (list a b c d))
+                 (list a b c d))
                (list 1 2 3 4))
 
         (equal (pb-destructure_let [(km_keys a b c) (km :a 1 :b 2 :c 3)]
-                   (list a b c))
+                 (list a b c))
                (list 1 2 3))
 
         (equal (list 1 2 (list 3 4))
                (pb-destructure_let [(list* a b xs) (list 1 2 3 4)]
-                   (list a b xs)))
+                 (list a b xs)))
 
         (equal (funcall (pb-destructure_fn [(list* a b xs)]
                                            (list a b xs))
                         (list 1 2 3 4))
                (list 1 2 (list 3 4)))
         (equal (pb-destructure_let [(as m (km_keys a)) (km :a 1 :b 2)]
-                   (list m a))
+                 (list m a))
                '((:a 1 :b 2) 1)))))
 
 (pb-destructure_test)
