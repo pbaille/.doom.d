@@ -45,24 +45,24 @@
   (and (km2? m)
        (mapcar #'cdr (km2_entries m))))
 
-(defun km2_eq (km1 km2)
-  "Check if two keyword maps KM1 and KM2 are equal.
+(defun km2_eq (a b)
+  "Check if two keyword maps A and B are equal.
 Keyword maps are considered equal if they contain the same keys
 with the same associated values."
-  (and (km2? km1)
-       (km2? km2)
-       (let ((keys1 (km2_keys km1))
-             (keys2 (km2_keys km2)))
+  (and (km2? a)
+       (km2? b)
+       (let ((keys1 (km2_keys a))
+             (keys2 (km2_keys b)))
          (and (null (cl-set-difference keys1 keys2))
               (null (cl-set-difference keys2 keys1))
               (cl-every (lambda (entry1)
                           (let* ((key (car entry1))
                                  (val1 (cdr entry1))
-                                 (val2 (plist-get (cdr km2) key)))
+                                 (val2 (plist-get (cdr b) key)))
                             (if (km2? val1)
                                 (km2_eq val1 val2)
                               (equal val1 val2))))
-                        (km2_entries km1))))))
+                        (km2_entries a))))))
 
 (defun km2_into (m entries)
   "Add some ENTRIES to M (plist/keyword-map)."
@@ -80,16 +80,16 @@ with the same associated values."
              kms
              :initial-value (km2 ())))
 
-(defun km2_merge-with (f km1 km2)
-  "Merge KM1 and KM2 using F to merge values."
-  (km2_into km1
+(defun km2_merge-with (f a b)
+  "Merge A and B using F to merge values."
+  (km2_into a
             (mapcar (lambda (entry)
                       (let* ((k (car entry))
                              (v2 (cdr entry))
-                             (v1 (plist-get (cdr km1) k))
+                             (v1 (plist-get (cdr a) k))
                              (v (if v1 (funcall f v1 v2) v2)))
                         (cons k v)))
-                    (km2_entries km2))))
+                    (km2_entries b))))
 
 (km2_eq (km2_merge-with #'+
                       (km2 :a 1 :b 2)
