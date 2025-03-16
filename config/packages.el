@@ -212,7 +212,6 @@
   (setq gptel-default-mode 'org-mode)
   (setq gptel-use-header-line nil)
   ;; bindings
-  (setq-default gptel-model "claude-3-7-sonnet-20250219")
   ;; the only way I found for redefining the broken RET key of the menu to C-RET
   ;; the problem is that gptel-menu is autoloaded,
   ;; it has to be called once before the rebinding is possible.
@@ -220,9 +219,14 @@
     (transient-suffix-put 'gptel-menu (kbd "RET") :key "C-<return>")
     (advice-remove #'gptel-menu #'pb-gptel-change-return-key-in-menu))
   (advice-add #'gptel-menu :after #'pb-gptel-change-return-key-in-menu)
-  (gptel-make-anthropic "Claude"          ;Any name you want
-    :stream t                             ;Streaming responses
-    :key pb/claude-api-key))
+
+  (setq-default gptel-model
+                "claude-3-7-sonnet-20250219")
+
+  (setq gptel-backend
+        (gptel-make-anthropic "Claude"          ;Any name you want
+          :stream t                             ;Streaming responses
+          :key pb/claude-api-key)))
 
 (use-package tide
   :config
