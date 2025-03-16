@@ -131,7 +131,7 @@ With validation:
   (pb-struct_deftag numbox #'numberp)
   (numbox 1)         ; => (numbox . 1)
   (numbox \"hello\")  ; => nil (validation failed)"
-  (let* ((pred-sym (pb_join-symbol (list tag "?"))))
+  (let ((pred-sym (pb_join-symbol (list tag "?"))))
     `(progn
        (defun ,pred-sym (x)
          ,(format "Return X if it is a %s tagged value." (pb_name tag))
@@ -142,12 +142,13 @@ With validation:
                  t)
               x))
 
-       (defun ,tag (x)
+       (defun ,tag (x &rest xs)
          ,(format "Create a new %s tagged value." (pb_name tag))
-         ,(if content-pred
-              `(when (funcall ,content-pred x)
-                 (cons ',tag x))
-            `(cons ',tag x)))
+         (let ((x (if xs (cons x xs) x)))
+           ,(if content-pred
+                `(when (funcall ,content-pred x)
+                   (cons ',tag x))
+              `(cons ',tag x))))
 
        (pb-destructure_extend ',tag
                               (lambda (args seed)
@@ -158,10 +159,15 @@ With validation:
   ;; Test basic tag functionality with 'maybe' tag
   (pb-struct_deftag maybe)
 
+  (maybe 1)
+  (maybe 1 2)
+
   (cl-assert
    (and
     (pb_eq (maybe 42) '(maybe . 42) (cons 'maybe 42))
     (maybe? (maybe 42))
+    (equal (maybe (list 1 2))
+           (maybe 1 2))
     (null (maybe? '(other . 42)))
     (pb_eq (pb_let [(maybe x) (maybe 42)] x)
            (pb_let [(maybe x) (cons 'maybe 42)] x)
