@@ -143,8 +143,10 @@
           ("C-P" . pb-symex_ring-prepend)
 
           ;; llm
-          ("q r" . pb-gptel_current-symex-request-replace)
+          ("q r" . pb-gptel_current-symex-request)
           ("q f" . pb-gptel_fill-holes)
+          ("q e" . pb-gptel_current-symex-chat)
+          ("q b" . pb-gptel_current-buffer-chat)
 
           ;; non structural nav
           ("F" . pb-misc_goto-next-opening-delimiter)

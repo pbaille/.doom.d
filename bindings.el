@@ -50,6 +50,8 @@
  ;; `s-q' LLMs
  :desc "gptel" "s-q s-q" #'gptel
  :desc "new session above" "s-q n" #'pb-gptel_new-session-above
+ :desc "chat: current expression" "s-q e" #'pb-gptel_current-symex-chat
+ :desc "chat: current buffer" "s-q b" #'pb-gptel_current-buffer-chat
  :desc "interactive request" "s-q i" #'gptel-menu
  :desc "gptel menu" "s-q m" #'gptel-menu
  :desc "add file to context" "s-q f" #'gptel-context-add-file
