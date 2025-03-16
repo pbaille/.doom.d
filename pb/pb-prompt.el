@@ -16,6 +16,50 @@
 (require 'km)
 (require 'pb)
 (require 'pb-tree)
+(require 'pb-symex)
+
+(defvar pb-prompt_tree
+
+  (pb-tree "You are a useful assistant that lives in the holly emacs editor."
+           :code
+           (node ["You are a useful code assistant."
+                  "Your response should be valid code, intended to replace the current expression in a source code file."
+                  "Don't use markdown code block syntax or any non-valid code in your output."]
+
+                 :lisp
+                 (node "You really like lisp-like languages and you know how to balance parentheses correctly."
+
+                       :clj
+                       "You are a Clojure expert who understands functional programming concepts and persistent data structures."
+
+                       :cljs
+                       ["You are a ClojureScript expert who understands both Clojure concepts and JavaScript interoperability."
+                        "You're familiar with the React paradigm and modern frontend development patterns."]
+
+                       :elisp
+                       (node ["Guide the Emacs Lisp code assistant to write efficient, clean, and idiomatic code, including implementing functions, leveraging built-in Emacs Lisp libraries, and optimizing for readability and maintainability."
+                              "Encourage balancing parentheses and ensuring syntactic correctness throughout the code. Promote using docstrings and comments where necessary to enhance code clarity and understanding."]
+
+                             :context
+                             (node "Additional context"
+                                   :pb (lambda ()
+                                         (km :pb (pb_slurp "~/.doom.d/pb/pb.el")
+                                             :km (pb_slurp "~/.doom.d/pb/km.el")))))
+
+                       :context
+                       (lambda ()
+                         "Include code context, whole file, current-expression and more..."
+                         (km :buffer-name (buffer-file-name)
+                             :major-mode (symbol-name major-mode)
+                             :file-content (buffer-substring-no-properties (point-min) (point-max))
+                             :current-expression (pb-symex_current-as-string))))
+
+                 :fill
+                 "Complete the holes (denoted by __) in the given expression, do not change anything else!")
+
+           :task (lambda ()
+                   "Enter main instructions."
+                   (read-string "main task: "))))
 
 (defun pb-prompt_mk (x)
   "Generate a formatted prompt based on input X.
@@ -91,57 +135,20 @@ Returns nil if PATH does not exist or is nil."
 (pb_comment
  (pb-gptel_describe-path "~/.doom.d/pb"))
 
-(defvar pb-prompt_tree
-
-  (pb-tree "You are a useful assistant that lives in the holly emacs editor."
-           :code
-           (node ["You are a useful code assistant."
-                  "Your response should be valid code, intended to replace the current expression in a source code file."
-                  "Don't use markdown code block syntax or any non-valid code in your output."]
-
-                 :lisp
-                 (node "You really like lisp-like languages and you know how to balance parentheses correctly."
-
-                       :clj
-                       "You are a Clojure expert who understands functional programming concepts and persistent data structures."
-
-                       :cljs
-                       ["You are a ClojureScript expert who understands both Clojure concepts and JavaScript interoperability."
-                        "You're familiar with the React paradigm and modern frontend development patterns."]
-
-                       :elisp
-                       (node ["Guide the Emacs Lisp code assistant to write efficient, clean, and idiomatic code, including implementing functions, leveraging built-in Emacs Lisp libraries, and optimizing for readability and maintainability."
-                              "Encourage balancing parentheses and ensuring syntactic correctness throughout the code. Promote using docstrings and comments where necessary to enhance code clarity and understanding."]
-
-                             :context
-                             (node "Additional context"
-                                   :pb (lambda ()
-                                         (km :pb (pb_slurp "~/.doom.d/pb/pb.el")
-                                             :km (pb_slurp "~/.doom.d/pb/km.el")))))
-
-                       :context
-                       (lambda ()
-                         "Include code context, whole file, current-expression and more..."
-                         (km :buffer-name (buffer-file-name)
-                             :major-mode (symbol-name major-mode)
-                             :file-content (buffer-substring-no-properties (point-min) (point-max))
-                             :current-expression (pb-symex_current-as-string))))
-
-                 :fill
-                 "Complete the holes (denoted by __) in the given expression, do not change anything else!")
-
-           :task (lambda ()
-                   "Enter main instructions."
-                   (read-string "main task: ")))
-)
-
 (pb_comment
- (pp (pb-gptel_mk-request-prompt [:code :lisp :context]))
+ (pb-tree_get-path-values pb-prompt_tree [:code :lisp :context])
 
- (pb_let [(km_keys values) (pb-tree_get-path-values pb-gptel_tree [:code :lisp :context])]
-   values)
+ (pb-tree_select pb-prompt_tree [:code :lisp :context]))
 
- (pb-tree_select))
+
+(provide 'pb-prompt)
+
+
+
+
+
+
+
 
 
 
@@ -255,5 +262,3 @@ Provides completion with vertically aligned hints showing each path's content."
                   (funcall major-mode)
                   (goto-char (point-min))
                   ))))))))))
-
-(provide 'pb-prompt)
