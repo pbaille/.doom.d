@@ -65,6 +65,8 @@
  :desc "add file to context" "s-q f" #'gptel-context-add-file
  :desc "remove file from context" "s-q d" #'pb-gptel_remove-context-file
  :desc "remove all context" "s-q D" #'gptel-context-remove-all
+ :desc "tools" "s-q t e" (lambda () (interactive) (setq-local gptel-use-tools t))
+ :desc "tools" "s-q t d" (lambda () (interactive) (setq-local gptel-use-tools nil))
  ;; :desc "XP request insert" "s-q b i" #'pb-gptel_current-buffer-request-inlined
  ;; :desc "XP request replace" "s-q b r" #'pb-gptel_current-buffer-request-replace
  ;; :desc "XP request to new buffer" "s-q b b" #'pb-gptel_current-buffer-request-new-buffer
