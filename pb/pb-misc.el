@@ -86,6 +86,30 @@
     (erase-buffer)
     (read-only-mode 1)))
 
+(defun pb-misc_switch-to-message-buffer ()
+  (interactive)
+  (with-current-buffer "*Messages*"
+    (goto-char (point-max)))
+  (display-buffer "*Messages*"))
+
+(defun pb-misc_select-vterm-buffer ()
+  "Display a list of vterm buffers and return the name of the selected one.
+Uses `consult--read` to create an interactive selection menu of all vterm
+buffers. Returns the buffer name of the selected vterm buffer."
+  (interactive)
+  (let* ((repl-buffers (seq-filter
+                        (lambda (buffer)
+                          (string-match-p "\\*.*vterm.*\\*" (buffer-name buffer)))
+                        (buffer-list)))
+         (buffer-names (mapcar #'buffer-name repl-buffers))
+         (buffer-alist (cl-mapcar #'cons buffer-names repl-buffers)))
+    (let ((selected (consult--read
+                     buffer-names
+                     :prompt "Select vterm buffer: "
+                     :require-match t
+                     :sort nil)))
+      (buffer-name (cdr (assoc selected buffer-alist))))))
+
 (defun pb-misc_window-split (buffer)
   "Split the current window vertically, displaying BUFFER."
   (let* ((below-window (window-in-direction 'below))
