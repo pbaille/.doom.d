@@ -60,7 +60,7 @@ This function:
 Useful for debugging and improving Clojure code by letting the language model
 see both the code and its runtime behavior at once."
   (interactive)
-  (pb-gptel_current-symex-request-replace
+  (pb-gptel_current-symex-request
    (concat "current expression evaluates to:\n"
            (pb-clojure_eval-string (pb-symex_current-as-string))
            "\nFix it if needed.")))
