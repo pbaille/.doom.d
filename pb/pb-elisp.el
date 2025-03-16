@@ -14,6 +14,10 @@
 (require 'symex)
 (require 'km)
 (require 'pb)
+(require 'pb-destructure)
+(require 'pb-symex)
+(require 'flycheck)
+(require 'ielm)
 
 (defvar pb-elisp_result-buffer-name "ELisp_eval")
 
