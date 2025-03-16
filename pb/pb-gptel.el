@@ -176,13 +176,30 @@ to continue the conversation."
                                 (when (use-region-p)
                                   (buffer-substring-no-properties
                                    (region-beginning)
-                                   (region-end))))))
+                                   (region-end)))))
+
+                 (full-prompt (km :context
+                                  (km :current-file
+                                      (km :editor "emacs"
+                                          :buffer-name (buffer-file-name)
+                                          :major-mode (symbol-name major-mode)
+                                          :file-content (buffer-substring-no-properties (point-min) (point-max)))
+                                      :additional-files
+                                      (pb-gptel_context-files-to-km))
+                                  :instructions
+                                  (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+                                      :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
+                                                        "All org headings are level 3, 4, 5 ..."
+                                                        "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
+                                      :expression selection
+                                      :task prompt))))
 
             ;; Create or switch to the chat buffer
             (with-current-buffer (get-buffer-create chat-buffer-name)
               (org-mode)
               (erase-buffer)
               (gptel-mode)
+              (setq-local gptel-use-tools nil)
 
               ;; Insert the symex as a code block
               (insert (format "* %s\n\n" file-name))
@@ -195,33 +212,13 @@ to continue the conversation."
               ;; Switch to the buffer and position cursor
               (switch-to-buffer (current-buffer))
               (goto-char (point-max))
-              (evil-insert-state))
+              (evil-insert-state)
 
-            ;; Send request to get response
-            (pb-gptel_request
-
-             (km :context
-                 (km :current-file
-                     (km :editor "emacs"
-                         :buffer-name (buffer-file-name)
-                         :major-mode (symbol-name major-mode)
-                         :file-content (buffer-substring-no-properties (point-min) (point-max)))
-                     :additional-files
-                     (pb-gptel_context-files-to-km))
-                 :instructions
-                 (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
-                     :response-format ["Your response will be inserted in an org buffer, it should be valid org content, you can use headers starting at level 3 (***)."
-                                       "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
-                     :expression selection
-                     :task prompt))
-
-             (km :callback
-                 (lambda (res _)
-                   (with-current-buffer chat-buffer-name
-                     (goto-char (point-max))
-                     (insert res)
-                     (insert "\n\n**  ")
-                     (evil-normal-state))))))))
+              ;; Send request to get response
+              (pb-gptel_request
+               full-prompt
+               (km :stream t
+                   :fsm (gptel-make-fsm :handlers gptel-send--handlers)))))))
 
 (defun pb-gptel_current-symex-chat ()
   "Create a chat buffer to discuss the current symbolic expression.
@@ -241,40 +238,58 @@ The chat buffer supports ongoing conversation through gptel-mode."
    (km :selection (pb-symex_current-as-string)
        :prompt (read-string "Chat about current expression: "))))
 
-(defun pb-gptel_new-session-above ()
-  "Create a new GPT session in a split window above the current one.
-If current buffer visits a file, the new buffer will point to a file with
-same extension, that will be created under `pb-gptel-history-dir'."
-  (interactive)
-  (split-window-vertically)
-  (windmove-down)
-  (if (buffer-file-name)
-      (let* ((current-file-name (buffer-file-name))
-             (file (expand-file-name
-                    (file-name-nondirectory current-file-name)
-                    pb-gptel_history-dir)))
-        (let ((buffer-name
-               (concat pb-gptel_buffer-name-prefix
-                       (file-name-nondirectory file))))
-          (if (file-exists-p file)
-              (find-file file)
-            (progn
-              (switch-to-buffer (get-buffer-create buffer-name))
-              (set-visited-file-name file)))
-          (setq-local gptel--system-message
-                      (concat "You are a useful code assistant, that helps discussing "
-                              current-file-name
-                              " your ourput will only be valid syntax suitable to be inserted in this kind of source code file."))
-          (gptel-context-add-file current-file-name)))
-    (with-current-buffer (get-buffer-create
-                          (concat pb-gptel_buffer-name-prefix
-                                  (buffer-name)))
-      (switch-to-buffer (current-buffer))
-      (org-mode)
-      (gptel-mode)
-      (insert "*** ")
-      (goto-char (point-max))
-      (evil-insert-state))))
+(defvar pb-gptel_elisp-evaluation-tool
+  (gptel-make-tool
+   :name "eval_elisp"
+   :function (lambda (code)
+               (condition-case err
+                   (let ((result (eval (read code))))
+                     (format "%S" result))
+                 (error (format "Error: %S" err))))
+   :description "Evaluates Elisp code and returns the result. Warning: Only use for safe operations."
+   :args (list '(:name "code"
+                 :type string
+                 :description "Elisp code to evaluate"))
+   :category "emacs"
+   :confirm t))
+
+(setq gptel-tools
+      (list pb-gptel_elisp-evaluation-tool))
+
+;; (defun pb-gptel_new-session-above ()
+;;   "Create a new GPT session in a split window above the current one.
+;; If current buffer visits a file, the new buffer will point to a file with
+;; same extension, that will be created under `pb-gptel-history-dir'."
+;;   (interactive)
+;;   (split-window-vertically)
+;;   (windmove-down)
+;;   (if (buffer-file-name)
+;;       (let* ((current-file-name (buffer-file-name))
+;;              (file (expand-file-name
+;;                     (file-name-nondirectory current-file-name)
+;;                     pb-gptel_history-dir)))
+;;         (let ((buffer-name
+;;                (concat pb-gptel_buffer-name-prefix
+;;                        (file-name-nondirectory file))))
+;;           (if (file-exists-p file)
+;;               (find-file file)
+;;             (progn
+;;               (switch-to-buffer (get-buffer-create buffer-name))
+;;               (set-visited-file-name file)))
+;;           (setq-local gptel--system-message
+;;                       (concat "You are a useful code assistant, that helps discussing "
+;;                               current-file-name
+;;                               " your ourput will only be valid syntax suitable to be inserted in this kind of source code file."))
+;;           (gptel-context-add-file current-file-name)))
+;;     (with-current-buffer (get-buffer-create
+;;                           (concat pb-gptel_buffer-name-prefix
+;;                                   (buffer-name)))
+;;       (switch-to-buffer (current-buffer))
+;;       (org-mode)
+;;       (gptel-mode)
+;;       (insert "*** ")
+;;       (goto-char (point-max))
+;;       (evil-insert-state))))
 
 (provide 'pb-gptel)
 ;;; pb-gptel.el ends here.
