@@ -3,7 +3,7 @@
 (map!
  ;; `s-w' windows
  :desc "delete window" "s-w d" #'evil-window-delete
- :desc "kill buffer & window" "s-w C-d" #'kill-buffer-and-window
+ :desc "kill buffer & window" "s-w s-d" #'kill-buffer-and-window
  ;; moving
  :desc "move left" "s-w h" #'windmove-left
  :desc "move right" "s-w l" #'windmove-right
@@ -47,6 +47,14 @@
  :desc "describe mode" "s-i m" #'describe-mode
  :desc "describe active minor mode" "s-i M" #'doom/describe-active-minor-mode
 
+ ;; `s-b' buffers
+ :desc "ibuffer" "s-b s-b" #'ibuffer
+ :desc "*messages*" "s-b m" #'pb-misc_switch-to-message-buffer
+ :desc "terminals" "s-b t" #'pb-misc_select-vterm-buffer
+ :desc "project ibuffer" "s-b s-p" #'projectile-ibuffer
+ :desc "kill buffer" "s-b k" #'kill-current-buffer
+ :desc "kill buffer and window" "s-b s-k" #'kill-buffer-and-window
+
  ;; `s-q' LLMs
  :desc "gptel" "s-q s-q" #'gptel
  :desc "new session above" "s-q n" #'pb-gptel_new-session-above
@@ -66,8 +74,6 @@
       "s-f" #'find-file
       "s-d" #'dirvish-dwim
 
-      "s-b" #'ibuffer
-      "s-B" #'projectile-ibuffer
       "s-j" #'+vertico/switch-workspace-buffer
       "s-J" #'consult-buffer
       "s-k" #'ibuffer
@@ -241,10 +247,12 @@
        :n [return] #'cider-stacktrace-jump)
 
       (:map cider-mode-map
+
        :n "ö" (lambda () (interactive) (save-buffer) (cider-load-buffer))
        :n "s-r" (lambda () (interactive) (save-buffer) (cider-ns-refresh))
        :n "C-s-r" (lambda () (interactive) (save-buffer) (call-interactively #'cider-jack-in-clj))
-       :n "C-s-R" (lambda () (interactive) (save-buffer) (call-interactively #'cider-jack-in-cljs)))
+       :n "C-s-R" (lambda () (interactive) (save-buffer) (call-interactively #'cider-jack-in-cljs))
+       :desc "repls" "s-b r" #'pb-cider_select-repl-buffer)
 
       (:map reapl-mode-map
        :i "TAB" #'reapl-mode_complete)
