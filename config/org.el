@@ -82,12 +82,21 @@
            :target (file+head "inbox/${slug}.org"
                               "#+title: ${title}\n#+filetags: r_ex")
            :unnarrowed t
-           :immediate-finish t)))) ;; "◉"  "✳"
+           :immediate-finish t)))
+
+  (defun pb-org_disable-flycheck-in-org-src-buffers ()
+    "Disable flycheck when editing Org source blocks."
+    (when (bound-and-true-p flycheck-mode)
+      (flycheck-mode -1)))
+
+  (add-hook 'org-src-mode-hook
+            #'pb-org_disable-flycheck-in-org-src-buffers)) ;; "◉"  "✳"
 
 (use-package org-bullets
   :config
   (setq org-bullets-bullet-list '("⁖")) ; "◉" "○"
   (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+
 
 ;; for some reason putting this into use-package org-gtd :config do not work, trying this...
 '(use-package org-gtd
