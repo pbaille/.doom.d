@@ -116,13 +116,22 @@ Followed by a flat serie of cases of the form args-pattern return-expr."
                            b (if (> 0 a) (- a))]
                         (+ a a)
                         :fail))
+
+        (null (pb-flow [(cons 'io x) (cons 'iop 2)]
+                x))
+
+        (equal (pb-flow [x (cons 'io 23)
+                           (cons 'io x) x]
+                        x)
+               23)
+
         (pb_let [f (pb_fn [x]
                           (pb-flow (> x 0) (list :pos x)
                                    (< x 0) (list :neg x)
                                    :zero))]
-                (and (equal :zero (funcall f 0))
-                     (equal (list :pos 1) (funcall f 1))
-                     (equal (list :neg -1) (funcall f -1))))
+          (and (equal :zero (funcall f 0))
+               (equal (list :pos 1) (funcall f 1))
+               (equal (list :neg -1) (funcall f -1))))
         (equal (let ((f (pb-flow_fn
                          [(list :pair x y)] (list :pair (km :left x :right y))
                          [(list :atom x)] (list :atom x)
