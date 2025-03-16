@@ -44,8 +44,6 @@ and the seed it has to destructure against."
                   (funcall f args seed))
                  ((pb-destructure_guard-symbol? (car pat))
                   (pb-destructure (cons 'guard pat) seed))
-                 ((equal 'quote (car pat))
-                  (list (list (gensym "equal-check_") (list 'equal pat seed))))
                  (t (error (format "No destructuring implementation for: %s"
                                    op))))))
         (t (list (list (gensym "equal-check_") (list 'equal pat seed))))))
@@ -96,6 +94,11 @@ If seed is a symbol, gensym is not used and the symbol is returned."
    'eq (lambda (args seed)
          (pb-destructure (car args)
                          `(if (equal ,(cadr args) ,seed) ,seed))))
+
+  (pb-destructure_extend
+   'quote (lambda (args seed)
+            (list (list (gensym "equal-check_")
+                        (list 'equal (list 'quote (car args)) seed)))))
 
   (pb-destructure_extend
    'guard (lambda (args seed)
@@ -183,6 +186,10 @@ FN-DECL is the same kind of arguments `pb-destructure_fn' expects."
         (equal (funcall (pb-destructure_fn ((list* a b xs)) (list a b xs))
                         (list 1 2 3 4))
                (list 1 2 (list 3 4)))
+
+        (equal (pb-destructure_let [(cons 'io x) (cons 'io 2)]
+                 x)
+               2)
 
         (equal (pb-destructure_let [(list 'io x y) (list 'io 2 3)]
                  (list x y))
