@@ -191,3 +191,10 @@ With validation:
     (null (pb_let [(numbox x) (cons 'numbox 'io)] x)))))
 
 (pb-struct_deftag-tests)
+
+(pb_comment
+ (pb-struct_deftag km2)
+
+ (km2? (km2 :a 1 :b 2 :c (km2 :i 4))))
+
+(provide 'pb-struct)
