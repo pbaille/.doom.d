@@ -28,8 +28,7 @@
 
 (progn :colors
 
-       (use-package webkit-color-picker
-         :bind (("C-c C-p" . webkit-color-picker-show)))
+       (use-package webkit-color-picker)
 
        (use-package kurecolor)
 
@@ -39,4 +38,6 @@
                rainbow-x-colors nil
                rainbow-latex-colors nil
                rainbow-r-colors nil
-               rainbow-ansi-colors nil)))
+               rainbow-ansi-colors nil)
+         :bind (:map rainbow-mode-map
+                     ("C-c C-p" . webkit-color-picker-show))))
