@@ -21,6 +21,7 @@
 (require 'km)
 (require 'symex)
 (require 'pb-symex)
+(require 'pb-clojure)
 
 (defvar pb-gptel_history-dir
   "~/.doom.d/chats/history/")
@@ -152,7 +153,7 @@ OPTIONS is a plist or keyword map that may contain:
 - `selection': The code excerpt to discuss (defaults to region if active,
    otherwise current symbolic expression if not provided)
 
-This function creates a dedicated chat buffer in org-mode with the
+This function creates a dedicated chat buffer in `org-mode' with the
 following structure:
 1. A level-1 header with the file name
 2. A code block containing the selected code (when provided)
@@ -222,7 +223,7 @@ to continue the conversation."
 
 (defun pb-gptel_current-symex-chat ()
   "Create a chat buffer to discuss the current symbolic expression.
-This function opens a dedicated chat buffer in org-mode containing
+This function opens a dedicated chat buffer in `org-mode' containing
 the current symbolic expression and initiates a conversation with GPT.
 The user will be prompted to enter a question or topic for discussion
 about the expression. The resulting buffer will contain:
@@ -238,23 +239,37 @@ The chat buffer supports ongoing conversation through gptel-mode."
    (km :selection (pb-symex_current-as-string)
        :prompt (read-string "Chat about current expression: "))))
 
-(defvar pb-gptel_elisp-evaluation-tool
-  (gptel-make-tool
-   :name "eval_elisp"
-   :function (lambda (code)
-               (condition-case err
-                   (let ((result (eval (read code))))
-                     (format "%S" result))
-                 (error (format "Error: %S" err))))
-   :description "Evaluates Elisp code and returns the result. Warning: Only use for safe operations."
-   :args (list '(:name "code"
-                 :type string
-                 :description "Elisp code to evaluate"))
-   :category "emacs"
-   :confirm t))
+(progn :tools
 
-(setq gptel-tools
-      (list pb-gptel_elisp-evaluation-tool))
+       (defvar pb-gptel_elisp-evaluation-tool
+         (gptel-make-tool
+          :name "eval_elisp"
+          :function (lambda (code)
+                      (condition-case err
+                          (let ((result (eval (read code))))
+                            (format "%S" result))
+                        (error (format "Error: %S" err))))
+          :description "Evaluates Elisp code and returns the result. Warning: Only use for safe operations."
+          :args (list '(:name "code"
+                        :type string
+                        :description "Elisp code to evaluate"))
+          :category "emacs"
+          :confirm t))
+
+       (defvar pb-gptel_clojure-evaluation-tool
+         (gptel-make-tool
+          :name "eval_clojure"
+          :function #'pb-clojure_gptel-tool-function
+          :description "Evaluates Clojure code in the current CIDER REPL."
+          :args (list '(:name "code"
+                        :type string
+                        :description "Clojure code to evaluate"))
+          :category "clojure"
+          :confirm t))
+
+       (setq gptel-tools
+             (list pb-gptel_elisp-evaluation-tool
+                   pb-gptel_clojure-evaluation-tool)))
 
 ;; (defun pb-gptel_new-session-above ()
 ;;   "Create a new GPT session in a split window above the current one.

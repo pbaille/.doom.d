@@ -26,7 +26,7 @@
           :error (nrepl-dict-get response "err")))))
 
 (defun pb-clojure_gptel-tool-function (code)
-  (pb-gptel_mk-prompt
+  (pb-prompt_mk
    (km :clojure
        (km :expression code
            :evaluation (km_filter (pb-clojure_eval-string code)
@@ -35,19 +35,6 @@
 '(:tries
   (pb-clojure_eval-string "(+ 2 3)")
   (pb-clojure_gptel-tool-function "(+ 2 3)"))
-
-(defvar pb-clojure_gptel-tool
-  (gptel-make-tool
-   :name "eval_clojure"
-   :function (lambda (code)
-               (pb-gptel_mk-prompt
-                (pb-clojure_eval-string code)))
-   :description "Evaluates Clojure code in the current CIDER REPL and returns the result."
-   :args (list '(:name "code"
-                 :type string
-                 :description "Clojure code to evaluate"))
-   :category "clojure"
-   :confirm t))
 
 (defun pb-clojure_gptel-replace ()
   "Evaluate the current Clojure expression and request GPT to analyze it.
@@ -64,3 +51,5 @@ see both the code and its runtime behavior at once."
    (concat "current expression evaluates to:\n"
            (pb-clojure_eval-string (pb-symex_current-as-string))
            "\nFix it if needed.")))
+
+(provide 'pb-clojure)
