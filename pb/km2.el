@@ -18,7 +18,7 @@
 (defun km2-content? (m)
   "Check if M is a keyword map."
   (and (listp m)
-       (or (eq nil m)
+       (or (null m)
            (and (keywordp (car m))
                 (km2-content? (cddr m))))))
 
