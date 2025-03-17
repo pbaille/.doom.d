@@ -108,7 +108,8 @@ buffers. Returns the buffer name of the selected vterm buffer."
                      :prompt "Select vterm buffer: "
                      :require-match t
                      :sort nil)))
-      (buffer-name (cdr (assoc selected buffer-alist))))))
+      (switch-to-buffer
+       (buffer-name (cdr (assoc selected buffer-alist)))))))
 
 (defun pb-misc_window-split (buffer)
   "Split the current window vertically, displaying BUFFER."
