@@ -54,6 +54,8 @@
  :desc "project ibuffer" "s-b s-p" #'projectile-ibuffer
  :desc "kill buffer" "s-b k" #'kill-current-buffer
  :desc "kill buffer and window" "s-b s-k" #'kill-buffer-and-window
+ :desc "reload buffer" "s-b r" #'revert-buffer
+ :desc "rename buffer" "s-b R" #'rename-buffer
 
  ;; `s-q' LLMs
  :desc "gptel" "s-q s-q" #'gptel
