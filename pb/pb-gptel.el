@@ -38,7 +38,8 @@ OPTIONS is a plist of options to be passed to `gptel-request`.
 When called interactively, this prompts for the necessary inputs."
   (interactive)
   (apply #'gptel-request
-         (pb-prompt_mk content)
+         (encode-coding-string (pb-prompt_mk content)
+                               'utf-8)
          options))
 
 (defun pb-gptel_mk-request-prompt (path)
@@ -305,6 +306,23 @@ The chat buffer supports ongoing conversation through gptel-mode."
 ;;       (insert "*** ")
 ;;       (goto-char (point-max))
 ;;       (evil-insert-state))))
+
+(pb_comment
+ :coerce-non-utf-8-char-to-unicode
+ ;; gptel curl do not like non-utf-8
+ (pb-gptel_request (with-current-buffer "*Embark Collect: consult-imenu - *"
+                     (let ((str (buffer-substring-no-properties (point-min) (point-max))))
+                       (with-temp-buffer
+                         (insert str)
+                         (goto-char (point-min))
+                         ;; Instead of removing non-UTF-8 characters, replace them with their Unicode representation
+                         (while (re-search-forward "[^\x00-\x7F\u0080-\uFFFF]" nil t)
+                           (let ((char (match-string 0)))
+                             (replace-match (format "\\\\u%04X" (string-to-char char)))))
+                         (buffer-string))))
+                   (km :callback (lambda (res info)
+                                   (print res)))))
+
 
 (provide 'pb-gptel)
 ;;; pb-gptel.el ends here.
