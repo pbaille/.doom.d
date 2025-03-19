@@ -72,6 +72,7 @@
  ;; :desc "XP request insert" "s-q b i" #'pb-gptel_current-buffer-request-inlined
  ;; :desc "XP request replace" "s-q b r" #'pb-gptel_current-buffer-request-replace
  ;; :desc "XP request to new buffer" "s-q b b" #'pb-gptel_current-buffer-request-new-buffer
+ :desc "git status" "s-g s-g" #'magit-status
  )
 
 (map! "H-C-`" #'+popup/toggle
@@ -140,9 +141,9 @@
       :n "g b" #'pb-ibuffer_sidebar-focus)
 
 ;; gptel TODO remove when new `s-q' is learnt
-(map! :ni "s-g b" #'gptel
-      :ni "s-g n" #'pb-gptel_new-session-above
-      :ni "s-g g" #'gptel-menu)
+;; (map! :ni "s-g b" #'gptel
+;;       :ni "s-g n" #'pb-gptel_new-session-above
+;;       :ni "s-g g" #'gptel-menu)
 
 
 
