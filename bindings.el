@@ -76,7 +76,8 @@
 
 (map! "H-C-`" #'+popup/toggle
       "s-f" #'find-file
-      "s-d" #'dirvish-dwim
+      "s-d" #'dired-jump
+      "s-C-d" #'dirvish-dwim
 
       "s-j" #'+vertico/switch-workspace-buffer
       "s-J" #'consult-buffer
