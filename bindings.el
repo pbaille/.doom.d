@@ -72,7 +72,10 @@
  ;; :desc "XP request insert" "s-q b i" #'pb-gptel_current-buffer-request-inlined
  ;; :desc "XP request replace" "s-q b r" #'pb-gptel_current-buffer-request-replace
  ;; :desc "XP request to new buffer" "s-q b b" #'pb-gptel_current-buffer-request-new-buffer
+
+ ;; `s-g' git
  :desc "git status" "s-g s-g" #'magit-status
+ :desc "diff file" "s-g d" #'magit-diff-buffer-file
  )
 
 (map! "H-C-`" #'+popup/toggle
