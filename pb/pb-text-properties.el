@@ -54,8 +54,7 @@ therefore F has to be applied meaninfully."
         (add-face-text-property (point) (min next-change end)
                                 (pb-text-properties_update-face-value f face-prop)
                                 nil
-                                (or buf (current-buffer))
-                                )
+                                (or buf (current-buffer)))
         (goto-char next-change)))))
 
 (quote

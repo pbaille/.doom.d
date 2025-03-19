@@ -3,6 +3,9 @@
 (require 'request)
 (require 'json)
 (require 'vec)
+(require 'secrets)
+
+;;; Code:
 
 (progn
   (defvar pb-llm_chats
