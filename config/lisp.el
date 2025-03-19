@@ -142,6 +142,9 @@
           ("C-p" . pb-symex_ring-append)
           ("C-P" . pb-symex_ring-prepend)
 
+          ("M-C-j" . symex-insert-newline)
+          ("M-C-k" . symex-join-lines-backwards)
+
           ;; llm
           ("q r" . pb-gptel_current-symex-request)
           ("q f" . pb-gptel_fill-holes)
