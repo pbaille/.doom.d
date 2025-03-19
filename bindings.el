@@ -77,7 +77,9 @@
 (map! "H-C-`" #'+popup/toggle
       "s-f" #'find-file
       "s-d" #'dired-jump
-      "s-C-d" #'dirvish-dwim
+      "s-C-d" (lambda ()
+                (interactive)
+                (dirvish (projectile-project-root)))
 
       "s-j" #'+vertico/switch-workspace-buffer
       "s-J" #'consult-buffer
@@ -115,11 +117,12 @@
       "s-S-<down>" #'windmove-down)
 
 ;; vim motion in insert mode using control key.
-(map! :i "C-h" #'backward-char
-      :i "C-j" #'evil-next-line
-      :i "C-k" #'evil-previous-line
-      :i "C-l" #'forward-char
-      :i "C-w" evil-window-map
+(map! :ni "C-h" #'backward-char
+      :ni "C-j" #'evil-next-line
+      :ni "C-k" #'evil-previous-line
+      :ni "C-l" #'forward-char
+      :n "M-C-j" (lambda () (interactive) (evil-insert-newline-above) (evil-next-line))
+      :n "M-C-k" (lambda () (interactive) (delete-indentation))
 
       ;; some extras
       :i "C-S-h" #'paredit-backward-delete
