@@ -47,15 +47,18 @@
  :desc "describe mode" "s-i m" #'describe-mode
  :desc "describe active minor mode" "s-i M" #'doom/describe-active-minor-mode
 
- ;; `s-b' buffers
- :desc "ibuffer" "s-b s-b" #'ibuffer
- :desc "*messages*" "s-b m" #'pb-misc_switch-to-message-buffer
- :desc "terminals" "s-b t" #'pb-misc_select-vterm-buffer
- :desc "project ibuffer" "s-b s-p" #'projectile-ibuffer
- :desc "kill buffer" "s-b k" #'kill-current-buffer
- :desc "kill buffer and window" "s-b s-k" #'kill-buffer-and-window
- :desc "reload buffer" "s-b r" #'revert-buffer
- :desc "rename buffer" "s-b R" #'rename-buffer
+ ;; `s-j' buffers
+ :desc "project buffer" "s-j j" #'+vertico/switch-workspace-buffer
+ :desc "consult buffer" "s-j s-j" #'consult-buffer
+ :desc "ibuffer" "s-j s-i" #'ibuffer
+ :desc "*messages*" "s-j m" #'pb-misc_switch-to-message-buffer
+ :desc "terminals" "s-j t" #'pb-misc_select-vterm-buffer
+ :desc "project ibuffer" "s-j i" #'projectile-ibuffer
+ :desc "kill buffer" "s-j k" #'kill-current-buffer
+ :desc "kill buffer and window" "s-j s-k" #'kill-buffer-and-window
+ :desc "reload buffer" "s-j r" #'revert-buffer
+ :desc "rename buffer" "s-j R" #'rename-buffer
+ :desc "consult flycheck" "s-j w" #'consult-flycheck
 
  ;; `s-q' LLMs
  :desc "gptel" "s-q s-q" #'gptel
@@ -69,36 +72,36 @@
  :desc "remove all context" "s-q D" #'gptel-context-remove-all
  :desc "tools: enable" "s-q t e" (lambda () (interactive) (setq-local gptel-use-tools t))
  :desc "tools: disable" "s-q t d" (lambda () (interactive) (setq-local gptel-use-tools nil))
- :desc "ask google" "s-q g" (lambda () (interactive) (browse-url "https://www.google.com"))
- ;; :desc "XP request insert" "s-q b i" #'pb-gptel_current-buffer-request-inlined
- ;; :desc "XP request replace" "s-q b r" #'pb-gptel_current-buffer-request-replace
- ;; :desc "XP request to new buffer" "s-q b b" #'pb-gptel_current-buffer-request-new-buffer
 
  ;; `s-g' git
  :desc "git status" "s-g s-g" #'magit-status
  :desc "diff file" "s-g d" #'magit-diff-buffer-file
- )
 
-(map! "H-C-`" #'+popup/toggle
-      "s-f" #'find-file
-      "s-d" #'dired-jump
-      "s-C-d" (lambda ()
-                (interactive)
-                (dirvish (projectile-project-root)))
+ ;; `s-s' search
+ :desc "search file" "s-s s-s" #'+default/search-buffer
+ :desc "search project" "s-s p" #'+default/search-project
+ :desc "search replace" "s-s r" #'query-replace
+ :desc "search google" "s-s g" (lambda () (interactive) (browse-url "https://www.google.com"))
+ :desc "search mark" "s-s m" #'consult-mark
 
-      "s-j" #'+vertico/switch-workspace-buffer
-      "s-J" #'consult-buffer
-      "s-k" #'ibuffer
+ ;; `s-f' file
+ :desc "find file" "s-f s-f" #'find-file
+ :desc "find file" "s-f r" #'consult-recent-file
+ :desc "copy file" "s-f C" #'doom/copy-this-file
+ :desc "move file" "s-f R" #'doom/move-this-file
+ :desc "find project file" "s-f p" #'projectile-find-file
+ :desc "save file" "s-f s-s" #'save-buffer
 
-      "s-C-s" #'dired-sidebar-toggle-sidebar
+ ;; `s-d' dired
+ :desc "dired" "s-d d" #'dired-jump
+ :desc "dirvish" "s-d s-d" (lambda () (interactive) (dirvish (projectile-project-root)))
+ :desc "sidebar" "s-d s" #'dired-sidebar-toggle-sidebar
+ :desc "dired kill all" "s-d s-k" #'pb-misc_kill-all-dired-buffers)
 
-      "s-t" #'hs-hide-all
+(map! "s-t" #'hs-hide-all
       "s-T" #'hs-show-all
 
-      "C-<tab>" #'company-complete
       "M-v" #'consult-yank-from-kill-ring
-      "s-r" #'consult-register-load
-
       ;; buffer move
       "s-M-l" #'next-buffer
       "s-M-h" #'previous-buffer
@@ -144,59 +147,14 @@
 (map! :n "g f" #'dired-sidebar-jump-to-sidebar
       :n "g b" #'pb-ibuffer_sidebar-focus)
 
-;; gptel TODO remove when new `s-q' is learnt
-;; (map! :ni "s-g b" #'gptel
-;;       :ni "s-g n" #'pb-gptel_new-session-above
-;;       :ni "s-g g" #'gptel-menu)
-
-
-
 (map! :leader
-
-      "f e" #'consult-flycheck
 
       ;; overide default bookmark binding to the more useful consult-register
       "r r" #'consult-register-load
       "r f" #'consult-register
       "r s" #'consult-register-store
 
-      "s m" #'consult-mark ; previously consult-bookmark
-
-      "o d" #'dired-jump
-      "SPC" #'consult-buffer
-      "t s" #'dired-sidebar-toggle-sidebar
-      "t S" #'pb-dired_sidebar-reset
-      "t h" #'hs-toggle-hiding
-      "t R" #'rainbow-mode
-
-      ;; buffers
-      :desc "kill all dired buffers"
-      "b D" #'pb-misc_kill-all-dired-buffers
-      ;; exchange default doom bindings 'SPC b b' and 'SPC b B'
-      :desc "consult buffer"
-      "b b" #'consult-buffer
-      :desc "switch worksapce buffer"
-      "b B" #'+vertico/switch-workspace-buffer
-
-      "b K" #'kill-buffer-and-window
-
-      "o D" #'+debugger/start
-
-      :desc "pop google search"
-      "o g" (lambda () (interactive) (browse-url "https://google.com"))
-      :desc "open ChatGPT 4"
-      "o G" (lambda () (interactive) (browse-url "https://chat.openai.com/?model=gpt-4"))
-
-      :desc "delete-window"
-      :ni "w d" (lambda () (interactive) (delete-window))
-
-                                        ;"d d" #'org-gtd-choose
-                                        ;"d c" #'org-gtd-capture
-                                        ;"d e" #'org-gtd-engage
-                                        ;"d p" #'org-gtd-process-inbox
-                                        ;"t t" #'tab-line-mode
-
-      )
+      "o D" #'+debugger/start)
 
 (map! :localleader
       (:map org-mode-map
