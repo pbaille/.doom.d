@@ -314,32 +314,5 @@ If inside string or comment, toggle insert state."
                (symex-goto-last))
       (symex-delete count))))
 
-(pb_comment
-  (a)
-  (wer er))
-
-(defun pb-symex_update-overlay (&optional count)
-  "Update the highlight overlay to match the start/end position of NODE."
-  (when symex--current-overlay
-    (delete-overlay symex--current-overlay))
-  (setq-local symex--current-overlay
-              (make-overlay (symex--get-starting-point)
-                            (symex--get-end-point (or count 1))))
-  (overlay-put symex--current-overlay 'face 'symex--current-node-face))
-
-(defun pb-symex_expand-overlay-fw ()
-  "Expand the current overlay to include the next expression forward."
-  (interactive)
-  (when symex--current-overlay
-    (let ((start (overlay-start symex--current-overlay))
-          (end (overlay-end symex--current-overlay))
-          (next-end nil))
-      (save-excursion
-        (goto-char end)
-        (forward-sexp 1)
-        (setq next-end (point)))
-      (move-overlay symex--current-overlay start next-end)
-      (overlay-put symex--current-overlay 'face 'symex--current-node-face))))
-
 (provide 'pb-symex)
 ;;; pb-symex.el ends here.
