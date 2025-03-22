@@ -31,23 +31,24 @@ The `current-buffer' has to be a buffer recognized by cider for this to work,"
       (kill-buffer buffer))))
 
 (defun pb-cider_select-repl-buffer ()
-  "List and select a CIDER REPL buffer using consult."
+  "List and select a CIDER REPL buffer using consult.
+Uses consult--read to create an interactive selection menu of all CIDER REPL
+buffers with live previewing."
   (interactive)
   (let* ((repl-buffers (seq-filter
                         (lambda (buffer)
                           (string-match-p "\\*cider-repl" (buffer-name buffer)))
                         (buffer-list)))
-         (buffer-names (mapcar (lambda (buffer)
-                                 (let ((name (buffer-name buffer)))
-                                   (replace-regexp-in-string "\\*cider-repl \\([^:]*\\).*\\*" "\\1" name)))
-                               repl-buffers))
-         (buffer-alist (cl-mapcar #'cons buffer-names repl-buffers)))
-    (let ((selected (consult--read
-                     buffer-names
-                     :prompt "Select CIDER REPL: "
-                     :require-match t
-                     :sort nil)))
-      (buffer-name (cdr (assoc selected buffer-alist))))))
+         (buffer-names (mapcar #'buffer-name repl-buffers))
+         (selected (consult--read
+                    buffer-names
+                    :prompt "Select CIDER REPL: "
+                    :sort nil
+                    :require-match t
+                    :category 'buffer
+                    :state (consult--buffer-state))))
+    (when selected
+      selected)))
 
 (defun pb-cider_goto-repl ()
   "Let the user choose a repl buffer and switch the buffer to it."
