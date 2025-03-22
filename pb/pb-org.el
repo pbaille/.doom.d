@@ -422,6 +422,23 @@ If buffer is narrowed, widen it and narrow the previous node"
     (insert "\n\n#+end_src\n")
     (goto-char p)))
 
+(defun pb-org_get-current-code-block-mode ()
+  "Get the major mode corresponding to the current source block language."
+  (when (org-in-src-block-p)
+    (let ((info (org-babel-get-src-block-info)))
+      (org-src-get-lang-mode (nth 0 info)))))
+
+(defun pb-org_symex-eval ()
+  "Evaluate the current source block using the appropriate symex method.
+This function retrieves the major mode corresponding to the current
+source block language and then calls the symex evaluation method
+appropriate for that language."
+  (funcall (let ((major-mode (pb-org_get-current-code-block-mode)))
+             (symex-interface-get-method :eval))))
+
+(symex-interface-extend (list 'org-mode)
+                        (list :eval #'pb-org_symex-eval))
+
 (defun pb-org_eval-block ()
   "Eval code block."
   (interactive)
