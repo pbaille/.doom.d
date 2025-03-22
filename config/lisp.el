@@ -140,7 +140,8 @@
 
           ("C-R" . pb-symex_ring-replace)
           ("C-p" . pb-symex_ring-append)
-          ("C-P" . pb-symex_ring-prepend)
+          ("C-S-p" . pb-symex_ring-prepend)
+          ("C-;" . embark-act)
 
           ("M-C-j" . symex-insert-newline)
           ("M-C-k" . symex-join-lines-backwards)
