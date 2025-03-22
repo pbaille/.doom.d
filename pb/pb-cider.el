@@ -37,7 +37,9 @@ buffers with live previewing."
   (interactive)
   (let* ((repl-buffers (seq-filter
                         (lambda (buffer)
-                          (string-match-p "\\*cider-repl" (buffer-name buffer)))
+                          (and (buffer-live-p buffer)
+                               (with-current-buffer buffer
+                                 (derived-mode-p 'cider-repl-mode))))
                         (buffer-list)))
          (buffer-names (mapcar #'buffer-name repl-buffers))
          (selected (consult--read
