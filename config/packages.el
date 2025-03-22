@@ -39,7 +39,7 @@
 (use-package company
   :config
   (set-company-backend! 'org-mode nil)
-  (setq company-idle-delay 1))
+  (setq company-idle-delay nil))
 
 '(use-package nerd-icons-dired
   :hook
@@ -82,7 +82,8 @@
   :config
   (setq dirvish-hide-details t))
 
-
+(use-package embark
+  :config (setq embark-quit-after-action nil))
 
 (use-package dired-sidebar
   :config
@@ -152,6 +153,9 @@
             #b00000000
             #b00000000
             #b00000000))
+
+  (setq-default flycheck-disabled-checkers
+                '(emacs-lisp-package))
 
   (flycheck-define-error-level 'error
     :overlay-category 'flycheck-error-overlay
