@@ -81,7 +81,7 @@
  :desc "search file" "s-s s-s" #'+default/search-buffer
  :desc "search project" "s-s p" #'+default/search-project
  :desc "search replace" "s-s r" #'query-replace
- :desc "search google" "s-s g" (lambda () (interactive) (browse-url "https://www.google.com"))
+ :desc "search google" "s-s g" (lambda () (interactive) (browse-url "https://www.google.com/?autofocus=1"))
  :desc "search mark" "s-s m" #'consult-mark
 
  ;; `s-f' file
@@ -206,7 +206,7 @@
 
       (:map emacs-lisp-mode-map
        :i "C-p" #'pb-elisp_insert-package-prefix
-       :n "C-e" #'pb-elisp_send-expression-to-ielm)
+       :n "s-j e" #'eval-buffer)
 
       (:map cider-inspector-mode-map
        :n "j" #'cider-inspector-next-inspectable-object
