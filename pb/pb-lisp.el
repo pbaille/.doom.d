@@ -85,7 +85,11 @@
                "L" #'pb-lisp/extend-selection-to-next-sibling
                "H" #'pb-lisp/extend-selection-to-prev-sibling
                "J" #'pb-lisp/shrink-selection-from-beg
-               "K" #'pb-lisp/shrink-selection-from-end))
+               "K" #'pb-lisp/shrink-selection-from-end
+               ;; should use alt instead of ctrl
+               "C-L" #'pb-lisp/swap-with-next-sibling
+               "C-H" #'pb-lisp/swap-with-prev-sibling
+               ))
 
        (dolist (binding (sq_partition 2 2 pb-lisp/bindings))
          (define-key evil-pb-lisp-state-map
@@ -95,12 +99,29 @@
          (advice-remove (cadr binding) #'pb-lisp/update-overlay)))
 
 (progn :current-node
+
+       ;; symex-ts--get-topmost-node
+       (defun pb-lisp/get-topmost-node (node)
+         "Return the highest node in the tree starting from NODE.
+
+The returned node is the highest possible node that has the same
+start position as NODE."
+         (let ((node-start-pos (tsc-node-start-position node))
+               (parent (tsc-get-parent node)))
+           (if parent
+               (let ((parent-pos (tsc-node-start-position parent)))
+                 (if (eq node-start-pos parent-pos)
+                     (pb-lisp/get-topmost-node parent)
+                   node))
+             node)))
+
        (defun pb-lisp/get-current-node ()
          "Get the tree-sitter node at point."
          (if tree-sitter-tree
              (let* ((root (tsc-root-node tree-sitter-tree))
                     (pos (point)))
-               (tsc-get-named-descendant-for-position-range root pos pos))
+               (pb-lisp/get-topmost-node
+                (tsc-get-named-descendant-for-position-range root pos pos)))
            (message "tree-sitter not enabled")))
 
        (defun pb-lisp/get-current-node-bounds ()
@@ -141,6 +162,13 @@ Returns nil if NODE is not a child of PARENT."
                 (current-index (pb-lisp/get-node-child-index node parent))
                 (is-last-sibling (and current-index (= current-index (1- child-count))))
                 (next-sibling (and parent (not is-last-sibling) (tsc-get-next-sibling node))))
+           (message "Debug:\nnode=%S\nparent=%S\nchild-count=%S\ncurrent-index=%S\nis-last-sibling=%S\nnext-sibling=%S"
+                    (tsc-node-type node)
+                    (and parent (tsc-node-type parent))
+                    child-count
+                    current-index
+                    is-last-sibling
+                    (and next-sibling (tsc-node-type next-sibling)))
            (pb-lisp/goto-node next-sibling "No next sibling found")))
 
        (defun pb-lisp/goto-prev-sibling ()
@@ -297,12 +325,72 @@ Returns a list of (parent child-count node-list selected-indices) where:
 
        )
 
+(progn :move-expressions
+
+       (defun pb-lisp/swap-siblings (direction)
+         "Transpose the current node with its next or previous sibling.
+DIRECTION should be 'next or 'prev."
+         (let* ((node (pb-lisp/get-current-node))
+                (parent (tsc-get-parent node))
+                (sibling (cond ((eq direction 'next) (tsc-get-next-sibling node))
+                               ((eq direction 'prev) (tsc-get-prev-sibling node))
+                               (t nil)))
+                (node-start (tsc-node-start-position node))
+                (node-end (tsc-node-end-position node))
+                (node-text (buffer-substring-no-properties node-start node-end))
+                (sibling-start (and sibling (tsc-node-start-position sibling)))
+                (sibling-end (and sibling (tsc-node-end-position sibling)))
+                (sibling-text (and sibling (buffer-substring-no-properties sibling-start sibling-end))))
+
+           (when (and parent sibling)
+             (save-excursion
+               ;; We need to handle the order of deletion/insertion differently
+               ;; depending on which sibling comes first in the buffer
+               (if (< node-start sibling-start)
+                   ;; Node comes before sibling
+                   (progn
+                     (delete-region sibling-start sibling-end)
+                     (goto-char sibling-start)
+                     (insert node-text)
+                     (delete-region node-start node-end)
+                     (goto-char node-start)
+                     (insert sibling-text))
+                 ;; Sibling comes before node
+                 (progn
+                   (delete-region node-start node-end)
+                   (goto-char node-start)
+                   (insert sibling-text)
+                   (delete-region sibling-start sibling-end)
+                   (goto-char sibling-start)
+                   (insert node-text))))
+
+             ;; Reindent the region spanning both the original node and sibling
+             (let ((indent-region-start (min node-start sibling-start))
+                   (indent-region-end (max node-end sibling-end)))
+               (indent-region indent-region-start indent-region-end))
+
+             (cond ((eq direction 'next) (pb-lisp/goto-next-sibling))
+                   ((eq direction 'prev) (pb-lisp/goto-prev-sibling))))
+
+           (unless sibling
+             (message "No %s sibling to swap with" direction))))
+
+       (defun pb-lisp/swap-with-next-sibling ()
+         "Swap the current node with its next sibling."
+         (interactive)
+         (pb-lisp/swap-siblings 'next))
+
+       (defun pb-lisp/swap-with-prev-sibling ()
+         "Swap the current node with its previous sibling."
+         (interactive)
+         (pb-lisp/swap-siblings 'prev)))
+
 '(a b c d e)
 
 (map! (:map emacs-lisp-mode-map
        :n "s-l" #'evil-pb-lisp-state)
       (:map clojure-mode-map
-       :n "s-l" #'evil-pb-lisp-state))
+       :n "M-`" #'evil-pb-lisp-state))
 
 (provide 'pb-lisp)
 ;;; pb-lisp.el ends here
