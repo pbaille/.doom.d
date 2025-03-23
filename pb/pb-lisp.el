@@ -19,7 +19,7 @@
 
 (progn :mode-definition
        (evil-define-state pb-lisp
-         "Sorg state."
+         "PB Lisp state."
          :tag " PB_LISP "
          :message "-- PB_LISP --"
          :enable (normal)
@@ -68,36 +68,6 @@
                        (make-overlay (car bounds) (cdr bounds))))
          (overlay-put pb-lisp/current-overlay 'face 'pb-lisp/current-node-face)))
 
-(progn :bindings
-
-       (defun pb-lisp/exit ()
-         (interactive)
-         (evil-pb-lisp-state -1))
-
-       (defvar pb-lisp/bindings
-         (list "ESC" #'pb-lisp/exit
-               "h" #'pb-lisp/goto-prev-sibling
-               "l" #'pb-lisp/goto-next-sibling
-               "j" #'pb-lisp/goto-first-child
-               "k" #'pb-lisp/goto-parent
-               "C-l" #'pb-lisp/goto-last-sibling
-               "C-h" #'pb-lisp/goto-first-sibling
-               "L" #'pb-lisp/extend-selection-to-next-sibling
-               "H" #'pb-lisp/extend-selection-to-prev-sibling
-               "J" #'pb-lisp/shrink-selection-from-beg
-               "K" #'pb-lisp/shrink-selection-from-end
-               ;; should use alt instead of ctrl
-               "C-L" #'pb-lisp/swap-with-next-sibling
-               "C-H" #'pb-lisp/swap-with-prev-sibling
-               ))
-
-       (dolist (binding (sq_partition 2 2 pb-lisp/bindings))
-         (define-key evil-pb-lisp-state-map
-                     (kbd (car binding))
-                     (cadr binding))
-
-         (advice-remove (cadr binding) #'pb-lisp/update-overlay)))
-
 (progn :current-node
 
        ;; symex-ts--get-topmost-node
@@ -109,16 +79,16 @@ start position as NODE."
          (let ((node-start-pos (tsc-node-start-position node))
                (parent (tsc-get-parent node)))
            (if parent
-               (let ((parent-pos (tsc-node-start-position parent)))
+           (let ((parent-pos (tsc-node-start-position parent)))
                  (if (eq node-start-pos parent-pos)
-                     (pb-lisp/get-topmost-node parent)
-                   node))
+           (pb-lisp/get-topmost-node parent)
+         node))
              node)))
 
        (defun pb-lisp/get-current-node ()
          "Get the tree-sitter node at point."
          (if tree-sitter-tree
-             (let* ((root (tsc-root-node tree-sitter-tree))
+           (let* ((root (tsc-root-node tree-sitter-tree))
                     (pos (point)))
                (pb-lisp/get-topmost-node
                 (tsc-get-named-descendant-for-position-range root pos pos)))
@@ -134,8 +104,10 @@ Returns a cons cell (start . end) with buffer positions."
          "Go to the start position of NODE or display MESSAGE if node is nil."
          (if node
              (progn (goto-char (tsc-node-start-position node))
-                    (pb-lisp/update-overlay (tsc-node-position-range node)))
-           (message message)))
+                    (pb-lisp/update-overlay (tsc-node-position-range node))
+                    node)
+           (progn (message message)
+                  nil)))
 
        (defun pb-lisp/goto-parent ()
          "Move to the beginning of the parent node."
@@ -162,13 +134,6 @@ Returns nil if NODE is not a child of PARENT."
                 (current-index (pb-lisp/get-node-child-index node parent))
                 (is-last-sibling (and current-index (= current-index (1- child-count))))
                 (next-sibling (and parent (not is-last-sibling) (tsc-get-next-sibling node))))
-           (message "Debug:\nnode=%S\nparent=%S\nchild-count=%S\ncurrent-index=%S\nis-last-sibling=%S\nnext-sibling=%S"
-                    (tsc-node-type node)
-                    (and parent (tsc-node-type parent))
-                    child-count
-                    current-index
-                    is-last-sibling
-                    (and next-sibling (tsc-node-type next-sibling)))
            (pb-lisp/goto-node next-sibling "No next sibling found")))
 
        (defun pb-lisp/goto-prev-sibling ()
@@ -385,7 +350,221 @@ DIRECTION should be 'next or 'prev."
          (interactive)
          (pb-lisp/swap-siblings 'prev)))
 
-'(a b c d e)
+(progn :edition
+
+       '(a er b (ert dfg))
+
+       (defun pb-lisp/copy-selection ()
+         "Copy current selection and add it to the kill ring."
+         (interactive)
+         (let* ((start (overlay-start pb-lisp/current-overlay))
+                (end (overlay-end pb-lisp/current-overlay))
+                (text (buffer-substring-no-properties start end)))
+           (when (and start end)
+             (kill-new text)
+             (message "Copied selection to kill ring"))))
+
+       (defun pb-lisp/delete-selection ()
+         "Delete current-overlay, adding its content to the kill ring, after deletion goto next node if exists, previous node if exists or parent."
+         (interactive)
+         (let* ((start (overlay-start pb-lisp/current-overlay))
+                (end (overlay-end pb-lisp/current-overlay))
+                (node (pb-lisp/get-current-node))
+                (parent (tsc-get-parent node))
+                (next-sibling (save-excursion (pb-lisp/goto-next-sibling)))
+                (prev-sibling (save-excursion (pb-lisp/goto-prev-sibling)))
+                ;; Store target position before deleting
+                (target-pos (cond (next-sibling
+                                   start)
+                                  (prev-sibling
+                                   (tsc-node-start-position prev-sibling))
+                                  (parent
+                                   (tsc-node-start-position parent))
+                                  (t start))))
+           ;; Kill the region (adds to kill ring)
+           (kill-region start end)
+           (cond
+            (next-sibling
+             ;; Delete forward whitespace
+             (while (and (< (point) (point-max))
+                         (looking-at-p "\\s-"))
+               (delete-char 1)))
+            (prev-sibling
+             ;; Delete backward whitespace
+             (while (and (> (point) (point-min))
+                         (progn (backward-char) (looking-at-p "\\s-")))
+               (delete-char 1))))
+           (goto-char target-pos)
+           (pb-lisp/update-overlay)))
+
+       (defun pb-lisp/yank-after ()
+         "Yank clipboard contents after the current node."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (end (tsc-node-end-position node)))
+           (goto-char end)
+           (insert " ")
+           (save-excursion (yank))
+           (pb-lisp/update-overlay)))
+
+       (defun pb-lisp/yank-before ()
+         "Yank clipboard contents before the current node."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (start (tsc-node-start-position node)))
+           (goto-char start)
+           (save-excursion
+             (yank)
+             (insert " "))
+           (pb-lisp/update-overlay)))
+
+       (defun pb-lisp/replace-selection ()
+         "Replace the current selection with clipboard contents."
+         (interactive)
+         (let ((start (overlay-start pb-lisp/current-overlay))
+               (end (overlay-end pb-lisp/current-overlay)))
+           (delete-region start end)
+           (goto-char start)
+           (save-excursion (yank))
+           (pb-lisp/update-overlay)))
+
+       (defun pb-lisp/change-selection ()
+         "Delete the current selection and enter insert state."
+         (interactive)
+         (let ((start (overlay-start pb-lisp/current-overlay))
+               (end (overlay-end pb-lisp/current-overlay)))
+           (delete-region start end)
+           (goto-char start)
+           (evil-insert-state)))
+
+       (defun pb-lisp/insert-after ()
+         "Enter insert state after the current node."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (end (tsc-node-end-position node)))
+           (goto-char end)
+           (insert " ")
+           (evil-insert-state)))
+
+       (defun pb-lisp/insert-before ()
+         "Enter insert state before the current node."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (start (tsc-node-start-position node)))
+           (goto-char start)
+           (save-excursion (insert " "))
+           (evil-insert-state)))
+
+       (defun pb-lisp/insert-at-begining ()
+         "Enter insert state at the beginning of the current node's content."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (start (tsc-node-start-position node))
+                (node-type (tsc-node-type node)))
+           ;; For lists, move inside the opening paren
+           (if (member node-type '("list" "vector" "map" "set"))
+               (progn
+                 (goto-char start)
+                 (forward-char 1) ;; Move past the opening delimiter
+                 (skip-chars-forward " \t\n") ;; Skip whitespace
+                 (evil-insert-state))
+             ;; For other node types, go to start
+             (goto-char start)
+             (evil-insert-state))))
+
+       (defun pb-lisp/insert-at-end ()
+         "Enter insert state at the end of the current node's content."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (end (tsc-node-end-position node))
+                (node-type (tsc-node-type node)))
+           ;; For lists, move inside the closing paren
+           (if (member node-type '("list" "vector" "map" "set"))
+               (progn
+                 (goto-char end)
+                 (backward-char 1) ;; Move before the closing delimiter
+                 (skip-chars-backward " \t\n") ;; Skip whitespace backward
+                 (evil-insert-state))
+             ;; For other node types, go to end
+             (goto-char end)
+             (evil-insert-state))))
+
+       (progn :editing-advanced
+              (defun pb-lisp/paren-wrap ()
+                "Wrap the current node in parentheses."
+                (interactive)
+                (let* ((node (pb-lisp/get-current-node))
+                       (start (tsc-node-start-position node))
+                       (end (tsc-node-end-position node)))
+                  (save-excursion
+                    (goto-char end)
+                    (insert ")")
+                    (goto-char start)
+                    (insert "("))
+                  (pb-lisp/update-overlay)
+                  (goto-char start)))
+
+              (defun pb-lisp/raise-node ()
+                "Replace the parent node with the current node."
+                (interactive)
+                (let* ((node (pb-lisp/get-current-node))
+                       (parent (tsc-get-parent node))
+                       (node-start (tsc-node-start-position node))
+                       (node-end (tsc-node-end-position node))
+                       (node-text (buffer-substring-no-properties node-start node-end)))
+                  (if parent
+                      (let ((parent-start (tsc-node-start-position parent))
+                            (parent-end (tsc-node-end-position parent)))
+                        (delete-region parent-start parent-end)
+                        (goto-char parent-start)
+                        (save-excursion (insert node-text))
+                        (pb-lisp/update-overlay))
+                    (message "Cannot raise - no parent node"))))))
+
+(progn :bindings
+
+       (defun pb-lisp/exit ()
+         (interactive)
+         (evil-pb-lisp-state -1))
+
+       (defvar pb-lisp/bindings
+         (list (kbd "<escape>") #'pb-lisp/exit
+               "h" #'pb-lisp/goto-prev-sibling
+               "l" #'pb-lisp/goto-next-sibling
+               "j" #'pb-lisp/goto-first-child
+               "k" #'pb-lisp/goto-parent
+               "C-l" #'pb-lisp/goto-last-sibling
+               "C-h" #'pb-lisp/goto-first-sibling
+
+               "S-l" #'pb-lisp/extend-selection-to-next-sibling
+               "S-h" #'pb-lisp/extend-selection-to-prev-sibling
+               "S-j" #'pb-lisp/shrink-selection-from-beg
+               "S-k" #'pb-lisp/shrink-selection-from-end
+               ;; should use alt instead of ctrl
+               (kbd "M-l") #'pb-lisp/swap-with-next-sibling
+               (kbd "M-h") #'pb-lisp/swap-with-prev-sibling
+               (kbd "M-j") #'pb-lisp/paren-wrap
+               (kbd "M-k") #'pb-lisp/raise-node
+
+               "x" #'pb-lisp/delete-selection
+               "p" #'pb-lisp/yank-after
+               "P" #'pb-lisp/yank-before
+               "y" #'pb-lisp/copy-selection
+
+               "c" #'pb-lisp/change-selection
+               "A" #'pb-lisp/insert-after
+               "a" #'pb-lisp/insert-at-end
+               "I" #'pb-lisp/insert-before
+               "i" #'pb-lisp/insert-at-begining))
+
+
+       (dolist (binding (sq_partition 2 2 pb-lisp/bindings))
+         (evil-define-key* nil
+           evil-pb-lisp-state-map
+           (car binding)
+           (cadr binding))))
+
+'(a b ( d dfg (i et ) c) d e)
 
 (map! (:map emacs-lisp-mode-map
        :n "s-l" #'evil-pb-lisp-state)
