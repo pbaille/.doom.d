@@ -18,6 +18,7 @@
 (require 'tree-sitter-langs)
 
 (progn :mode-definition
+
        (evil-define-state pb-lisp
          "PB Lisp state."
          :tag " PB_LISP "
@@ -30,13 +31,14 @@
              `(box "magenta"))
 
        (defvar pb-lisp/modes
-         '(clojure-mode clojurescript-mode clojurec-mode
+         '(org-mode clojure-mode clojurescript-mode clojurec-mode
            emacs-lisp-mode fennel-mode sheme-mode racket-mode))
 
        (defun pb-lisp/enter-mode ()
          "Run when on entering sorg mode."
          (when (member major-mode pb-lisp/modes)
-           (tree-sitter-mode)
+           (tree-sitter-mode nil)
+           (hl-line-mode -1)
            (goto-char (car (pb-lisp/get-current-node-bounds)))
            (pb-lisp/update-overlay)))
 
@@ -44,15 +46,18 @@
          "Run on exiting sorg mode."
          (print "exit pb-lisp")
          (pb-lisp/delete-overlay)
-         (tree-sitter-mode -1)))
+         (tree-sitter-mode -1)
+         (hl-line-mode 1)))
 
 (progn :overlay
+
        (defface pb-lisp/current-node-face
-         '((t :inherit symex--current-node-face :extend nil))
+         '((t :inherit symex--current-node-face :extend nil :background "#3b3042"))
          "Face used to highlight the current tree node."
          :group 'pb-lisp/faces)
 
-       (defvar pb-lisp/current-overlay nil "The current overlay which highlights the current node.")
+       (defvar pb-lisp/current-overlay nil
+         "The current overlay which highlights the current node.")
 
        (defun pb-lisp/delete-overlay ()
          "Delete the highlight overlay."
@@ -70,8 +75,8 @@
 
 (progn :current-node
 
-       ;; symex-ts--get-topmost-node
        (defun pb-lisp/get-topmost-node (node)
+         ;; symex-ts--get-topmost-node
          "Return the highest node in the tree starting from NODE.
 
 The returned node is the highest possible node that has the same
@@ -79,10 +84,10 @@ start position as NODE."
          (let ((node-start-pos (tsc-node-start-position node))
                (parent (tsc-get-parent node)))
            (if parent
-           (let ((parent-pos (tsc-node-start-position parent)))
+               (let ((parent-pos (tsc-node-start-position parent)))
                  (if (eq node-start-pos parent-pos)
-           (pb-lisp/get-topmost-node parent)
-         node))
+                     (pb-lisp/get-topmost-node parent)
+                   node))
              node)))
 
        (defun pb-lisp/get-current-node ()
@@ -100,10 +105,11 @@ Returns a cons cell (start . end) with buffer positions."
          (tsc-node-position-range (pb-lisp/get-current-node))))
 
 (progn :motion
+
        (defun pb-lisp/goto-node (node message)
          "Go to the start position of NODE or display MESSAGE if node is nil."
          (if node
-             (progn (goto-char (tsc-node-start-position node))
+           (progn (goto-char (tsc-node-start-position node))
                     (pb-lisp/update-overlay (tsc-node-position-range node))
                     node)
            (progn (message message)
@@ -124,6 +130,12 @@ Returns nil if NODE is not a child of PARENT."
              (cl-loop for i from 0 below child-count
                       when (tsc-node-eq node (tsc-get-nth-named-child parent i))
                       return i))))
+
+       (defun pb-lisp/goto-nth-child (idx)
+         (let* ((node (pb-lisp/get-current-node))
+                (child (tsc-get-nth-named-child node idx)))
+           (when child
+             (pb-lisp/goto-node child "Child not found"))))
 
        (defun pb-lisp/goto-next-sibling ()
          "Move to the next sibling node."
@@ -177,10 +189,10 @@ Returns nil if NODE is not a child of PARENT."
          (let* ((node (pb-lisp/get-current-node))
                 (count (tsc-count-children node))
                 (child (and (> count 0) (tsc-get-nth-child node (1- count)))))
-           (pb-lisp/goto-node child "No child node found")))
-       )
+           (pb-lisp/goto-node child "No child node found"))))
 
 (progn :selection
+
        (defun pb-lisp/extend-selection-to-next-sibling ()
          "Extend the current selection to include the next sibling node."
          (interactive)
@@ -254,8 +266,6 @@ Returns a list of (parent child-count node-list selected-indices) where:
 
                (list parent child-count nodes (cons first-idx last-idx))))))
 
-
-
        (defun pb-lisp/shrink-selection-from-end ()
          "Shrink the current selection by excluding the last sibling."
          (interactive)
@@ -285,10 +295,7 @@ Returns a list of (parent child-count node-list selected-indices) where:
                       (new-start (tsc-node-start-position new-first-node)))
                  (goto-char new-start)
                  (pb-lisp/update-overlay (cons new-start end)))
-             (message "Cannot shrink selection further"))))
-
-
-       )
+             (message "Cannot shrink selection further")))))
 
 (progn :move-expressions
 
@@ -350,9 +357,35 @@ DIRECTION should be 'next or 'prev."
          (interactive)
          (pb-lisp/swap-siblings 'prev)))
 
+(progn :indentation
+
+       (defun pb-lisp/indent-current-node ()
+         "Indent the current node."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (start (tsc-node-start-position node))
+                (end (tsc-node-end-position node)))
+           (indent-region start end)))
+
+       (defun pb-lisp/indent-parent-node ()
+         "Indent the parent node of the current node."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (parent (tsc-get-parent node))
+                (current-index (pb-lisp/get-node-child-index node parent)))
+           (when parent
+             ;; Capture current position in parent's children
+             (pb-lisp/goto-parent)
+             ;; Indent parent
+             (pb-lisp/indent-current-node)
+             ;; Return to original child
+             (pb-lisp/goto-nth-child current-index)))))
+
 (progn :edition
 
-       '(a er b (ert dfg))
+       '(a er (ert
+               dfg) (ert
+               dfg))
 
        (defun pb-lisp/copy-selection ()
          "Copy current selection and add it to the kill ring."
@@ -395,6 +428,7 @@ DIRECTION should be 'next or 'prev."
                          (progn (backward-char) (looking-at-p "\\s-")))
                (delete-char 1))))
            (goto-char target-pos)
+           (pb-lisp/indent-parent-node)
            (pb-lisp/update-overlay)))
 
        (defun pb-lisp/yank-after ()
@@ -405,6 +439,7 @@ DIRECTION should be 'next or 'prev."
            (goto-char end)
            (insert " ")
            (save-excursion (yank))
+           (pb-lisp/indent-parent-node)
            (pb-lisp/update-overlay)))
 
        (defun pb-lisp/yank-before ()
@@ -416,6 +451,7 @@ DIRECTION should be 'next or 'prev."
            (save-excursion
              (yank)
              (insert " "))
+           (pb-lisp/indent-parent-node)
            (pb-lisp/update-overlay)))
 
        (defun pb-lisp/replace-selection ()
@@ -426,6 +462,7 @@ DIRECTION should be 'next or 'prev."
            (delete-region start end)
            (goto-char start)
            (save-excursion (yank))
+           (pb-lisp/indent-parent-node)
            (pb-lisp/update-overlay)))
 
        (defun pb-lisp/change-selection ()
@@ -435,6 +472,7 @@ DIRECTION should be 'next or 'prev."
                (end (overlay-end pb-lisp/current-overlay)))
            (delete-region start end)
            (goto-char start)
+           (pb-lisp/indent-parent-node)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-after ()
@@ -444,6 +482,7 @@ DIRECTION should be 'next or 'prev."
                 (end (tsc-node-end-position node)))
            (goto-char end)
            (insert " ")
+           (pb-lisp/indent-parent-node)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-before ()
@@ -453,6 +492,7 @@ DIRECTION should be 'next or 'prev."
                 (start (tsc-node-start-position node)))
            (goto-char start)
            (save-excursion (insert " "))
+           (pb-lisp/indent-parent-node)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-at-begining ()
@@ -462,7 +502,7 @@ DIRECTION should be 'next or 'prev."
                 (start (tsc-node-start-position node))
                 (node-type (tsc-node-type node)))
            ;; For lists, move inside the opening paren
-           (if (member node-type '("list" "vector" "map" "set"))
+           (if (member node-type '(list vector map set))
                (progn
                  (goto-char start)
                  (forward-char 1) ;; Move past the opening delimiter
@@ -479,7 +519,7 @@ DIRECTION should be 'next or 'prev."
                 (end (tsc-node-end-position node))
                 (node-type (tsc-node-type node)))
            ;; For lists, move inside the closing paren
-           (if (member node-type '("list" "vector" "map" "set"))
+           (if (member node-type '(list vector map set))
                (progn
                  (goto-char end)
                  (backward-char 1) ;; Move before the closing delimiter
@@ -489,46 +529,49 @@ DIRECTION should be 'next or 'prev."
              (goto-char end)
              (evil-insert-state))))
 
-       (progn :editing-advanced
-              (defun pb-lisp/paren-wrap ()
-                "Wrap the current node in parentheses."
-                (interactive)
-                (let* ((node (pb-lisp/get-current-node))
-                       (start (tsc-node-start-position node))
-                       (end (tsc-node-end-position node)))
-                  (save-excursion
-                    (goto-char end)
-                    (insert ")")
-                    (goto-char start)
-                    (insert "("))
-                  (pb-lisp/update-overlay)
-                  (goto-char start)))
+       (defun pb-lisp/paren-wrap ()
+         "Wrap the current node in parentheses."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (start (tsc-node-start-position node))
+                (end (tsc-node-end-position node)))
+           (save-excursion
+             (goto-char end)
+             (insert ")")
+             (goto-char start)
+             (insert "("))
+           (pb-lisp/indent-parent-node)
+           (pb-lisp/update-overlay)
+           (goto-char start)))
 
-              (defun pb-lisp/raise-node ()
-                "Replace the parent node with the current node."
-                (interactive)
-                (let* ((node (pb-lisp/get-current-node))
-                       (parent (tsc-get-parent node))
-                       (node-start (tsc-node-start-position node))
-                       (node-end (tsc-node-end-position node))
-                       (node-text (buffer-substring-no-properties node-start node-end)))
-                  (if parent
-                      (let ((parent-start (tsc-node-start-position parent))
-                            (parent-end (tsc-node-end-position parent)))
-                        (delete-region parent-start parent-end)
-                        (goto-char parent-start)
-                        (save-excursion (insert node-text))
-                        (pb-lisp/update-overlay))
-                    (message "Cannot raise - no parent node"))))))
+       (defun pb-lisp/raise-node ()
+         "Replace the parent node with the current node."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (parent (tsc-get-parent node))
+                (node-start (tsc-node-start-position node))
+                (node-end (tsc-node-end-position node))
+                (node-text (buffer-substring-no-properties node-start node-end)))
+           (if parent
+               (let ((parent-start (tsc-node-start-position parent))
+                     (parent-end (tsc-node-end-position parent)))
+                 (delete-region parent-start parent-end)
+                 (goto-char parent-start)
+                 (save-excursion (insert node-text))
+                 (pb-lisp/indent-parent-node)
+                 (pb-lisp/update-overlay))
+             (message "Cannot raise - no parent node")))))
 
 (progn :bindings
 
        (defun pb-lisp/exit ()
          (interactive)
-         (evil-pb-lisp-state -1))
+         (evil-pb-lisp-state -1)
+         (evil-normal-state 1))
 
        (defvar pb-lisp/bindings
          (list (kbd "<escape>") #'pb-lisp/exit
+               (kbd "<tab>") #'pb-lisp/indent-current-node
                "h" #'pb-lisp/goto-prev-sibling
                "l" #'pb-lisp/goto-next-sibling
                "j" #'pb-lisp/goto-first-child
@@ -550,6 +593,7 @@ DIRECTION should be 'next or 'prev."
                "p" #'pb-lisp/yank-after
                "P" #'pb-lisp/yank-before
                "y" #'pb-lisp/copy-selection
+               "S-r" #'pb-lisp/replace-selection
 
                "c" #'pb-lisp/change-selection
                "A" #'pb-lisp/insert-after
@@ -557,19 +601,25 @@ DIRECTION should be 'next or 'prev."
                "I" #'pb-lisp/insert-before
                "i" #'pb-lisp/insert-at-begining))
 
-
        (dolist (binding (sq_partition 2 2 pb-lisp/bindings))
          (evil-define-key* nil
            evil-pb-lisp-state-map
            (car binding)
            (cadr binding))))
 
-'(a b ( d dfg (i et ) c) d e)
+'(a b (d dfg dfg
+         (i (et)
+            (et)) (i (et)
+                     (et))
+         c)
+  d e)
 
 (map! (:map emacs-lisp-mode-map
        :n "s-l" #'evil-pb-lisp-state)
       (:map clojure-mode-map
        :n "M-`" #'evil-pb-lisp-state))
+
+(message "pb-lisp loaded")
 
 (provide 'pb-lisp)
 ;;; pb-lisp.el ends here
