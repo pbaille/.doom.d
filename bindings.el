@@ -40,6 +40,7 @@
  :desc "doom help menu" "s-i h" help-map
  :desc "imenu" "s-i s-i" #'consult-imenu
  :desc "describe function" "s-i f" #'helpful-callable
+ :desc "describe face" "s-i F" #'describe-face
  :desc "describe variable" "s-i v" #'helpful-variable
  :desc "describe symbol" "s-i o" #'describe-symbol
  :desc "describe command" "s-i x" #'helpful-command
