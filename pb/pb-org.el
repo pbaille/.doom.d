@@ -209,7 +209,7 @@ If buffer is narrowed, widen it and narrow the next node"
       (point))))
 
 (defvar pb-org_lisp-flavors
-  (list "clojure" "racket" "emacs-lisp" "scheme" "fennel"))
+  (list "clojure" "racket" "elisp" "emacs-lisp" "scheme" "fennel"))
 
 (defun pb-org_at-lisp-block-p ()
   "Check if point is at the start of a Clojure src block in org mode."
@@ -457,6 +457,17 @@ appropriate for that language."
   (interactive)
   (or (pb-org_maybe-edit-block)
       (call-interactively #'evil-mouse-start-end)))
+
+(defun pb-org_code-block-content-bounds ()
+  "Get the bounds of the source block content at point.
+Return a cons cell with (start . end) positions of the content."
+  (when (org-at-block-p)
+    (save-excursion
+      (let ((element (org-element-at-point)))
+        (when (eq (org-element-type element) 'src-block)
+          (let* ((contents-begin (org-element-property :contents-begin element))
+                 (contents-end (org-element-property :contents-end element)))
+            (cons contents-begin contents-end)))))))
 
 (provide 'pb-org)
 ;;; pb-org.el ends here
