@@ -21,7 +21,8 @@
  :desc "swap down" "s-w J" #'+evil/window-move-down
  ;; where am I
  :desc "flash current position" "s-w s-w" #'+nav-flash/blink-cursor
-
+ :desc "new window" "s-w n" #'pb-misc_dwim-split
+ :desc "split open buffer" "s-w b" #'pb-misc_window-split-consult-buffer
 
  ;; `s-p' project
  :desc "switch persp" "s-p s-p" #'persp-switch
@@ -60,6 +61,10 @@
  :desc "reload buffer" "s-j r" #'revert-buffer
  :desc "rename buffer" "s-j R" #'rename-buffer
  :desc "consult flycheck" "s-j w" #'consult-flycheck
+ :desc "scratch buffer" "s-j s-n" #'pb-misc_scratch-buffer
+ :desc "scratch buffer" "s-j n" (lambda ()
+                                  (interactive)
+                                  (pb-misc_scratch-buffer 'split))
 
  ;; `s-q' LLMs
  :desc "gptel" "s-q s-q" #'gptel

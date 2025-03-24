@@ -14,6 +14,8 @@
 (require 'evil)
 (require 'consult)
 (require 'hideshow)
+(require 'symex)
+(require 'flycheck)
 
 (defun pb-misc_open-google ()
   "Open Google in Emacs using xwidget-webkit browser."
@@ -104,6 +106,65 @@ the cursor at the maximum point (end of buffer)."
   (interactive)
   (switch-to-buffer "*Messages*")
   (goto-char (point-max)))
+
+(defun pb-misc_window-split ()
+  (if (> (window-pixel-height) (window-pixel-width))
+      (split-window-vertically)
+    (split-window-horizontally)))
+
+(defun pb-misc_dwim-split (&optional buffer)
+  "Split the current window and display the previous buffer in the new window.
+This creates a vertical split with the previous buffer displayed in the new window
+while keeping the current buffer in the original window."
+  (interactive)
+  (let ((new-window (pb-misc_window-split)))
+    (set-window-buffer new-window (or buffer (other-buffer)))
+    new-window))
+
+(defun pb-misc_window-split-consult-buffer ()
+  "Split the window and display a selected buffer in the new window.
+This function first splits the window based on its dimensions using
+`pb-misc_window-split`, then prompts the user to select a buffer using
+consult's completion interface. The selected buffer will be displayed
+in the newly created window."
+  (interactive)
+  ;; if this is aborted we should delete the window
+  (let* ((current-buffer (current-buffer))
+         (current-window (selected-window))
+         (selected (consult--read
+                    (mapcar #'buffer-name (buffer-list))
+                    :prompt "Select buffer: "
+                    :sort t
+                    :require-match t
+                    :category 'buffer
+                    :state (consult--buffer-state)))
+         (new-window (pb-misc_dwim-split selected)))
+    (switch-to-buffer current-buffer)
+    (other-window 1)))
+
+(defun pb-misc_scratch-buffer (&optional split)
+  "Create or switch to a scratch buffer for the current file or buffer.
+The scratch buffer is named SCRATCH_ followed by the buffer name.
+The scratch buffer will use the same major mode as the current buffer.
+For Emacs Lisp buffers, it will automatically insert a lexical binding header,
+disable flycheck and enable symex-mode.
+
+When optional argument SPLIT is non-nil, it will split the window
+and display the scratch buffer in the new window."
+  (interactive)
+  (let* ((scratch-buffer-name (concat "SCRATCH_" (buffer-name)))
+         (current-mode major-mode)
+         (buffer-exists (get-buffer scratch-buffer-name)))
+    (switch-to-buffer (get-buffer-create scratch-buffer-name))
+    (unless buffer-exists
+      (funcall current-mode)
+      (when (eq major-mode 'emacs-lisp-mode)
+        (insert ";;; -*- lexical-binding: t; -*-\n\n()")
+        (goto-char (point-max))
+        (flycheck-mode -1)
+        (symex-mode-interface)))
+    (when split
+      (pb-misc_dwim-split))))
 
 (defun pb-misc_select-vterm-buffer ()
   "Display a list of vterm buffers and switch to the selected one.
