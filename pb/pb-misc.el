@@ -102,9 +102,8 @@ that are in either `dired-mode' or `dired-sidebar-mode'."
 This displays the *Messages* buffer in another window and positions
 the cursor at the maximum point (end of buffer)."
   (interactive)
-  (with-current-buffer "*Messages*"
-    (goto-char (point-max)))
-  (display-buffer "*Messages*"))
+  (switch-to-buffer "*Messages*")
+  (goto-char (point-max)))
 
 (defun pb-misc_select-vterm-buffer ()
   "Display a list of vterm buffers and switch to the selected one.
