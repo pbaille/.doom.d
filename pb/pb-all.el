@@ -20,6 +20,7 @@
 (require 'pb-flow)
 (require 'pb-tree)
 
+(require 'pb-lisp)
 (require 'pb-cider)
 (require 'pb-color)
 (require 'pb-dired)
