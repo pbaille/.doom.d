@@ -23,6 +23,7 @@
  :desc "flash current position" "s-w s-w" #'+nav-flash/blink-cursor
  :desc "new window" "s-w n" #'pb-misc_dwim-split
  :desc "split open buffer" "s-w b" #'pb-misc_window-split-consult-buffer
+ :desc "delete other windows" "s-w C-d" #'delete-other-windows
 
  ;; `s-p' project
  :desc "switch persp" "s-p s-p" #'persp-switch
@@ -212,7 +213,8 @@
 
       (:map emacs-lisp-mode-map
        :i "C-p" #'pb-elisp_insert-package-prefix
-       :n "s-j e" #'eval-buffer)
+       :n "s-j e" #'eval-buffer
+       :n "s-l" #'evil-pb-lisp-state)
 
       (:map cider-inspector-mode-map
        :n "j" #'cider-inspector-next-inspectable-object
