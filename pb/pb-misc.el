@@ -121,6 +121,35 @@ while keeping the current buffer in the original window."
     (set-window-buffer new-window (or buffer (other-buffer)))
     new-window))
 
+(progn :window-resizing
+       (defun pb-misc_increase-window-width ()
+         "Increase the width of the current window by half its current width.
+This function enlarges the window horizontally, making it wider
+by approximately 50% of its original width."
+         (interactive)
+         (enlarge-window (/ (window-width) 2) t))
+
+       (defun pb-misc_shrink-window-width ()
+         "Decrease the width of the current window by half its current width.
+This function shrinks the window horizontally, making it narrower
+by approximately 50% of its original width."
+         (interactive)
+         (shrink-window (/ (window-width) 2) t))
+
+       (defun pb-misc_increase-window-height ()
+         "Increase the height of the current window by half its current height.
+This function enlarges the window vertically, making it taller
+by approximately 50% of its original height."
+         (interactive)
+         (enlarge-window (/ (window-height) 2)))
+
+       (defun pb-misc_shrink-window-height ()
+         "Decrease the height of the current window by half its current height.
+This function shrinks the window vertically, making it shorter
+by approximately 50% of its original height."
+         (interactive)
+         (shrink-window (/ (window-height) 2))))
+
 (defun pb-misc_window-split-consult-buffer ()
   "Split the window and display a selected buffer in the new window.
 This function first splits the window based on its dimensions using

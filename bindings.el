@@ -4,11 +4,16 @@
  ;; `s-w' windows
  :desc "delete window" "s-w d" #'evil-window-delete
  :desc "kill buffer & window" "s-w s-d" #'kill-buffer-and-window
- ;; moving
+ ;;; moving
  :desc "move left" "s-w h" #'windmove-left
  :desc "move right" "s-w l" #'windmove-right
  :desc "move down" "s-w j" #'windmove-down
  :desc "move up" "s-w k" #'windmove-up
+ ;; resizing
+ :desc "width +" "s-w M-l" #'pb-misc_increase-window-width
+ :desc "width -" "s-w M-h" #'pb-misc_shrink-window-width
+ :desc "height +" "s-w M-j" #'pb-misc_increase-window-height
+ :desc "height -" "s-w M-k" #'pb-misc_shrink-window-height
  ;; splitting
  :desc "split down" "s-w C-j" (lambda () (interactive) (evil-window-split) (windmove-down))
  :desc "split right" "s-w C-l" (lambda () (interactive) (evil-window-vsplit) (windmove-right))
