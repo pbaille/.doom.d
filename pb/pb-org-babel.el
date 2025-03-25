@@ -88,5 +88,56 @@ SPEC:"
 
 (advice-add 'org-babel-insert-result :around #'pb-org-babel_insert-result-hook)
 
+(require 'treesit)
+
+(defvar pb-org-babel_lang->treesit-lang
+  '((emacs-lisp . elisp)))
+
+(defun pb-org-babel_setup-treesit-ranges ()
+  "Configure treesit parsers for all src blocks in the current org buffer.
+Each src block will get a parser corresponding to its language."
+  (interactive)
+  (when (derived-mode-p 'org-mode)
+    (let ((src-blocks '())
+          (parsers '()))
+      ;; First pass: collect all src blocks and their languages
+      (save-excursion
+        (goto-char (point-min))
+        (while (re-search-forward "^[ \t]*#\\+begin_src[ \t]+\\([^ \t\n]+\\)" nil t)
+          (let* ((lang (match-string-no-properties 1))
+                 (lang-symbol (intern lang))
+                 (beg (match-end 0))
+                 (block-end (save-excursion
+                              (when (re-search-forward "^[ \t]*#\\+end_src" nil t)
+                                (match-beginning 0)))))
+            (when block-end
+              (forward-line)
+              (setq beg (point))
+              (push (list lang-symbol beg block-end) src-blocks)))))
+
+      ;; Second pass: create parsers for each language
+      (dolist (lang-blocks (seq-group-by #'car src-blocks))
+        (let* ((lang (car lang-blocks))
+               (blocks (cdr lang-blocks))
+               (ranges (mapcar (lambda (block)
+                                 (cons (nth 1 block) (nth 2 block)))
+                               blocks))
+               (lang (or (alist-get lang pb-org-babel_lang->treesit-lang)
+                         lang)))
+          (print lang)
+          (condition-case nil
+              (let ((parser (or (treesit-parser-create lang)
+                                (message "Warning: Could not create parser for %s" lang))))
+                (print parser)
+                (print ranges)
+                (when parser
+                  (push parser parsers)
+                  (treesit-parser-set-included-ranges parser ranges)))
+            (error (message "Failed to configure parser for %s" lang)))))
+
+      (message "Configured %d parsers for %d src blocks"
+               (length parsers) (length src-blocks))
+      parsers)))
+
 (provide 'pb-org-babel)
 ;;; pb-org-babel.el ends here.
