@@ -660,11 +660,6 @@ DIRECTION should be 'next or 'prev."
          c)
   d e)
 
-(map! (:map emacs-lisp-mode-map
-       :n "s-l" #'evil-pb-lisp-state)
-      (:map clojure-mode-map
-       :n "M-`" #'evil-pb-lisp-state))
-
 (message "pb-lisp (treesit) loaded")
 
 (provide 'pb-lisp)
