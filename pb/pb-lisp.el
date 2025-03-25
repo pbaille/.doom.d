@@ -89,7 +89,7 @@ start position as NODE."
        (defun pb-lisp/get-current-node ()
          "Get the tree-sitter node at point."
          (if (treesit-parser-list)
-           (let* ((pos (point)))
+             (let* ((pos (point)))
                (pb-lisp/get-topmost-node
                 (treesit-node-at pos 'elisp)))
            (message "tree-sit not enabled")))
@@ -98,7 +98,27 @@ start position as NODE."
          "Get the start and end positions of the current tree-sitter node.
 Returns a cons cell (start . end) with buffer positions."
          (let ((node (pb-lisp/get-current-node)))
-           (cons (treesit-node-start node) (treesit-node-end node)))))
+           (cons (treesit-node-start node) (treesit-node-end node))))
+
+       (defun pb-lisp/current-node-as-string ()
+         "Get the string content of the current treesit node.
+Returns the text between the start and end positions of the current
+node as determined by `pb-lisp/get-current-node', or nil if no valid
+node is found at point."
+         (let* ((node (pb-lisp/get-current-node))
+                (start (treesit-node-start node))
+                (end (treesit-node-end node)))
+           (when (and start end)
+             (buffer-substring-no-properties start end))))
+
+       (defun pb-lisp/current-selection-as-string ()
+         "Get the string content of the current selection overlay.
+Returns the text within the bounds of `pb-lisp/current-overlay', or
+nil if the overlay is not properly set or has invalid bounds."
+         (let* ((start (overlay-start pb-lisp/current-overlay))
+                (end (overlay-end pb-lisp/current-overlay)))
+           (when (and start end)
+             (buffer-substring-no-properties start end)))))
 
 (progn :motion
 
@@ -459,16 +479,20 @@ DIRECTION should be 'next or 'prev."
            (pb-lisp/indent-parent-node)
            (pb-lisp/update-overlay)))
 
-       (defun pb-lisp/replace-selection ()
+       (defun pb-lisp/replace-selection (&optional content)
          "Replace the current selection with clipboard contents."
          (interactive)
          (let ((start (overlay-start pb-lisp/current-overlay))
                (end (overlay-end pb-lisp/current-overlay)))
            (delete-region start end)
            (goto-char start)
-           (save-excursion (yank))
+           (save-excursion (if content (insert content) (yank)))
            (pb-lisp/indent-parent-node)
-           (pb-lisp/update-overlay)))
+           (pb-lisp/update-overlay
+            (cons start
+                  (if content
+                      (+ start (length content))
+                    end)))))
 
        (defun pb-lisp/change-selection ()
          "Delete the current selection and enter insert state."
@@ -507,7 +531,8 @@ DIRECTION should be 'next or 'prev."
                 (start (treesit-node-start node))
                 (node-type (treesit-node-type node)))
            ;; For lists, move inside the opening paren
-           (if (treesit-node-child-count node t)
+           (if (> (treesit-node-child-count node t)
+                  0)
                (progn
                  (goto-char start)
                  (forward-char 1) ;; Move past the opening delimiter
@@ -525,7 +550,8 @@ DIRECTION should be 'next or 'prev."
                 (node-type (treesit-node-type node)))
            (print node-type)
            ;; For lists, move inside the closing paren
-           (if (treesit-node-child-count node t)
+           (if (> (treesit-node-child-count node t)
+                  0)
                (progn
                  (goto-char end)
                  (backward-char 1) ;; Move before the closing delimiter
@@ -606,7 +632,29 @@ DIRECTION should be 'next or 'prev."
              (pb-lisp/indent-parent-node)
              (pb-lisp/update-overlay)))))
 
+(progn :evaluation
+
+       (defun pb-lisp/eval-current-node (&optional eval-fn)
+         "Evaluate the current tree-sitter node in the appropriate context."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (start (treesit-node-start node))
+                (end (treesit-node-end node))
+                (node-text (buffer-substring-no-properties start end)))
+           (if eval-fn
+               (funcall eval-fn node-text)
+             (eval (read node-text)))))
+
+       (defun pb-lisp/eval-pretty ()
+         "Evaluate and pretty-print the current Lisp expression.
+Displays the result in a buffer named 'ELisp_eval'."
+         (interactive)
+         (pb-elisp_display-expression
+          (pb-lisp/eval-current-node))))
+
 (progn :bindings
+
+       (+ 2 3)
 
        (defun pb-lisp/exit ()
          (interactive)
@@ -645,7 +693,11 @@ DIRECTION should be 'next or 'prev."
                "A" #'pb-lisp/insert-after
                "a" #'pb-lisp/insert-at-end
                "I" #'pb-lisp/insert-before
-               "i" #'pb-lisp/insert-at-begining))
+               "i" #'pb-lisp/insert-at-begining
+               "e" #'pb-lisp/eval-current-node
+               (kbd "C-e") #'pb-lisp/eval-pretty
+
+               (kbd "q r") #'pb-lisp/gptel-request-replace))
 
        (dolist (binding (sq_partition 2 2 pb-lisp/bindings))
          (evil-define-key* nil
@@ -653,14 +705,41 @@ DIRECTION should be 'next or 'prev."
            (car binding)
            (cadr binding))))
 
-'(a b (d dfg dfg
-         (i (et)
-            (et)) (i (et)
-                     (et))
-         c)
+'(a b (d
+       (i (et)
+          (et))
+       c)
   d e)
 
 (message "pb-lisp (treesit) loaded")
+
+(require 'pb-gptel)
+
+(defun pb-lisp/gptel-request-replace (&optional options)
+  (interactive)
+  (pb_let [(km_keys prompt callback) options]
+    (pb-gptel_request
+
+     (km :context
+         (km :current-file
+             (km :editor "emacs"
+                 :buffer-name (buffer-file-name)
+                 :major-mode (symbol-name major-mode)
+                 :file-content (buffer-substring-no-properties (point-min) (point-max)))
+             :additional-files
+             (pb-gptel_context-files-to-km))
+         :instructions
+         (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+             :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
+                               "Don't use markdown code block syntax or any non-valid code in your output."]
+             :expression (pb-lisp/current-selection-as-string)
+             :task (or prompt
+                       (read-string "Edit current selection: "))))
+
+     (km :callback
+         (or callback
+             (lambda (res info)
+               (pb-lisp/replace-selection res)))))))
 
 (provide 'pb-lisp)
 ;;; pb-lisp.el ends here

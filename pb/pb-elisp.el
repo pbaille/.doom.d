@@ -63,6 +63,13 @@ Displays the result in a buffer named 'ELisp_eval'."
   (pb-elisp_display-expression
    (eval (read (pb-symex_current-as-string)))))
 
+(require 'treesit)
+
+(defun pb-elisp_treesit-parser-setup ()
+  "Setup tree-sitter parser for current elisp buffer."
+  (when (treesit-language-available-p 'elisp)
+    (treesit-parser-create 'elisp)))
+
 ;; extended the symex interface
 (setq symex-interfaces
       `((emacs-lisp-mode . ,(km_put (alist-get 'emacs-lisp-mode symex-interfaces)
@@ -70,6 +77,9 @@ Displays the result in a buffer named 'ELisp_eval'."
                                     #'pb-elisp_eval-pretty))
         ,@(seq-remove (pb_fn [(cons x _)] (equal x 'emacs-lisp-mode))
                       symex-interfaces)))
+
+(add-hook 'emacs-lisp-mode-hook
+          #'pb-elisp_treesit-parser-setup)
 
 (provide 'pb-elisp)
 ;;; pb-elisp.el ends here.
