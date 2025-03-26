@@ -221,6 +221,9 @@
        :n "s-j e" #'eval-buffer
        :n "s-l" #'evil-pb-lisp-state)
 
+      (:map clojure-mode-map
+       :n "M-`" #'evil-pb-lisp-state)
+
       (:map cider-inspector-mode-map
        :n "j" #'cider-inspector-next-inspectable-object
        :n "k" #'cider-inspector-previous-inspectable-object
