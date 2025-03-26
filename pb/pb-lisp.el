@@ -567,7 +567,7 @@ Operates on region between START and END."
          "Enter insert state after the current node."
          (interactive)
          (let* ((node (pb-lisp/get-current-node))
-                (end (treesit-node-end node))) 
+                (end (treesit-node-end node)))
            (goto-char end)
            (insert " ")
            (pb-lisp/indent-parent-node)
@@ -653,6 +653,32 @@ Operates on region between START and END."
                  (pb-lisp/update-overlay))
              (message "Cannot raise - no parent node"))))
 
+       (defun pb-lisp/splice-node ()
+         "Remove the current node's delimiters, keeping only its content."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (start (treesit-node-start node))
+                (end (treesit-node-end node))
+                (first-child (treesit-node-child node 0 t))
+                (child-count (treesit-node-child-count node t)))
+           (if (and first-child (> child-count 0))
+               (save-excursion
+                 (let* ((last-child-idx (1- child-count))
+                        (last-child (treesit-node-child node last-child-idx t))
+                        (content (buffer-substring-no-properties
+                                  (1+ start) ;; Skip opening delimiter
+                                  (1- end)))) ;; Skip closing delimiter
+                   ;; Delete the node entirely
+                   (delete-region start end)
+                   ;; Insert just the content (without delimiters)
+                   (goto-char start)
+                   (insert content)
+                   ;; Reindent the spliced content
+                   (indent-region start (+ start (length content)))
+                   ;; Update selection overlay
+                   (pb-lisp/update-overlay (cons start (+ start (length content))))))
+             (message "Cannot splice - node must have children"))))
+
        (defun pb-lisp/move-node-down-one-line ()
          "Move the current node or selection down one line."
          (interactive)
@@ -693,7 +719,7 @@ Operates on region between START and END."
 
 (progn :evaluation
 
-       (defvar pb-lisp/elisp-methods
+       (setq pb-lisp/elisp-methods
          (km :eval
              (lambda (node-text)
                (interactive)
@@ -704,13 +730,37 @@ Operates on region between START and END."
                (interactive)
                (pb-elisp_display-expression (eval (read node-text))))))
 
+       (setq pb-lisp/clojure-methods
+         (km :eval
+             (lambda (_)
+               (interactive)
+               (save-excursion
+                 (goto-char (overlay-end pb-lisp/current-overlay))
+                 (cider-eval-last-sexp)))
+
+             :eval-pretty
+             (lambda (code-string)
+               (interactive)
+               (save-excursion
+                 (goto-char (overlay-end pb-lisp/current-overlay))
+                 (cider-pprint-eval-last-sexp)))))
+
        (defvar pb-lisp/major-mode->methods
-         `((emacs-lisp-mode ,@pb-lisp/elisp-methods))
+         `((emacs-lisp-mode ,@pb-lisp/elisp-methods)
+           (clojure-mode ,@pb-lisp/clojure-methods)
+           (clojurescript-mode ,@pb-lisp/clojure-methods)
+           (clojurec-mode ,@pb-lisp/clojure-methods))
          "Maps tree-sitter language symbols to a plist of methods/configs.
 Each language entry contains:
 - :parser-lang - the language symbol for the tree-sitter parser
 - :get-node - the string name used when getting nodes with treesit-node-at
 - :modes - list of major modes associated with this language")
+
+       (setq pb-lisp/major-mode->methods
+             `((emacs-lisp-mode ,@pb-lisp/elisp-methods)
+               (clojure-mode ,@pb-lisp/clojure-methods)
+               (clojurescript-mode ,@pb-lisp/clojure-methods)
+               (clojurec-mode ,@pb-lisp/clojure-methods)))
 
        (defun pb-lisp/get-method (k)
          (km_get (alist-get major-mode pb-lisp/major-mode->methods)
@@ -765,6 +815,7 @@ Displays the result in a buffer named 'ELisp_eval'."
                "P" #'pb-lisp/yank-before
                "y" #'pb-lisp/copy-selection
                "R" #'pb-lisp/replace-selection
+               "s" #'pb-lisp/splice-node
 
                "c" #'pb-lisp/change-selection
                "A" #'pb-lisp/insert-after
