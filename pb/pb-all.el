@@ -20,6 +20,9 @@
 (require 'pb-flow)
 (require 'pb-tree)
 
+(require 'pb-struct)
+(require 'km2)
+
 (require 'pb-lisp)
 (require 'pb-cider)
 (require 'pb-color)
