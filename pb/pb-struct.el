@@ -33,7 +33,7 @@ Example:
   (person? p)         ; => t
   (person.name p)     ; => \"John\"
   (pb_let [(person name age) p] name) ; => \"John\""
-  (let* ((pred-sym (pb_symbol name "?")))
+  (let* ((pred-sym (pb_join-symbol (list name "?"))))
     `(progn
        (defun ,pred-sym (x)
          ,(format "Check if X is a %s struct."
@@ -43,7 +43,7 @@ Example:
 
        ,@(seq-map-indexed
           (lambda (m i)
-            `(defun ,(pb_symbol name "." m) (x)
+            `(defun ,(pb_join-symbol (list name "." m)) (x)
                ,(format "Get the %s field from the %s struct."
                         (pb_name m)
                         (pb_name name))
@@ -65,7 +65,8 @@ Example:
 
 (defun pb-struct_run-tests ()
 
-  (pb-struct person name age)
+  (eval-when-compile
+    (pb-struct person name age))
 
   (pb-destructure '(person a b c) '(x z y))
 
@@ -77,20 +78,21 @@ Example:
     :ok))
 
   (cl-assert
-    (equal
-     (pb_let [x (person "Pierre" 43)]
-         (list (person? x)
-               (person.name x)))
-     '(t "Pierre")))
+   (equal
+    (pb_let [x (person "Pierre" 43)]
+      (list (person? x)
+            (person.name x)))
+    '(t "Pierre")))
 
   (cl-assert
    (equal
     (pb_let [(person name age) (person "Pierre" 43)]
-        (list name age))
+      (list name age))
     '("Pierre" 43)))
 
-  (pb-struct address street city)
-  (pb-struct employee name age address)
+  (eval-when-compile
+    (pb-struct address street city)
+    (pb-struct employee name age address))
 
   (cl-assert
    (equal
@@ -156,8 +158,8 @@ With validation:
                                                 (list 'cdr (list ',pred-sym seed))))))))
 
 (defun pb-struct_deftag-tests ()
-  ;; Test basic tag functionality with 'maybe' tag
-  (pb-struct_deftag maybe)
+  (eval-when-compile
+    (pb-struct_deftag maybe))
 
   (maybe 1)
   (maybe 1 2)
@@ -181,7 +183,8 @@ With validation:
            :not-maybe)))
 
   ;; Test tag with numeric validation
-  (pb-struct_deftag numbox #'numberp)
+  (eval-when-compile
+    (pb-struct_deftag numbox #'numberp))
 
   (cl-assert
    (and
