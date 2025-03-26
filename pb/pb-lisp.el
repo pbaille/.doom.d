@@ -132,17 +132,17 @@ node is found at point."
          (let* ((node (or node (pb-lisp/get-current-node)))
                 (parent (treesit-node-parent node)))
            (pb-elisp_display-expression
-            (km2 :parent-node (treesit-node-parent node)
+            (km2 :node-type (treesit-node-type node)
+                 :idx (treesit-node-index node)
+                 :field-name (treesit-node-field-name node)
+                 :parent-node (treesit-node-parent node)
+                 :siblings-count (treesit-node-child-count parent)
                  :siblings (mapcar (lambda (p)
                                      (km2 :children-count (treesit-node-child-count parent)
                                           :field-name (treesit-node-field-name node)
                                           :node-type (treesit-node-type node)
                                           :idx (treesit-node-index node)))
-                                   (treesit-node-children parent))
-                 :siblings-count (treesit-node-child-count parent)
-                 :field-name (treesit-node-field-name node)
-                 :node-type (treesit-node-type node)
-                 :idx (treesit-node-index node)))))
+                                   (treesit-node-children parent))))))
 
        (defun pb-lisp/current-selection-as-string ()
          "Get the string content of the current selection overlay.
@@ -423,12 +423,26 @@ DIRECTION should be 'next or 'prev."
 
 (progn :indentation
 
+       (defun pb-lisp/join-trailing-delimiters (start end)
+         "Join trailing delimiters with preceding expressions.
+Closing delimiters should never be the first thing of line, they should be
+close to the last element of the enclosing expression.
+Operates on region between START and END."
+         (interactive "r")
+         (save-excursion
+           (goto-char start)
+           (while (re-search-forward "^[ \t]*\\()\\|\\]\\|}\\)" end t)
+             (replace-match " \\1" nil nil)
+             (backward-char)
+             (delete-indentation))))
+
        (defun pb-lisp/indent-current-node ()
          "Indent the current node."
          (interactive)
          (let* ((node (pb-lisp/get-current-node))
                 (start (treesit-node-start node))
                 (end (treesit-node-end node)))
+           (pb-lisp/join-trailing-delimiters start end)
            (indent-region start end)))
 
        (defun pb-lisp/indent-parent-node ()
@@ -553,7 +567,7 @@ DIRECTION should be 'next or 'prev."
          "Enter insert state after the current node."
          (interactive)
          (let* ((node (pb-lisp/get-current-node))
-                (end (treesit-node-end node)))
+                (end (treesit-node-end node))) 
            (goto-char end)
            (insert " ")
            (pb-lisp/indent-parent-node)
