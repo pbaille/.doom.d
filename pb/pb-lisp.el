@@ -14,6 +14,7 @@
 (require 'sq)
 (require 'evil)
 (require 'treesit)
+(require 'pb-elisp)
 
 (progn :mode-definition
 
@@ -32,9 +33,23 @@
          '(org-mode clojure-mode clojurescript-mode clojurec-mode
            emacs-lisp-mode fennel-mode sheme-mode racket-mode))
 
+       (defvar pb-lisp/major-mode->treesit-lang
+         '((emacs-list . elisp)
+           (clojure-mode . elisp)
+           (clojurescript-mode . elisp)
+           (clojurec-mode . elisp)))
+
+       (defun pb-lisp/parser-setup ()
+         "Setup tree-sitter parser for current elisp buffer."
+         (when-let ((lang (alist-get major-mode pb-lisp/major-mode->treesit-lang)))
+           (print (cons "parser setup " lang))
+           (when (treesit-language-available-p lang)
+             (treesit-parser-create lang))))
+
        (defun pb-lisp/enter-mode ()
          "Run when on entering sorg mode."
          (when (member major-mode pb-lisp/modes)
+           (pb-lisp/parser-setup)
            (hl-line-mode -1)
            (goto-char (car (pb-lisp/get-current-node-bounds)))
            (pb-lisp/update-overlay)))
@@ -91,7 +106,7 @@ start position as NODE."
          (if (treesit-parser-list)
              (let* ((pos (point)))
                (pb-lisp/get-topmost-node
-                (treesit-node-at pos 'elisp)))
+                (treesit-node-at pos (alist-get major-mode pb-lisp/major-mode->treesit-lang))))
            (message "tree-sit not enabled")))
 
        (defun pb-lisp/get-current-node-bounds ()
@@ -110,6 +125,24 @@ node is found at point."
                 (end (treesit-node-end node)))
            (when (and start end)
              (buffer-substring-no-properties start end))))
+
+       (require 'km2)
+       (defun pb-lisp/log-node (&optional node)
+         (interactive)
+         (let* ((node (or node (pb-lisp/get-current-node)))
+                (parent (treesit-node-parent node)))
+           (pb-elisp_display-expression
+            (km2 :parent-node (treesit-node-parent node)
+                 :siblings (mapcar (lambda (p)
+                                     (km2 :children-count (treesit-node-child-count parent)
+                                          :field-name (treesit-node-field-name node)
+                                          :node-type (treesit-node-type node)
+                                          :idx (treesit-node-index node)))
+                                   (treesit-node-children parent))
+                 :siblings-count (treesit-node-child-count parent)
+                 :field-name (treesit-node-field-name node)
+                 :node-type (treesit-node-type node)
+                 :idx (treesit-node-index node)))))
 
        (defun pb-lisp/current-selection-as-string ()
          "Get the string content of the current selection overlay.
@@ -148,6 +181,17 @@ Returns nil if NODE is not a child of PARENT."
                       when (equal node child)
                       return i))))
 
+       (defun pb-lisp/get-node-idx (node)
+         "Get the index of NODE among the named children of PARENT.
+Returns nil if NODE is not a child of PARENT."
+         (when node
+           (let* ((parent (treesit-node-parent node))
+                  (children (treesit-node-children parent)))
+             (cl-loop for c in children
+                      for i from 0
+                      when (eq node c)
+                      return i))))
+
        (defun pb-lisp/goto-nth-child (idx)
          (let* ((node (pb-lisp/get-current-node))
                 (child (treesit-node-child node idx t)))
@@ -159,7 +203,8 @@ Returns nil if NODE is not a child of PARENT."
          (interactive)
          (let* ((node (pb-lisp/get-current-node))
                 (next-sibling (treesit-node-next-sibling node t)))
-           (pb-lisp/goto-node next-sibling "No next sibling found")))
+           (if next-sibling
+               (pb-lisp/goto-node next-sibling "No next sibling found"))))
 
        (defun pb-lisp/goto-prev-sibling ()
          "Move to the previous sibling node."
@@ -634,23 +679,41 @@ DIRECTION should be 'next or 'prev."
 
 (progn :evaluation
 
-       (defun pb-lisp/eval-current-node (&optional eval-fn)
+       (defvar pb-lisp/elisp-methods
+         (km :eval
+             (lambda (node-text)
+               (interactive)
+               (eval (read node-text)))
+
+             :eval-pretty
+             (lambda (node-text)
+               (interactive)
+               (pb-elisp_display-expression (eval (read node-text))))))
+
+       (defvar pb-lisp/major-mode->methods
+         `((emacs-lisp-mode ,@pb-lisp/elisp-methods))
+         "Maps tree-sitter language symbols to a plist of methods/configs.
+Each language entry contains:
+- :parser-lang - the language symbol for the tree-sitter parser
+- :get-node - the string name used when getting nodes with treesit-node-at
+- :modes - list of major modes associated with this language")
+
+       (defun pb-lisp/get-method (k)
+         (km_get (alist-get major-mode pb-lisp/major-mode->methods)
+                 k))
+
+       (defun pb-lisp/eval-current-node ()
          "Evaluate the current tree-sitter node in the appropriate context."
          (interactive)
-         (let* ((node (pb-lisp/get-current-node))
-                (start (treesit-node-start node))
-                (end (treesit-node-end node))
-                (node-text (buffer-substring-no-properties start end)))
-           (if eval-fn
-               (funcall eval-fn node-text)
-             (eval (read node-text)))))
+         (funcall (pb-lisp/get-method :eval)
+                  (pb-lisp/current-selection-as-string)))
 
        (defun pb-lisp/eval-pretty ()
          "Evaluate and pretty-print the current Lisp expression.
 Displays the result in a buffer named 'ELisp_eval'."
          (interactive)
-         (pb-elisp_display-expression
-          (pb-lisp/eval-current-node))))
+         (funcall (pb-lisp/get-method :eval-pretty)
+                  (pb-lisp/current-selection-as-string))))
 
 (progn :bindings
 
@@ -697,7 +760,8 @@ Displays the result in a buffer named 'ELisp_eval'."
                "e" #'pb-lisp/eval-current-node
                (kbd "C-e") #'pb-lisp/eval-pretty
 
-               (kbd "q r") #'pb-lisp/gptel-request-replace))
+               (kbd "q r") #'pb-lisp/gptel-request-replace
+               "?" #'pb-lisp/log-node))
 
        (dolist (binding (sq_partition 2 2 pb-lisp/bindings))
          (evil-define-key* nil
