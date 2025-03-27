@@ -43,6 +43,9 @@
  :desc "kill presp" "s-p s-k" #'+workspace/kill
  :desc "new persp" "s-p n" #'+workspace/new-named
 
+ ;; `s-o' open
+ :desc "vterm here" "s-o t" #'+vterm/here
+
  ;; `s-i' info/help
  :desc "doom help menu" "s-i h" help-map
  :desc "imenu" "s-i s-i" #'consult-imenu
@@ -159,6 +162,9 @@
 (map! :n "g f" #'dired-sidebar-jump-to-sidebar
       :n "g b" #'pb-ibuffer_sidebar-focus)
 
+(map! :n "g j" #'evil-scroll-line-to-top
+      :n "g k" #'evil-scroll-line-to-bottom)
+
 (map! :leader
 
       ;; overide default bookmark binding to the more useful consult-register
@@ -222,7 +228,7 @@
        :n "s-l" #'evil-pb-lisp-state)
 
       (:map clojure-mode-map
-       :n "M-`" #'evil-pb-lisp-state)
+       :n "s-l" #'evil-pb-lisp-state)
 
       (:map cider-inspector-mode-map
        :n "j" #'cider-inspector-next-inspectable-object

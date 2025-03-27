@@ -161,6 +161,10 @@
           ("C-j" . pb-symex_next-line) ;; replace symex-climb-branch
           ("C-l" . evil-forward-char)
           ("C-h" . evil-backward-char)
+          ("g j" . evil-scroll-line-to-top)
+          ("g k" . evil-scroll-line-to-bottom)
+          ("C-S-j" . evil-scroll-line-up)
+          ("C-S-k" . evil-scroll-line-down)
 
 
           ;; indent, tidy

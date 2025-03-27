@@ -94,8 +94,9 @@
   :config
   (add-hook 'vterm-mode-hook
             (lambda ()
-              (setq-local mode-line-format
-                          (default-value 'mode-line-format)))))
+              (hide-mode-line-mode -1)
+              (doom-modeline-mode 1))
+            10000000))
 
 
 (use-package consult
