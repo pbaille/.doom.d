@@ -51,7 +51,10 @@ flycheck-mode."
     (erase-buffer)
     (insert (pp expression))
     (emacs-lisp-mode)
-    (flycheck-mode -1)))
+    (flycheck-mode -1))
+  (let ((result-buffer (get-buffer pb-elisp_result-buffer-name)))
+    (unless (get-buffer-window result-buffer)
+      (display-buffer result-buffer))))
 
 (defun pb-elisp_eval-pretty ()
   "Evaluate and pretty-print the current Lisp expression.
