@@ -28,7 +28,7 @@
  :desc "flash current position" "s-w s-w" #'+nav-flash/blink-cursor
  :desc "new window" "s-w n" #'pb-misc_dwim-split
  :desc "split open buffer" "s-w b" #'pb-misc_window-split-consult-buffer
- :desc "delete other windows" "s-w C-d" #'delete-other-windows
+ :desc "delete other windows" "s-w D" #'delete-other-windows
 
  ;; `s-p' project
  :desc "switch persp" "s-p s-p" #'persp-switch
@@ -45,6 +45,7 @@
 
  ;; `s-o' open
  :desc "vterm here" "s-o t" #'+vterm/here
+ :desc "project sidebar" "s-o p" #'dirvish-side
 
  ;; `s-i' info/help
  :desc "doom help menu" "s-i h" help-map
