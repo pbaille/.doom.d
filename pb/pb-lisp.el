@@ -720,30 +720,30 @@ Operates on region between START and END."
 (progn :evaluation
 
        (setq pb-lisp/elisp-methods
-         (km :eval
-             (lambda (node-text)
-               (interactive)
-               (eval (read node-text)))
+             (km :eval
+                 (lambda (node-text)
+                   (interactive)
+                   (eval (read node-text)))
 
-             :eval-pretty
-             (lambda (node-text)
-               (interactive)
-               (pb-elisp_display-expression (eval (read node-text))))))
+                 :eval-pretty
+                 (lambda (node-text)
+                   (interactive)
+                   (pb-elisp_display-expression (eval (read node-text))))))
 
        (setq pb-lisp/clojure-methods
-         (km :eval
-             (lambda (_)
-               (interactive)
-               (save-excursion
-                 (goto-char (overlay-end pb-lisp/current-overlay))
-                 (cider-eval-last-sexp)))
+             (km :eval
+                 (lambda (_)
+                   (interactive)
+                   (save-excursion
+                     (goto-char (overlay-end pb-lisp/current-overlay))
+                     (cider-eval-last-sexp)))
 
-             :eval-pretty
-             (lambda (code-string)
-               (interactive)
-               (save-excursion
-                 (goto-char (overlay-end pb-lisp/current-overlay))
-                 (cider-pprint-eval-last-sexp)))))
+                 :eval-pretty
+                 (lambda (code-string)
+                   (interactive)
+                   (save-excursion
+                     (goto-char (overlay-end pb-lisp/current-overlay))
+                     (cider-pprint-eval-last-sexp)))))
 
        (defvar pb-lisp/major-mode->methods
          `((emacs-lisp-mode ,@pb-lisp/elisp-methods)
@@ -825,6 +825,7 @@ Displays the result in a buffer named 'ELisp_eval'."
                "e" #'pb-lisp/eval-current-node
                (kbd "C-e") #'pb-lisp/eval-pretty
 
+               "t" #'pb-misc_toggle-hiding
                (kbd "q r") #'pb-lisp/gptel-request-replace
                "?" #'pb-lisp/log-node))
 
