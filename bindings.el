@@ -45,7 +45,7 @@
 
  ;; `s-o' open
  :desc "vterm here" "s-o t" #'+vterm/here
- :desc "project sidebar" "s-o p" #'dirvish-side
+ :desc "project sidebar" "s-o s-p" #'+dired/dirvish-side-and-follow
 
  ;; `s-i' info/help
  :desc "doom help menu" "s-i h" help-map
@@ -107,6 +107,7 @@
  :desc "move file" "s-f R" #'doom/move-this-file
  :desc "find project file" "s-f p" #'projectile-find-file
  :desc "save file" "s-f s-s" #'save-buffer
+ :desc "delete file" "s-f D" #'doom/delete-this-file
 
  ;; `s-d' dired
  :desc "dired" "s-d d" #'dired-jump

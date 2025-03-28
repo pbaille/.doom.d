@@ -138,7 +138,7 @@
           ("}" . symex-wrap-curly)
           ("{" . symex-create-curly)
 
-          ("C-R" . pb-symex_ring-replace)
+          ("C-S-r" . pb-symex_ring-replace)
           ("C-p" . pb-symex_ring-append)
           ("C-S-p" . pb-symex_ring-prepend)
           ("C-;" . embark-act)
