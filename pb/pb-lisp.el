@@ -35,9 +35,9 @@
 
        (defvar pb-lisp/major-mode->treesit-lang
          '((emacs-list . elisp)
-           (clojure-mode . elisp)
-           (clojurescript-mode . elisp)
-           (clojurec-mode . elisp)))
+           (clojure-mode . clojure)
+           (clojurescript-mode . clojure)
+           (clojurec-mode . clojure)))
 
        (defun pb-lisp/parser-setup ()
          "Setup tree-sitter parser for current elisp buffer."
@@ -189,7 +189,7 @@ start position as NODE, but excludes the root source_file node."
                (let ((parent-pos (treesit-node-start parent))
                      (parent-type (treesit-node-type parent)))
                  (if (and (eq node-start-pos parent-pos)
-                          (not (equal parent-type "source_file")))
+                          (not (member parent-type '("source" "source_file"))))
                      (pb-lisp/get-topmost-node parent)
                    node))
              node)))
@@ -296,13 +296,24 @@ start position as NODE, but excludes the root source_file node."
            (when child
              (pb-lisp/goto-node child "Child not found"))))
 
-       (defun pb-lisp/goto-next-sibling ()
+       (defun pb-lisp/goto-next-sibling_simple ()
          "Move to the next sibling node."
          (interactive)
          (let* ((node (pb-lisp/get-current-node))
                 (next-sibling (treesit-node-next-sibling node t)))
            (if next-sibling
                (pb-lisp/goto-node next-sibling "No next sibling found"))))
+
+       (defun pb-lisp/goto-next-sibling ()
+         "Move to the next sibling node."
+         (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (parent (treesit-node-parent node))
+                (next-node (treesit-node-child parent (1+ (treesit-node-index node)))))
+           (pb-lisp/goto-node (when (not (member (treesit-node-type next-node)
+                                                 '(")" "]" "}")))
+                                next-node)
+                              "No next sibling found")))
 
        (defun pb-lisp/goto-prev-sibling ()
          "Move to the previous sibling node."
