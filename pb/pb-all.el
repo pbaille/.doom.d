@@ -45,6 +45,8 @@
 (require 'pb-udp)
 (require 'pb-walk)
 
+(require 'pb-multiline-strings)
+
 (require 'sorg)
 
 (print "pb loaded")
