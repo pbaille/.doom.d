@@ -1,6 +1,8 @@
 ;;; pb/xp/structs.el -*- lexical-binding: t; -*-
 
 (require 'pb)
+(require 'pb-destructure)
+(require 'pb-flow)
 
 (pb_comment
  :extend-destructure-for-simple-struct
@@ -66,6 +68,7 @@ Example:
 (defun pb-struct_run-tests ()
 
   (eval-when-compile
+    (require 'pb-destructure)
     (pb-struct person name age))
 
   (pb-destructure '(person a b c) '(x z y))
