@@ -45,6 +45,24 @@
 ;; pop-up-frames: If you want new buffers to always appear in the current window (unless another window is specifically requested), you can set this variable to nil
 (setq pop-up-frames nil)
 
+'(progn
+ (defun pb-doom/banner ()
+   (let ((banner '("                                                 "
+                   "███████ ███    ███  █████   ██████ ███████       "
+                   "██      ████  ████ ██   ██ ██      ██            "
+                   "█████   ██ ████ ██ ███████ ██      ███████       "
+                   "██      ██  ██  ██ ██   ██ ██           ██       "
+                   "███████ ██      ██ ██   ██  ██████ ███████       "
+                   "                                                 ")))
+     (insert (propertize (concat (mapconcat #'identity banner "\n") "\n")
+                         'face 'doom-dashboard-banner))))
+
+ ;; Add to config.el and replace the default banner
+ (setq +doom-dashboard-functions
+       (cons #'pb-doom/banner
+             (remove #'+doom-dashboard-ascii-banner
+                     +doom-dashboard-functions))))
+
 (progn :shorthand-bug-fix
 
        "In my current version (emacs-mac) the 'elisp-shorthand-font-lock-face was taking an extra char."
