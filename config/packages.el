@@ -156,7 +156,7 @@
             #b00000000))
 
   (setq-default flycheck-disabled-checkers
-                '(emacs-lisp-package))
+                '(emacs-lisp-package emacs-lisp-checkdoc))
 
   (flycheck-define-error-level 'error
     :overlay-category 'flycheck-error-overlay
