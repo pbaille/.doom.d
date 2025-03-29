@@ -37,7 +37,7 @@ OPTIONS is a plist of options to be passed to `gptel-request`.
 
 When called interactively, this prompts for the necessary inputs."
   (interactive)
-  (let ((gptel-max-tokens 100000))
+  (let ((gptel-max-tokens 64000))
     (apply #'gptel-request
            (encode-coding-string (pb-prompt_mk content)
                                  'utf-8)
@@ -208,60 +208,70 @@ After the GPT response is inserted, a new level-2 header is added
 to continue the conversation."
   (interactive)
   (pb_let [(km_keys prompt selection) options]
-    (let* ((buffer-file-name (buffer-file-name))
-           (file-name (if buffer-file-name
-                          (file-name-nondirectory buffer-file-name)
+    (let* ((source-buffer (current-buffer))
+           (file-path (buffer-file-name))
+           (file-name (if file-path
+                          (file-name-nondirectory file-path)
                         (buffer-name)))
-           (chat-buffer-name (concat "CHAT_" file-name))
-           (major-mode-name (symbol-name major-mode))
-           (prompt (or prompt (read-string (format "Chat about %s: " file-name ))))
-           (selection (or selection
-                          (when (use-region-p)
-                            (buffer-substring-no-properties
-                             (region-beginning)
-                             (region-end)))))
+           (chat-buffer-name (concat "CHAT_" file-name)))
 
-           (full-prompt (km :context
-                            (km :current-file
-                                (km :editor "emacs"
-                                    :buffer-name (buffer-file-name)
-                                    :major-mode (symbol-name major-mode)
-                                    :file-content (buffer-substring-no-properties (point-min) (point-max)))
-                                :additional-files
-                                (pb-gptel_context-files-to-km))
-                            :instructions
-                            (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
-                                :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
-                                                  "All org headings are level 3, 4, 5 ..."
-                                                  "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
-                                :expression selection
-                                :task prompt))))
+      (if (get-buffer chat-buffer-name)
+          (switch-to-buffer (get-buffer chat-buffer-name))
+        (let* ((major-mode-name (symbol-name major-mode))
+               (selection (or selection
+                              (when (use-region-p)
+                                (buffer-substring-no-properties
+                                 (region-beginning)
+                                 (region-end)))))
 
-      ;; Create or switch to the chat buffer
-      (with-current-buffer (get-buffer-create chat-buffer-name)
-        (org-mode)
-        (erase-buffer)
-        (gptel-mode)
-        (setq-local gptel-use-tools nil)
+               (full-prompt (km :context
+                                (km :current-file
+                                    (km :editor "emacs"
+                                        :buffer-name (buffer-file-name)
+                                        :major-mode (symbol-name major-mode)
+                                        :file-content (buffer-substring-no-properties (point-min) (point-max)))
+                                    :additional-files
+                                    (pb-gptel_context-files-to-km))
+                                :instructions
+                                (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+                                    :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
+                                                      "All org headings are level 3, 4, 5 ..."
+                                                      "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
+                                    :expression selection))))
 
-        ;; Insert the symex as a code block
-        (insert (format "* %s\n\n" file-name))
-        (when selection
-          (insert (format "#+begin_src %s\n%s\n#+end_src\n\n"
-                          (replace-regexp-in-string "-mode$" "" major-mode-name)
-                          selection)))
-        (insert (concat "** " prompt "\n\n" ))
+          ;; Create or switch to the chat buffer
+          (with-current-buffer (get-buffer-create chat-buffer-name)
+            (org-mode)
+            (erase-buffer)
+            (gptel-mode)
+            (setq-local gptel--system-message
+                        (pb-prompt_mk full-prompt))
+            (setq-local gptel-use-tools nil)
+            (evil-normal-state)
+            (symex-mode -1)
 
-        ;; Switch to the buffer and position cursor
-        (switch-to-buffer (current-buffer))
-        (goto-char (point-max))
-        (evil-insert-state)
+            (progn :bindings
+                   (evil-define-key nil 'local (kbd "s-q s-q")
+                     (lambda () (interactive)
+                       (call-interactively #'gptel-send)
+                       (evil-insert-newline-below)
+                       (goto-char (point-max))))
+                   (evil-define-key nil 'local (kbd "s-q b")
+                     (lambda () (interactive)
+                       (switch-to-buffer source-buffer))))
 
-        ;; Send request to get response
-        (pb-gptel_request
-         full-prompt
-         (km :stream t
-             :fsm (gptel-make-fsm :handlers gptel-send--handlers)))))))
+            ;; Insert the symex as a code block
+            (insert (format "* %s\n\n" file-name))
+            (when selection
+              (insert (format "#+begin_src %s\n%s\n#+end_src\n\n"
+                              (replace-regexp-in-string "-mode$" "" major-mode-name)
+                              selection)))
+            (insert "** ")
+
+            ;; Switch to the buffer and position cursor
+            (switch-to-buffer (current-buffer))
+            (goto-char (point-max))
+            (evil-insert-state)))))))
 
 (defun pb-gptel_current-symex-chat ()
   "Create a chat buffer to discuss the current symbolic expression.
