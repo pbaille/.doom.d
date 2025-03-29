@@ -234,7 +234,10 @@
   (setq gptel-backend
         (gptel-make-anthropic "Claude"          ;Any name you want
           :stream t                             ;Streaming responses
-          :key pb/claude-api-key)))
+          :key pb/claude-api-key))
+
+  (gptel-make-gemini "Gemini"
+    :key pb/gemini-api-key :stream t))
 
 (use-package tide
   :config
