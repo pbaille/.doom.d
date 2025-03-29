@@ -464,10 +464,17 @@ Return a cons cell with (start . end) positions of the content."
   (when (org-at-block-p)
     (save-excursion
       (let ((element (org-element-at-point)))
+        (print (cadr element))
         (when (eq (org-element-type element) 'src-block)
-          (let* ((contents-begin (org-element-property :contents-begin element))
-                 (contents-end (org-element-property :contents-end element)))
-            (cons contents-begin contents-end)))))))
+          (let* ((value (org-element-property :value element)))
+            (forward-line 1)
+            (cons (point) (+ (point) (length value)))))))))
+
+(defun pb-org_code-block-language ()
+  "Return the language of the src block at point."
+  (let ((element (org-element-at-point)))
+    (when (eq (car element) 'src-block)
+      (org-element-property :language element))))
 
 (provide 'pb-org)
 ;;; pb-org.el ends here

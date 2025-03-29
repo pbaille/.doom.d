@@ -14,6 +14,8 @@
 (require 'km)
 (require 'pb-flow)
 (require 'cl-lib)
+(require 'org)
+(require 'org-element)
 
 (defun pb-org-babel_strip-lisp-comments (code)
   "Remove comments from a string of Lisp CODE.
@@ -138,6 +140,24 @@ Each src block will get a parser corresponding to its language."
       (message "Configured %d parsers for %d src blocks"
                (length parsers) (length src-blocks))
       parsers)))
+
+(require 'pb-org)
+
+(defun pb-org-babel_add-treesit-range-for-block ()
+  "Add a treesit range for the current src block."
+  (interactive)
+  (when-let ((bounds (pb-org_code-block-content-bounds)))
+    (let* ((lang (pb-org_code-block-language))
+           (treesit-lang (or (alist-get (intern lang) pb-org-babel_lang->treesit-lang)
+                             (intern lang)))
+           (parser (condition-case nil
+                       (treesit-parser-create treesit-lang)
+                     (error (message "Failed to create parser for %s" lang)
+                            nil))))
+      (when parser
+        (treesit-parser-set-included-ranges parser (list bounds))
+        (message "Added treesit range for %s block" lang)
+        parser))))
 
 (provide 'pb-org-babel)
 ;;; pb-org-babel.el ends here.

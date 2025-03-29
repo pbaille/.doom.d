@@ -77,14 +77,47 @@ it enters edition mode."
              (evil-insert-state))
     (newline-and-indent)))
 
+(defun sorg--initialize-tree-sitter-for-src-block ()
+  "Initialize tree-sitter for the current src block's content."
+  (when (pb-org_at-lisp-block-p)))
+
 (defun sorg--return ()
   "Hit return."
   (interactive)
-  '(print "sorg ret")
-  (cond ((evil-normal-state-p) (evil-sorg-state))
+  (print "sorg ret")
+  (cond ((evil-normal-state-p)
+         (cond ((org-in-src-block-p)
+                (save-excursion (let ((element (org-element-at-point)))
+                                  (goto-char (org-element-property :begin element)))
+                                (pb-org-babel_add-treesit-range-for-block))
+                (evil-pb-lisp-state 1))
+               (t (evil-sorg-state))
+
+               (nil (pb-org_maybe-edit-block))))
         ((evil-insert-state-p) (newline-and-indent) '(sorg--maybe-enter-code-block))
         (t (evil-sorg-state)
-           (pb-org_maybe-edit-block))))
+           (print (list :block? (pb-org_at-lisp-block-p)))
+           (cond ((pb-org_at-lisp-block-p)
+                  (pb-org-babel_add-treesit-range-for-block)
+                  (evil-sorg-state -1)
+                  (evil-next-line)
+                  (evil-pb-lisp-state 1))
+
+                 (nil (pb-org_maybe-edit-block))))))
+
+(progn :pb-lisp-refresh-tree
+       (defun sorg--refresh-current-code-block-tree ()
+         (when (org-in-src-block-p)
+           (save-excursion (let ((element (org-element-at-point)))
+                             (goto-char (org-element-property :begin element)))
+                           (pb-org-babel_add-treesit-range-for-block))))
+
+       (defun sorg--refresh-before-pb-lisp-overlay (&rest _)
+         "Refresh the current code block tree before updating overlay in pb-lisp."
+         (when (eq major-mode 'org-mode)
+           (sorg--refresh-current-code-block-tree)))
+
+       (advice-add 'pb-lisp/update-overlay :before #'sorg--refresh-before-pb-lisp-overlay))
 
 (defun sorg--click ()
   "Click mouse 1 action."
