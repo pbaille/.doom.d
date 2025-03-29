@@ -217,6 +217,8 @@
   (setq gptel-default-mode 'org-mode)
   (setq gptel-use-header-line nil)
   (setq gptel-use-tools nil)
+  (setq gptel-cache t)
+  (setq gptel-log-level 'info)
   ;; bindings
   ;; the only way I found for redefining the broken RET key of the menu to C-RET
   ;; the problem is that gptel-menu is autoloaded,
