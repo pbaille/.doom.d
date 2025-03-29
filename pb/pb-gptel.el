@@ -76,6 +76,41 @@ added to the gptel context, making it easy to include them in prompts."
                                     (with-temp-buffer (insert-file-contents filepath) (buffer-string)))))
                           gptel-context--alist)))
 
+       (defun pb-gptel_directory-to-km (dir-path &optional max-depth current-depth)
+         "Convert all files in DIR-PATH into a nested keyword map structure.
+Recursively builds a keyword map where:
+- Keys are the basenames of files and directories
+- File values are the content of those files as strings
+- Directory values are nested keyword maps with their contents
+
+Arguments:
+  DIR-PATH: Directory path to process
+  MAX-DEPTH: Optional maximum recursion depth (nil means no limit)
+  CURRENT-DEPTH: Internal parameter for tracking recursion depth"
+         (let ((current-depth (or current-depth 0))
+               (max-depth-reached (and max-depth (>= current-depth max-depth)))
+               (result ()))
+           (when (and (file-exists-p dir-path)
+                      (file-directory-p dir-path)
+                      (not max-depth-reached))
+             (dolist (item (directory-files dir-path t "^[^.]"))
+               (let ((basename (file-name-nondirectory item)))
+                 (cond
+                  ;; For directories, recurse to create nested km
+                  ((file-directory-p item)
+                   (setq result (km_put result
+                                        (intern (concat ":" basename))
+                                        (pb-gptel_directory-to-km item max-depth (1+ current-depth)))))
+
+                  ;; For regular files, add content as value
+                  ((file-regular-p item)
+                   (setq result (km_put result
+                                        (intern (concat ":" basename))
+                                        (with-temp-buffer
+                                          (insert-file-contents item)
+                                          (buffer-string)))))))))
+           result))
+
        (defun pb-gptel_remove-context-file ()
          "Let the user choose a file present in context using gptel-context-remove.
 This function presents a completion interface for selecting a file to remove
@@ -272,6 +307,49 @@ to continue the conversation."
             (switch-to-buffer (current-buffer))
             (goto-char (point-max))
             (evil-insert-state)))))))
+
+(defun pb-gptel_directory-chat ()
+  (interactive)
+  (let* ((dir (read-directory-name "Directory to discuss: "))
+         (chat-buffer-name (read-string "Buffer name: ")))
+
+    (if (get-buffer chat-buffer-name)
+        (switch-to-buffer (get-buffer chat-buffer-name))
+      (let* ((full-prompt (km :context
+                              (km :project-files
+                                  (pb-gptel_directory-to-km dir))
+                              :instructions
+                              (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+                                  :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
+                                                    "All org headings are level 3, 4, 5 ..."
+                                                    "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]))))
+
+        ;; Create or switch to the chat buffer
+        (with-current-buffer (get-buffer-create chat-buffer-name)
+          (org-mode)
+          (erase-buffer)
+          (gptel-mode)
+          (setq-local gptel--system-message
+                      (pb-prompt_mk full-prompt))
+          (setq-local gptel-use-tools nil)
+          (evil-normal-state)
+          (symex-mode -1)
+
+          (progn :bindings
+                 (evil-define-key nil 'local (kbd "s-q s-q")
+                   (lambda () (interactive)
+                     (call-interactively #'gptel-send)
+                     (evil-insert-newline-below)
+                     (goto-char (point-max)))))
+
+          ;; Insert the symex as a code block
+          (insert (format "* %s\n\n" dir))
+          (insert "** ")
+
+          ;; Switch to the buffer and position cursor
+          (switch-to-buffer (current-buffer))
+          (goto-char (point-max))
+          (evil-insert-state))))))
 
 (defun pb-gptel_current-symex-chat ()
   "Create a chat buffer to discuss the current symbolic expression.
