@@ -122,7 +122,7 @@ Returns nil if PATH does not exist or is nil."
                 :name filename
                 :children (seq-reduce (lambda (ret p)
                                         (pb_let [(as x (km_keys name))
-                                                 (pb-gptel_describe-path p)]
+                                                 (pb-gptel/describe-path p)]
                                           (print name)
                                           (km_put ret (pb_keyword name) x)))
                                       (directory-files path t "^[^.].*")
@@ -133,7 +133,7 @@ Returns nil if PATH does not exist or is nil."
             )))))
 
 (pb_comment
- (pb-gptel_describe-path "~/.doom.d/pb"))
+ (pb-gptel/describe-path "~/.doom.d/pb"))
 
 (pb_comment
  (pb-tree_get-path-values pb-prompt_tree [:code :lisp :context])
@@ -155,7 +155,7 @@ Returns nil if PATH does not exist or is nil."
 (pb_comment
  :interactive-request
 
- (defun pb-gptel_simple-select-paths (prompt m)
+ (defun pb-gptel/simple-select-paths (prompt m)
    (interactive)
    (let* ((path-strs (mapcar (lambda (p)
                                (intern (mapconcat #'pb_keyword-name (car p) ".")))
@@ -166,7 +166,7 @@ Returns nil if PATH does not exist or is nil."
                                (split-string k "\\."))))
              (completing-read-multiple prompt path-strs))))
 
- (defun pb-gptel_select-paths (prompt m)
+ (defun pb-gptel/select-paths (prompt m)
    "Select paths from a map M using PROMPT with aligned annotations.
 Provides completion with vertically aligned hints showing each path's content."
    (interactive)
@@ -208,18 +208,18 @@ Provides completion with vertically aligned hints showing each path's content."
                        (split-string (substring k 1) "\\.")))
              (completing-read-multiple prompt (km_keys flatten-tree)))))
 
- (defun pb-gptel_sub-request-tree ()
+ (defun pb-gptel/sub-request-tree ()
    (interactive)
-   (let* ((selected-paths (pb-gptel_select-paths "Select request-tree paths: " pb-gptel_request-tree)))
-     (km_select-paths* pb-gptel_request-tree selected-paths)))
+   (let* ((selected-paths (pb-gptel/select-paths "Select request-tree paths: " pb-gptel/request-tree)))
+     (km_select-paths* pb-gptel/request-tree selected-paths)))
 
- (defun pb-gptel_interactive-request ()
+ (defun pb-gptel/interactive-request ()
    (interactive)
-   (let* ((req (pb-gptel_sub-request-tree))
+   (let* ((req (pb-gptel/sub-request-tree))
           (action (read-char-choice
                    "i = insert, r = replace, b = buffer: "
                    '(?i ?r ?b))))
-     (pb-gptel_request
+     (pb-gptel/request
       req
       (km :callback
           (lambda (res info)
@@ -233,12 +233,12 @@ Provides completion with vertically aligned hints showing each path's content."
               (cond
                ;; If we're in symex-mode, replace the current symex
                ((and (boundp 'symex-mode) symex-mode)
-                (symex--undo-collapse-begin 'pb-gptel_replace-symex)
+                (symex--undo-collapse-begin 'pb-gptel/replace-symex)
                 (symex-change 1)
                 (insert res)
                 (symex-mode-interface)
                 (symex-tidy)
-                (symex--undo-collapse-end 'pb-gptel_replace-symex))
+                (symex--undo-collapse-end 'pb-gptel/replace-symex))
 
                ;; If a region is active, replace it
                ((use-region-p)

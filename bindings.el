@@ -78,14 +78,14 @@
 
  ;; `s-q' LLMs
  :desc "gptel" "s-q s-q" #'gptel
- :desc "new session above" "s-q n" #'pb-gptel_new-session-above
- :desc "chat: current expression" "s-q e" #'pb-gptel_current-symex-chat
- :desc "chat: current buffer" "s-q b" #'pb-gptel_current-buffer-chat
- :desc "chat: directory" "s-q s-d" #'pb-gptel_directory-chat
+ :desc "new session above" "s-q n" #'pb-gptel/new-session-above
+ :desc "chat: current expression" "s-q e" #'pb-gptel/current-symex-chat
+ :desc "chat: current buffer" "s-q b" #'pb-gptel/current-buffer-chat
+ :desc "chat: directory" "s-q s-d" #'pb-gptel/directory-chat
  :desc "interactive request" "s-q i" #'gptel-menu
  :desc "gptel menu" "s-q m" #'gptel-menu
  :desc "add file to context" "s-q f" #'gptel-context-add-file
- :desc "remove file from context" "s-q d" #'pb-gptel_remove-context-file
+ :desc "remove file from context" "s-q d" #'pb-gptel/remove-context-file
  :desc "remove all context" "s-q D" #'gptel-context-remove-all
  :desc "tools: enable" "s-q t e" (lambda () (interactive) (setq-local gptel-use-tools t))
  :desc "tools: disable" "s-q t d" (lambda () (interactive) (setq-local gptel-use-tools nil))
@@ -155,6 +155,8 @@
       :i "C-S-l" #'paredit-forward-delete
       ;; :i "C-w" #'pb-misc_insert-open-paren
       :i "TAB" #'consult-company)
+
+(map! :v "s-x" #'execute-extended-command)
 
 (map! :i "s-1" #'+workspace/switch-to-0
       :i "s-2" #'+workspace/switch-to-1

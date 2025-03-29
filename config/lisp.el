@@ -147,10 +147,10 @@
           ("M-C-k" . symex-join-lines-backwards)
 
           ;; llm
-          ("q r" . pb-gptel_current-symex-request)
-          ("q f" . pb-gptel_fill-holes)
-          ("q e" . pb-gptel_current-symex-chat)
-          ("q b" . pb-gptel_current-buffer-chat)
+          ("q r" . pb-gptel/current-symex-request)
+          ("q f" . pb-gptel/fill-holes)
+          ("q e" . pb-gptel/current-symex-chat)
+          ("q b" . pb-gptel/current-buffer-chat)
 
           ;; non structural nav
           ("F" . pb-misc_goto-next-opening-delimiter)

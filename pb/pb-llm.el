@@ -94,7 +94,7 @@
  pb-llm_last-responses
 
  (pb-llm_create-chat :pb-llm
-                     (pb-gptel_mk-request-prompt [:code :lisp :context]))
+                     (pb-gptel/mk-request-prompt [:code :lisp :context]))
 
  (pb-llm_chat :pb-llm
               "Explain the pb-llm package purpose")
