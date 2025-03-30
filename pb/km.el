@@ -217,6 +217,38 @@ XS is a list alternating paths and update-fns."
   "Aggregate all given PATHS with their corresponding value in M."
   (km_select-paths* m paths))
 
+(progn :pretty-str
+
+       (defun km_to-pretty-str (m &optional indentation-lvl)
+         "Get a pretty string representing M. Entries are stacked vertically, and nested kms are processed recursively and indented."
+         (if (not (km? m))
+             (format "%s" m)
+           (let ((entries (km_entries m)))
+             (if (null entries)
+                 "(km)"
+               (let ((lines (mapcar
+                             (lambda (entry)
+                               (let* ((k (car entry))
+                                      (v (cdr entry))
+                                      (v-str (km_to-pretty-str v
+                                                               (+ (or indentation-lvl 0)
+                                                                  (1+ (length (symbol-name k)))))))
+                                 (format "%s %s" k v-str)))
+                             entries)))
+                 (concat "(km "
+                         (car lines)
+                         (if (cdr lines) "\n" "")
+                         (replace-regexp-in-string "^" (concat (make-string (or indentation-lvl 0) ?\s)
+                                                               "    ")
+                                                   (mapconcat #'identity (cdr lines) "\n"))
+                         ")"))))))
+
+       (pb_comment
+        (message (concat "\n"
+                         (km_to-pretty-str (km :a 1 :b 2 :tobu (km :c1 3 :c2 5)
+                                               :b "oiu"
+                                               :tobu (km :sipos (km :fun 3) :c2 5)))))))
+
 (defmacro km_let (binding &rest body)
   "Let binding for keyword maps.
 BINDING specifies variables to be bound from a keyword map,
