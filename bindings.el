@@ -209,7 +209,8 @@
        :i "C-j" #'evil-next-line
        :i "C-k" #'evil-previous-line
        ;; trigger sorg mode
-       :ni "<return>" #'sorg--return)
+       :ni "<return>" #'sorg--return
+       :ni "s-l" #'evil-pb-lisp-state)
 
       (:map gptel-mode-map
        :i "C-e" #'gptel-send
