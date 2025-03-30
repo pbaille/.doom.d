@@ -20,6 +20,7 @@
 (require 'ielm)
 
 (defvar pb-elisp_result-buffer-name "ELisp_eval")
+(defvar pb-elisp_package-separator-char "/")
 
 (defun pb-elisp_send-expression-to-ielm ()
   "Evaluate the expression at point and print the result in the IELM buffer."
@@ -38,7 +39,7 @@
   (let* ((file-name (buffer-file-name))
          (base-name (file-name-base file-name))
          ;; Extract the package name (you may need to adjust this based on your file naming convention)
-         (package-prefix (concat base-name "_")))
+         (package-prefix (concat base-name pb-elisp_package-separator-char)))
     (insert package-prefix)))
 
 (defun pb-elisp_display-expression (expression &optional pp-fn)
