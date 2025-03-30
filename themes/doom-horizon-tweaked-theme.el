@@ -105,9 +105,10 @@
    (modeline-fg     `(,(doom-darken (car fg) 0.2) ,@(cdr fg-alt)))
    (modeline-fg-alt `(,(doom-lighten (car bg) 0.2) ,@(cdr base3)))
 
-   (modeline-bg (doom-darken violet 0.6))
+   (modeline-bg (doom-blend (doom-darken red 0.6)
+                            (doom-darken violet 0.6)
+                            0.2))
    (modeline-bg-inactive base2))
-
 
   ;;;; Base theme face overrides
   (((font-lock-comment-face &override)
@@ -162,15 +163,15 @@
 
    (doom-modeline-bar :background (if -modeline-bright modeline-bg highlight))
    (doom-modeline-highlight :foreground (doom-lighten bg 0.3))
-   (doom-modeline-project-dir :foreground red :inherit 'bold )
-   (doom-modeline-buffer-path :foreground red)
-   (doom-modeline-buffer-file :foreground fg)
+   (doom-modeline-project-dir :foreground (doom-lighten red 0.3) :inherit 'bold )
+   (doom-modeline-buffer-path :foreground fg)
+   (doom-modeline-buffer-file :foreground fg-alt)
    (doom-modeline-buffer-modified :foreground yellow :weight 'ultra-bold)
    (doom-modeline-panel :background base1)
    (doom-modeline-urgent :foreground modeline-fg)
    (doom-modeline-info :foreground cyan)
 
-   (spacious-padding-subtle-mode-line-active :background "green")
+   (internal-border :background base1)
 
    (symex--current-node-face :background (doom-lighten base3 0.05))
 
