@@ -41,7 +41,7 @@
          (package-prefix (concat base-name "_")))
     (insert package-prefix)))
 
-(defun pb-elisp_display-expression (expression)
+(defun pb-elisp_display-expression (expression &optional pp-fn)
   "Display EXPRESSION in a dedicated buffer with proper formatting.
 This function creates or switches to a buffer named by
 `pb-elisp_result-buffer-name`, clears its content, inserts the
@@ -49,7 +49,7 @@ pretty-printed EXPRESSION, sets it to `emacs-lisp-mode', and disables
 flycheck-mode."
   (with-current-buffer (get-buffer-create pb-elisp_result-buffer-name)
     (erase-buffer)
-    (insert (pp expression))
+    (insert (funcall (or pp-fn #'pp) expression))
     (emacs-lisp-mode)
     (flycheck-mode -1))
   (let ((result-buffer (get-buffer pb-elisp_result-buffer-name)))
