@@ -122,6 +122,8 @@
    ((line-number-current-line &override) :foreground hor-highlight-brighter)
    (tooltip :background base0 :foreground fg)
 
+   (marginalia-documentation :foreground violet)
+
 ;;;; fringe
    (cider-fringe-good-face :foreground (doom-darken dark-blue 0.3))
 
@@ -172,6 +174,11 @@
    (doom-modeline-info :foreground cyan)
 
    (internal-border :background base1)
+   (vertico-current :background (doom-darken (doom-blend base1 violet 0.85)
+                                             0.1))
+   (vertico-multiline :foreground teal)
+   (vertico-group-title :foreground teal)
+   (vertico-group-separator :foreground teal :strike-through t)
 
    (symex--current-node-face :background (doom-lighten base3 0.05))
 
