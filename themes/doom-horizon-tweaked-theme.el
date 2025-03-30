@@ -75,8 +75,8 @@
    (vertical-bar   base0)
    (selection      violet)
    (builtin        violet)
-   (comments       (if doom-horizon-tweaked-brighter-comments magenta hor-highlight-bright))
-   (doc-comments   (if doom-horizon-tweaked-brighter-comments magenta hor-highlight-bright))
+   (comments       (if doom-horizon-tweaked-brighter-comments magenta (doom-darken teal 0.4)))
+   (doc-comments   (if doom-horizon-tweaked-brighter-comments magenta (doom-darken teal 0.4)))
    (constants      orange)
    (functions      teal)
    (keywords       violet)
@@ -158,7 +158,7 @@
     :background modeline-bg :foreground modeline-fg
     :box `(:line-width 4 :color ,modeline-bg))
    (mode-line-inactive
-    :background (doom-darken base3 0.3) :foreground modeline-fg-alt
+    :background base1 :foreground modeline-fg-alt
     :box `(:line-width 4 :color ,(doom-lighten base3 0.03)))
    (mode-line-emphasis :foreground (if -modeline-bright base8 highlight))
    (mode-line-highlight :background base1 :foreground fg)
@@ -176,9 +176,9 @@
    (internal-border :background base1)
    (vertico-current :background (doom-darken (doom-blend base1 violet 0.85)
                                              0.1))
-   (vertico-multiline :foreground teal)
-   (vertico-group-title :foreground teal)
-   (vertico-group-separator :foreground teal :strike-through t)
+   (vertico-multiline :foreground magenta)
+   (vertico-group-title :foreground magenta)
+   (vertico-group-separator :foreground magenta :strike-through t)
 
    (symex--current-node-face :background (doom-lighten base3 0.05))
 
