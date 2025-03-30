@@ -38,6 +38,4 @@
                rainbow-x-colors nil
                rainbow-latex-colors nil
                rainbow-r-colors nil
-               rainbow-ansi-colors nil)
-         :bind (:map rainbow-mode-map
-                     ("C-c C-p" . webkit-color-picker-show))))
+               rainbow-ansi-colors nil)))
