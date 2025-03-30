@@ -367,8 +367,7 @@ about the expression. The resulting buffer will contain:
 The chat buffer supports ongoing conversation through gptel-mode."
   (interactive)
   (pb-gptel/current-buffer-chat
-   (km :selection (pb-symex_current-as-string)
-       :prompt (read-string "Chat about current expression: "))))
+   (km :selection (pb-symex_current-as-string))))
 
 (progn :tools
 
