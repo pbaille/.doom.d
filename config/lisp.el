@@ -194,6 +194,9 @@
 
   (symex-initialize)
 
+  (add-hook 'evil-symex-state-entry-hook
+            (lambda () (hl-line-mode -1)))
+
   (add-hook 'evil-symex-state-exit-hook
             (lambda () (hl-line-mode 1)))
 
