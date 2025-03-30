@@ -155,7 +155,7 @@
     :background modeline-bg :foreground modeline-fg
     :box `(:line-width 4 :color ,modeline-bg))
    (mode-line-inactive
-    :background (doom-lighten base3 0.03) :foreground modeline-fg-alt
+    :background (doom-darken base3 0.3) :foreground modeline-fg-alt
     :box `(:line-width 4 :color ,(doom-lighten base3 0.03)))
    (mode-line-emphasis :foreground (if -modeline-bright base8 highlight))
    (mode-line-highlight :background base1 :foreground fg)
@@ -170,6 +170,9 @@
    (doom-modeline-urgent :foreground modeline-fg)
    (doom-modeline-info :foreground cyan)
 
+   (spacious-padding-subtle-mode-line-active :background "green")
+
+   (symex--current-node-face :background (doom-lighten base3 0.05))
 
 ;;;; elscreen
    (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
