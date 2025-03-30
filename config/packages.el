@@ -210,6 +210,22 @@
   (add-hook 'typescript-mode-hook #'prettier-js-mode)
   (add-hook 'web-mode-hook #'prettier-js-mode))
 
+(use-package hl-line
+  :config
+  ;; Option 1: Call the function to disable it
+  (global-hl-line-mode -1)
+
+  ;; Option 2: If you want to disable it completely
+  ;; and prevent it from being enabled by other packages
+  (setq global-hl-line-sticky-flag nil)
+
+  ;; Option 3: If you want to control when it's enabled
+  '(add-hook 'prog-mode-hook #'hl-line-mode))
+
+(use-package yasnippet
+  :config
+  (setq yas-global-mode nil))
+
 (use-package gptel
   :config
   ;; this key is set in secrets.el
