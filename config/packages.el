@@ -217,6 +217,7 @@
   (setq gptel-default-mode 'org-mode)
   (setq gptel-use-header-line nil)
   (setq gptel-use-tools nil)
+  (setq gptel-include-tool-results t)
   (setq gptel-cache t)
   (setq gptel-log-level 'info)
   ;; bindings
