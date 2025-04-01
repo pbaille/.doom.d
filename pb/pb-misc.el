@@ -195,6 +195,29 @@ and display the scratch buffer in the new window."
     (when split
       (pb-misc_dwim-split))))
 
+(defun pb-misc_new-buffer ()
+  "Creates a new buffer prompting user for name and major mode."
+  (interactive)
+  (let* ((buffer-name (read-string "Buffer name: "))
+         (buffer-exists (get-buffer buffer-name)))
+    (if buffer-exists
+        (switch-to-buffer buffer-exists)
+      (let* ((mode-list (all-completions "" obarray
+                                         (lambda (s)
+                                           (and (fboundp s)
+                                                (string-match-p "-mode$" (symbol-name s))))))
+             (selected-mode (consult--read mode-list
+                                           :prompt "Major mode: "
+                                           :default "fundamental-mode"
+                                           :require-match t
+                                           :sort t
+                                           :category 'mode))
+             (mode-function (intern selected-mode)))
+        (switch-to-buffer (get-buffer-create buffer-name))
+        (when (fboundp mode-function)
+          (funcall mode-function))
+        (message "Created new buffer '%s' with %s" buffer-name selected-mode)))))
+
 (defun pb-misc_select-vterm-buffer ()
   "Display a list of vterm buffers and switch to the selected one.
 Uses consult--read to create an interactive selection menu of all vterm
