@@ -1,120 +1,129 @@
 ;;; bindings.el -*- lexical-binding: t; -*- :emacs: :emacs:
 
 (map!
- ;; `s-w' windows
- :desc "delete window" "s-w d" #'evil-window-delete
- :desc "kill buffer & window" "s-w s-d" #'kill-buffer-and-window
- ;;; moving
- :desc "move left" "s-w h" #'windmove-left
- :desc "move right" "s-w l" #'windmove-right
- :desc "move down" "s-w j" #'windmove-down
- :desc "move up" "s-w k" #'windmove-up
- ;; resizing
- :desc "width +" "s-w M-l" #'pb-misc_increase-window-width
- :desc "width -" "s-w M-h" #'pb-misc_shrink-window-width
- :desc "height +" "s-w M-j" #'pb-misc_increase-window-height
- :desc "height -" "s-w M-k" #'pb-misc_shrink-window-height
- ;; splitting
- :desc "split down" "s-w C-j" (lambda () (interactive) (evil-window-split) (windmove-down))
- :desc "split right" "s-w C-l" (lambda () (interactive) (evil-window-vsplit) (windmove-right))
- :desc "split up" "s-w C-h" #'evil-window-vsplit
- :desc "split left" "s-w C-k" #'evil-window-split
- ;; swapping
- :desc "swap up" "s-w K" #'+evil/window-move-up
- :desc "swap right" "s-w L" #'+evil/window-move-right
- :desc "swap left" "s-w H" #'+evil/window-move-left
- :desc "swap down" "s-w J" #'+evil/window-move-down
- ;; where am I
- :desc "flash current position" "s-w s-w" #'+nav-flash/blink-cursor
- :desc "new window" "s-w n" #'pb-misc_dwim-split
- :desc "split open buffer" "s-w b" #'pb-misc_window-split-consult-buffer
- :desc "delete other windows" "s-w D" #'delete-other-windows
+ (:prefix ("s-w" . "windows")
+          (:desc "delete window!" "d" #'evil-window-delete)
+          (:desc "kill buffer & window" "s-d" #'kill-buffer-and-window)
 
- ;; `s-p' project
- :desc "switch persp" "s-p s-p" #'persp-switch
- :desc "project buffers" "s-p p" #'projectile-ibuffer
- :desc "find file" "s-p f" #'projectile-find-file
- :desc "recent file" "s-p r" #'projectile-recentf
- :desc "add buffer" "s-p a" #'persp-add-buffer
- :desc "search in project" "s-p s" #'+default/search-project
- :desc "kill buffer" "s-p k" #'persp-kill-buffer
- :desc "remove buffer" "s-p d" #'persp-remove-buffer
- :desc "project dired" "s-p s-d" #'project-dired
- :desc "kill presp" "s-p s-k" #'+workspace/kill
- :desc "new persp" "s-p n" #'+workspace/new-named
+          ;; moving
+          (:desc "move left" "h" #'windmove-left)
+          (:desc "move right" "l" #'windmove-right)
+          (:desc "move down" "j" #'windmove-down)
+          (:desc "move up" "k" #'windmove-up)
 
- ;; `s-o' open
- :desc "vterm here" "s-o t" #'+vterm/here
- :desc "project sidebar" "s-o s-p" #'+dired/dirvish-side-and-follow
+          ;; resizing
+          (:desc "width +" "M-l" #'pb-misc_increase-window-width)
+          (:desc "width -" "M-h" #'pb-misc_shrink-window-width)
+          (:desc "height +" "M-j" #'pb-misc_increase-window-height)
+          (:desc "height -" "M-k" #'pb-misc_shrink-window-height)
 
- ;; `s-i' info/help
- :desc "doom help menu" "s-i h" help-map
- :desc "imenu" "s-i s-i" #'consult-imenu
- :desc "describe function" "s-i f" #'helpful-callable
- :desc "describe face" "s-i F" #'describe-face
- :desc "describe variable" "s-i v" #'helpful-variable
- :desc "describe symbol" "s-i o" #'describe-symbol
- :desc "describe command" "s-i x" #'helpful-command
- :desc "describe key" "s-i k" #'helpful-key
- :desc "describe mode" "s-i m" #'describe-mode
- :desc "describe active minor mode" "s-i M" #'doom/describe-active-minor-mode
+          ;; splitting
+          (:desc "split down" "C-j" (lambda () (interactive) (evil-window-split) (windmove-down)))
+          (:desc "split right" "C-l" (lambda () (interactive) (evil-window-vsplit) (windmove-right)))
+          (:desc "split up" "C-h" #'evil-window-vsplit)
+          (:desc "split left" "C-k" #'evil-window-split)
 
- ;; `s-j' buffers
- :desc "project buffer" "s-j j" #'+vertico/switch-workspace-buffer
- :desc "consult buffer" "s-j s-j" #'consult-buffer
- :desc "ibuffer" "s-j s-i" #'ibuffer
- :desc "*messages*" "s-j m" #'pb-misc_switch-to-message-buffer
- :desc "terminals" "s-j t" #'pb-misc_select-vterm-buffer
- :desc "project ibuffer" "s-j i" #'projectile-ibuffer
- :desc "kill buffer" "s-j k" #'kill-current-buffer
- :desc "kill buffer and window" "s-j s-k" #'kill-buffer-and-window
- :desc "reload buffer" "s-j r" #'revert-buffer
- :desc "rename buffer" "s-j R" #'rename-buffer
- :desc "consult flycheck" "s-j w" #'consult-flycheck
- :desc "scratch buffer" "s-j s-n" #'pb-misc_scratch-buffer
- :desc "scratch buffer" "s-j n" (lambda ()
-                                  (interactive)
-                                  (pb-misc_scratch-buffer 'split))
+          ;; swapping
+          (:desc "swap up" "K" #'+evil/window-move-up)
+          (:desc "swap right" "L" #'+evil/window-move-right)
+          (:desc "swap left" "H" #'+evil/window-move-left)
+          (:desc "swap down" "J" #'+evil/window-move-down)
 
- ;; `s-q' LLMs
- :desc "gptel" "s-q s-q" #'gptel
- :desc "new session above" "s-q n" #'pb-gptel/new-session-above
- :desc "chat: current expression" "s-q e" #'pb-gptel/current-symex-chat
- :desc "chat: current buffer" "s-q b" #'pb-gptel/current-buffer-chat
- :desc "chat: directory" "s-q s-d" #'pb-gptel/directory-chat
- :desc "interactive request" "s-q i" #'gptel-menu
- :desc "gptel menu" "s-q m" #'gptel-menu
- :desc "add file to context" "s-q f" #'gptel-context-add-file
- :desc "remove file from context" "s-q d" #'pb-gptel/remove-context-file
- :desc "remove all context" "s-q D" #'gptel-context-remove-all
- :desc "tools: enable" "s-q t e" (lambda () (interactive) (setq-local gptel-use-tools t))
- :desc "tools: disable" "s-q t d" (lambda () (interactive) (setq-local gptel-use-tools nil))
+          ;; misc
+          (:desc "flash current position" "s-w" #'+nav-flash/blink-cursor)
+          (:desc "new window" "n" #'pb-misc_dwim-split)
+          (:desc "split open buffer" "b" #'pb-misc_window-split-consult-buffer)
+          (:desc "delete other windows" "D" #'delete-other-windows))
 
- ;; `s-g' git
- :desc "git status" "s-g s-g" #'magit-status
- :desc "diff file" "s-g d" #'magit-diff-buffer-file
+ (:prefix ("s-p" . "project")
+          (:desc "switch persp" "s-p" #'persp-switch)
+          (:desc "project buffers" "p" #'projectile-ibuffer)
+          (:desc "find file" "f" #'projectile-find-file)
+          (:desc "recent file" "r" #'projectile-recentf)
+          (:desc "add buffer" "a" #'persp-add-buffer)
+          (:desc "search in project" "s" #'+default/search-project)
+          (:desc "kill buffer" "k" #'persp-kill-buffer)
+          (:desc "remove buffer" "d" #'persp-remove-buffer)
+          (:desc "project dired" "s-d" #'project-dired)
+          (:desc "kill persp" "s-k" #'+workspace/kill)
+          (:desc "new persp" "n" #'+workspace/new-named))
 
- ;; `s-s' search
- :desc "search file" "s-s s-s" #'+default/search-buffer
- :desc "search project" "s-s p" #'+default/search-project
- :desc "search replace" "s-s r" #'query-replace
- :desc "search google" "s-s g" (lambda () (interactive) (browse-url "https://www.google.com/?autofocus=1"))
- :desc "search mark" "s-s m" #'consult-mark
+ (:prefix ("s-o" . "open")
+          (:desc "vterm here" "t" #'+vterm/here)
+          (:desc "project sidebar" "s-p" #'+dired/dirvish-side-and-follow))
 
- ;; `s-f' file
- :desc "find file" "s-f s-f" #'find-file
- :desc "find file" "s-f r" #'consult-recent-file
- :desc "copy file" "s-f C" #'doom/copy-this-file
- :desc "move file" "s-f R" #'doom/move-this-file
- :desc "find project file" "s-f p" #'projectile-find-file
- :desc "save file" "s-f s-s" #'save-buffer
- :desc "delete file" "s-f D" #'doom/delete-this-file
+ (:prefix ("s-i" . "info/help")
+          (:desc "doom help menu" "h" help-map)
+          (:desc "imenu" "s-i" #'consult-imenu)
+          (:desc "describe function" "f" #'helpful-callable)
+          (:desc "describe face" "F" #'describe-face)
+          (:desc "describe variable" "v" #'helpful-variable)
+          (:desc "describe symbol" "o" #'describe-symbol)
+          (:desc "describe command" "x" #'helpful-command)
+          (:desc "describe key" "k" #'helpful-key)
+          (:desc "describe mode" "m" #'describe-mode)
+          (:desc "describe active minor mode" "M" #'doom/describe-active-minor-mode))
 
- ;; `s-d' dired
- :desc "dired" "s-d d" #'dired-jump
- :desc "dirvish" "s-d s-d" (lambda () (interactive) (dirvish (projectile-project-root)))
- :desc "sidebar" "s-d s" #'dired-sidebar-toggle-sidebar
- :desc "dired kill all" "s-d s-k" #'pb-misc_kill-all-dired-buffers)
+ (:prefix ("s-j" . "buffers")
+          (:desc "project buffer" "j" #'+vertico/switch-workspace-buffer)
+          (:desc "consult buffer" "s-j" #'consult-buffer)
+          (:desc "ibuffer" "s-i" #'ibuffer)
+          (:desc "*messages*" "m" #'pb-misc_switch-to-message-buffer)
+          (:desc "terminals" "t" #'pb-misc_select-vterm-buffer)
+          (:desc "project ibuffer" "i" #'projectile-ibuffer)
+          (:desc "kill buffer" "k" #'kill-current-buffer)
+          (:desc "kill buffer and window" "s-k" #'kill-buffer-and-window)
+          (:desc "reload buffer" "r" #'revert-buffer)
+          (:desc "rename buffer" "R" #'rename-buffer)
+          (:desc "consult flycheck" "w" #'consult-flycheck)
+          (:desc "scratch buffer" "s-n" #'pb-misc_scratch-buffer)
+          (:desc "scratch buffer" "n" (lambda ()
+                                        (interactive)
+                                        (pb-misc_scratch-buffer 'split)))
+          (:desc "new buffer" "N" #'pb-misc/new-buffer))
+
+ (:prefix ("s-q" . "LLMs")
+          (:desc "gptel" "s-q" #'gptel)
+          (:desc "new session above" "n" #'pb-gptel/new-session-above)
+          (:desc "chat: current expression" "e" #'pb-gptel/current-symex-chat)
+          (:desc "chat: current buffer" "b" #'pb-gptel/current-buffer-chat)
+          (:desc "chat: directory" "s-d" #'pb-gptel/directory-chat)
+          (:desc "interactive request" "i" #'gptel-menu)
+          (:desc "gptel menu" "m" #'gptel-menu)
+          (:desc "add file to context" "f" #'gptel-context-add-file)
+          (:desc "remove file from context" "d" #'pb-gptel/remove-context-file)
+          (:desc "remove all context" "D" #'gptel-context-remove-all)
+
+          (:prefix ("t" . "tools")
+                   (:desc "enable" "e" (lambda () (interactive) (setq-local gptel-use-tools t)))
+                   (:desc "disable" "d" (lambda () (interactive) (setq-local gptel-use-tools nil)))))
+
+ (:prefix ("s-g" . "git")
+          (:desc "git status" "s-g" #'magit-status)
+          (:desc "diff file" "d" #'magit-diff-buffer-file))
+
+ (:prefix ("s-s" . "search")
+          (:desc "search file" "s-s" #'+default/search-buffer)
+          (:desc "search symbol at point" "s" #'+vertico/search-symbol-at-point)
+          (:desc "search project" "p" #'+default/search-project)
+          (:desc "search replace" "r" #'query-replace)
+          (:desc "search google" "g" (lambda () (interactive) (browse-url "https://www.google.com/?autofocus=1")))
+          (:desc "search mark" "m" #'consult-mark))
+
+ (:prefix ("s-f" . "file")
+          (:desc "find file" "s-f" #'find-file)
+          (:desc "recent file" "r" #'consult-recent-file)
+          (:desc "copy file" "C" #'doom/copy-this-file)
+          (:desc "move file" "R" #'doom/move-this-file)
+          (:desc "find project file" "p" #'projectile-find-file)
+          (:desc "save file" "s-s" #'save-buffer)
+          (:desc "delete file" "D" #'doom/delete-this-file))
+
+ (:prefix ("s-d" . "dired")
+          (:desc "dired" "d" #'dired-jump)
+          (:desc "dirvish" "s-d" (lambda () (interactive) (dirvish (projectile-project-root))))
+          (:desc "sidebar" "s" #'dired-sidebar-toggle-sidebar)
+          (:desc "dired kill all" "s-k" #'pb-misc_kill-all-dired-buffers)))
 
 (map! "s-t" #'hs-hide-all
       "s-T" #'hs-show-all
