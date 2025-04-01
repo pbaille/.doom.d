@@ -204,29 +204,6 @@
           (:desc "word wrap" "w" #'visual-line-mode)
           (:desc "read only" "r" #'read-only-mode)))
 
-(map! "M-v" #'consult-yank-from-kill-ring
-      ;; buffer move
-      "s-M-l" #'next-buffer
-      "s-M-h" #'previous-buffer
-      "s-<right>" #'next-buffer
-      "s-<left>" #'previous-buffer
-
-      ;; workspace move
-      "s-M-C-h" #'+workspace/switch-left
-      "s-M-C-l" #'+workspace/switch-right
-      "s-<up>" #'+workspace/switch-left
-      "s-<down>" #'+workspace/switch-right
-
-      ;; window move
-      "s-C-l" #'windmove-right
-      "s-C-h" #'windmove-left
-      "s-C-k" #'windmove-up
-      "s-C-j" #'windmove-down
-      "s-S-<right>" #'windmove-right
-      "s-S-<left>" #'windmove-left
-      "s-S-<up>" #'windmove-up
-      "s-S-<down>" #'windmove-down)
-
 ;; vim motion in insert mode using control key.
 (map! :ni "C-h" #'backward-char
       :ni "C-j" #'evil-next-line
@@ -239,7 +216,8 @@
       :i "C-S-h" #'paredit-backward-delete
       :i "C-S-l" #'paredit-forward-delete
       ;; :i "C-w" #'pb-misc_insert-open-paren
-      :i "TAB" #'consult-company)
+      :i "TAB" #'consult-company
+      :i "M-v" #'consult-yank-from-kill-ring)
 
 (map! :v "s-x" #'execute-extended-command)
 
