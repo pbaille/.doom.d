@@ -251,7 +251,8 @@
        :n "s-r" (lambda () (interactive) (save-buffer) (cider-ns-refresh))
        :n "C-s-r" (lambda () (interactive) (save-buffer) (call-interactively #'cider-jack-in-clj))
        :n "C-s-R" (lambda () (interactive) (save-buffer) (call-interactively #'cider-jack-in-cljs))
-       :desc "repls" "s-j e" #'pb-cider_select-repl-buffer)
+       :desc "select repl" "s-j r" #'pb-cider_select-repl-buffer
+       :desc "eval buffer" "s-j e" #'cider-eval-buffer)
 
       (:map reapl-mode-map
        :i "TAB" #'reapl-mode_complete)
