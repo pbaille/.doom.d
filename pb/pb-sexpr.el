@@ -13,6 +13,8 @@
 ;;; Code:
 
 (require 'symex)
+(require 'pb-multiline-strings)
+'(require 'thing-at-point)
 
 (defun pb-sexpr_shift-expression (delta)
   (setq evil-shift-width 1)
@@ -32,9 +34,11 @@
 
 (defun pb-sexpr_indent ()
   (interactive)
-  (let ((beg (point)))
-    (indent-region beg (save-excursion (evil-jump-item)))
-    (pb-sexpr_shift-expression (- beg (point)))))
+  (if (thing-at-point 'string)
+      (pb-multiline-strings/indent-in-place (point) (symex--get-end-point 1))
+    (let ((beg (point)))
+      (indent-region beg (save-excursion (evil-jump-item)))
+      (pb-sexpr_shift-expression (- beg (point))))))
 
 (defun pb-sexpr_shift-expressions (delta)
   (let ((p (point)))
