@@ -36,17 +36,51 @@
           (:desc "delete other windows" "D" #'delete-other-windows))
 
  (:prefix ("s-p" . "project")
-          (:desc "switch persp" "s-p" #'persp-switch)
-          (:desc "project buffers" "p" #'projectile-ibuffer)
-          (:desc "find file" "f" #'projectile-find-file)
-          (:desc "recent file" "r" #'projectile-recentf)
-          (:desc "add buffer" "a" #'persp-add-buffer)
-          (:desc "search in project" "s" #'+default/search-project)
-          (:desc "kill buffer" "k" #'persp-kill-buffer)
-          (:desc "remove buffer" "d" #'persp-remove-buffer)
-          (:desc "project dired" "s-d" #'project-dired)
-          (:desc "kill persp" "s-k" #'+workspace/kill)
-          (:desc "new persp" "n" #'+workspace/new-named))
+
+          (:desc "switch persp"
+                 "s-p" #'persp-switch)
+
+          (:desc "project buffers"
+                 "p" #'projectile-ibuffer)
+
+          (:desc "find file"
+                 "f" #'projectile-find-file)
+
+          (:desc "recent file"
+                 "r" #'projectile-recentf)
+
+          (:desc "add buffer"
+                 "a" #'persp-add-buffer)
+
+          (:desc "search in project"
+                 "s" #'+default/search-project)
+
+          (:desc "kill buffer"
+                 "k" #'persp-kill-buffer)
+
+          (:desc "remove buffer"
+                 "d" #'persp-remove-buffer)
+
+          (:desc "project dired"
+                 "s-d" #'project-dired)
+
+          (:desc "kill persp"
+                 "s-k" #'+workspace/kill)
+
+          (:desc "new persp"
+                 "n" #'+workspace/new-named)
+
+          (:desc "next persp"
+                 "l" #'+workspace/switch-right)
+
+          (:desc "prev persp"
+                 "h" #'+workspace/switch-left)
+
+          (:desc "move right"
+                 "M-l" #'+workspace/swap-right)
+
+          (:desc "move left"
+                 "M-h" #'+workspace/swap-left))
 
  (:prefix ("s-o" . "open")
           (:desc "vterm here" "t" #'+vterm/here)
