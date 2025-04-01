@@ -83,8 +83,10 @@
    (methods        magenta)
    (operators      teal)
    (type           teal)
-   (strings        yellow)
-   (variables      red)
+   (strings        (doom-blend (doom-lighten yellow 0.2)
+                               bg
+                               0.9))
+   (variables      (doom-lighten red 0.1))
    (numbers        orange)
    (region         hor-highlight)
    (error          red)
@@ -173,6 +175,8 @@
    (doom-modeline-urgent :foreground modeline-fg)
    (doom-modeline-info :foreground cyan)
 
+   (clojure-keyword-face :foreground (doom-lighten (doom-blend orange red 0.85)
+                                                   0.1))
    (internal-border :background base1)
    (vertico-current :background (doom-darken (doom-blend base1 violet 0.85)
                                              0.1))
