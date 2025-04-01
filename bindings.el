@@ -99,22 +99,56 @@
           (:desc "describe active minor mode" "M" #'doom/describe-active-minor-mode))
 
  (:prefix ("s-j" . "buffers")
-          (:desc "project buffer" "j" #'+vertico/switch-workspace-buffer)
-          (:desc "consult buffer" "s-j" #'consult-buffer)
-          (:desc "ibuffer" "s-i" #'ibuffer)
-          (:desc "*messages*" "m" #'pb-misc_switch-to-message-buffer)
-          (:desc "terminals" "t" #'pb-misc_select-vterm-buffer)
-          (:desc "project ibuffer" "i" #'projectile-ibuffer)
-          (:desc "kill buffer" "k" #'kill-current-buffer)
-          (:desc "kill buffer and window" "s-k" #'kill-buffer-and-window)
-          (:desc "reload buffer" "r" #'revert-buffer)
-          (:desc "rename buffer" "R" #'rename-buffer)
-          (:desc "consult flycheck" "w" #'consult-flycheck)
-          (:desc "scratch buffer" "s-n" #'pb-misc_scratch-buffer)
-          (:desc "scratch buffer" "n" (lambda ()
-                                        (interactive)
-                                        (pb-misc_scratch-buffer 'split)))
-          (:desc "new buffer" "N" #'pb-misc/new-buffer))
+
+          (:desc "project buffer"
+                 "j" #'+vertico/switch-workspace-buffer)
+
+          (:desc "consult buffer"
+                 "s-j" #'consult-buffer)
+
+          (:desc "ibuffer"
+                 "s-i" #'ibuffer)
+
+          (:desc "*messages*"
+                 "m" #'pb-misc_switch-to-message-buffer)
+
+          (:desc "terminals"
+                 "t" #'pb-misc_select-vterm-buffer)
+
+          (:desc "project ibuffer"
+                 "i" #'projectile-ibuffer)
+
+          (:desc "kill buffer"
+                 "k" #'kill-current-buffer)
+
+          (:desc "kill buffer and window"
+                 "s-k" #'kill-buffer-and-window)
+
+          (:desc "reload buffer"
+                 "r" #'revert-buffer)
+
+          (:desc "rename buffer"
+                 "R" #'rename-buffer)
+
+          (:desc "consult flycheck"
+                 "w" #'consult-flycheck)
+
+          (:desc "scratch buffer"
+                 "s-n" #'pb-misc_scratch-buffer)
+
+          (:desc "scratch buffer"
+                 "n" (lambda ()
+                       (interactive)
+                       (pb-misc_scratch-buffer 'split)))
+
+          (:desc "new buffer"
+                 "N" #'pb-misc/new-buffer)
+
+          (:desc "next"
+                 "l" #'next-buffer)
+
+          (:desc "previous"
+                 "h" #'previous-buffer))
 
  (:prefix ("s-q" . "LLMs")
           (:desc "gptel" "s-q" #'gptel)
@@ -140,7 +174,8 @@
           (:desc "search file" "s-s" #'+default/search-buffer)
           (:desc "search symbol at point" "s" #'+vertico/search-symbol-at-point)
           (:desc "search project" "p" #'+default/search-project)
-          (:desc "search replace" "r" #'query-replace)
+          (:desc "search replace thing at point" "r" #'pb-misc/query-replace-thing-at-point)
+          (:desc "search replace" "s-r" #'query-replace)
           (:desc "search google" "g" (lambda () (interactive) (browse-url "https://www.google.com/?autofocus=1")))
           (:desc "search mark" "m" #'consult-mark))
 
@@ -157,12 +192,19 @@
           (:desc "dired" "d" #'dired-jump)
           (:desc "dirvish" "s-d" (lambda () (interactive) (dirvish (projectile-project-root))))
           (:desc "sidebar" "s" #'dired-sidebar-toggle-sidebar)
-          (:desc "dired kill all" "s-k" #'pb-misc_kill-all-dired-buffers)))
+          (:desc "dired kill all" "s-k" #'pb-misc_kill-all-dired-buffers))
 
-(map! "s-t" #'hs-hide-all
-      "s-T" #'hs-show-all
+ (:prefix ("s-t" . "toggle")
+          (:desc "folding" "s-t" #'hs-toggle-hiding)
+          (:desc "fold level" "t l" #'hs-hide-level)
+          (:desc "fold show block" "t o" #'hs-show-block)
+          (:desc "flycheck" "f" #'flycheck-mode)
+          (:desc "line numbers" "l" #'doom/toggle-line-numbers)
+          (:desc "highlight line" "h" #'hl-line-mode)
+          (:desc "word wrap" "w" #'visual-line-mode)
+          (:desc "read only" "r" #'read-only-mode)))
 
-      "M-v" #'consult-yank-from-kill-ring
+(map! "M-v" #'consult-yank-from-kill-ring
       ;; buffer move
       "s-M-l" #'next-buffer
       "s-M-h" #'previous-buffer
