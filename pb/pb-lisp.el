@@ -33,6 +33,8 @@
          '(org-mode clojure-mode clojurescript-mode clojurec-mode
            emacs-lisp-mode fennel-mode sheme-mode racket-mode))
 
+       (defvar-local pb-lisp/current-node nil)
+
        (defvar pb-lisp/major-mode->treesit-lang
          '((emacs-list . elisp)
            (clojure-mode . clojure)
@@ -58,6 +60,7 @@
        (defun pb-lisp/exit-mode ()
          "Run on exiting sorg mode."
          (print "exit pb-lisp")
+         (setq-local pb-lisp/current-node nil)
          (pb-lisp/delete-overlay)
          (hl-line-mode 1)))
 
@@ -196,16 +199,21 @@
                    node))
              node)))
 
-       (defun pb-lisp/get-current-node ()
+       (defun pb-lisp/get-current-node (&optional fresh)
          "Get the tree-sitter node at point."
          (if (treesit-parser-list)
-             (let* ((node (treesit-node-at (point)
-                                           (alist-get major-mode pb-lisp/major-mode->treesit-lang)))
-                    (node (if (member (treesit-node-type node) '(")" "]" "}"))
-                              (treesit-node-parent node)
-                            node)))
-               (pb-lisp/get-topmost-node node))
+             (or (and (not fresh) pb-lisp/current-node)
+                 (let* ((node (treesit-node-at (point)
+                                               (alist-get major-mode pb-lisp/major-mode->treesit-lang)))
+                        (node (if (member (treesit-node-type node) '(")" "]" "}"))
+                                  (treesit-node-parent node)
+                                node)))
+                   (pb-lisp/get-topmost-node node)))
            (message "tree-sit not enabled")))
+
+       (defun pb-lisp/refresh-current-node ()
+         "Get the tree-sitter node at point."
+         (setq-local pb-lisp/current-node (pb-lisp/get-current-node t)))
 
        (defun pb-lisp/get-current-node-bounds ()
          "Get the start and end positions of the current tree-sitter node.
@@ -259,7 +267,8 @@
        (defun pb-lisp/goto-node (node message)
          "Go to the start position of NODE or display MESSAGE if node is nil."
          (if node
-           (progn (goto-char (treesit-node-start node))
+             (progn (goto-char (treesit-node-start node))
+                    (setq-local pb-lisp/current-node node)
                     (pb-lisp/set-selection (cons (treesit-node-start node) (treesit-node-end node)))
                     node)
            (progn (message message)
@@ -305,7 +314,7 @@
          (let* ((node (pb-lisp/get-current-node))
                 (next-sibling (treesit-node-next-sibling node t)))
            (if next-sibling
-           (pb-lisp/goto-node next-sibling "No next sibling found"))))
+               (pb-lisp/goto-node next-sibling "No next sibling found"))))
 
        (defun pb-lisp/goto-next-sibling_less-simple ()
          "Move to the next sibling node."
@@ -692,7 +701,7 @@ Skips over closing delimiters and continues to the next valid node."
                (end (cdr pb-lisp/selection)))
            (delete-region start end)
            (goto-char start)
-           (pb-lisp/indent-parent-node)
+           '(pb-lisp/indent-parent-node)
            (evil-insert-state 1)))
 
        (defun pb-lisp/insert-after ()
@@ -702,7 +711,11 @@ Skips over closing delimiters and continues to the next valid node."
                 (end (treesit-node-end node)))
            (goto-char end)
            (insert " ")
-           (pb-lisp/indent-parent-node)
+           (save-excursion
+             (when (member (char-after) '(?\( ?\[ ?\{))
+               (insert " ")))
+           '(pb-lisp/refresh-current-node)
+           '(pb-lisp/indent-parent-node)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-before ()
@@ -712,7 +725,7 @@ Skips over closing delimiters and continues to the next valid node."
                 (start (treesit-node-start node)))
            (goto-char start)
            (save-excursion (insert " "))
-           (pb-lisp/indent-parent-node)
+           '(pb-lisp/indent-parent-node)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-at-begining ()
