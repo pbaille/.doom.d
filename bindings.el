@@ -159,7 +159,7 @@
           (:desc "interactive request" "i" #'gptel-menu)
           (:desc "gptel menu" "m" #'gptel-menu)
           (:desc "add file to context" "f" #'gptel-context-add-file)
-          (:desc "remove file from context" "d" #'pb-gptel/remove-context-file)
+          (:desc "remove files from context" "d" #'pb-gptel/remove-context-files)
           (:desc "remove all context" "D" #'gptel-context-remove-all)
 
           (:prefix ("t" . "tools")
@@ -204,34 +204,35 @@
           (:desc "word wrap" "w" #'visual-line-mode)
           (:desc "read only" "r" #'read-only-mode)))
 
-;; vim motion in insert mode using control key.
-(map! :ni "C-h" #'backward-char
-      :ni "C-j" #'evil-next-line
-      :ni "C-k" #'evil-previous-line
-      :ni "C-l" #'forward-char
-      :n "M-C-j" (lambda () (interactive) (evil-insert-newline-above) (evil-next-line))
-      :n "M-C-k" (lambda () (interactive) (delete-indentation))
+(progn :misc
 
-      ;; some extras
-      :i "C-S-h" #'paredit-backward-delete
-      :i "C-S-l" #'paredit-forward-delete
-      ;; :i "C-w" #'pb-misc_insert-open-paren
-      :i "TAB" #'consult-company
-      :i "M-v" #'consult-yank-from-kill-ring)
+       (map! :ni "C-h" #'backward-char
+             :ni "C-j" #'evil-next-line
+             :ni "C-k" #'evil-previous-line
+             :ni "C-l" #'forward-char
+             :n "M-C-j" (lambda () (interactive) (evil-insert-newline-above) (evil-next-line))
+             :n "M-C-k" (lambda () (interactive) (delete-indentation))
 
-(map! :v "s-x" #'execute-extended-command)
+             ;; some extras
+             :i "C-S-h" #'paredit-backward-delete
+             :i "C-S-l" #'paredit-forward-delete
+             ;; :i "C-w" #'pb-misc_insert-open-paren
+             :i "TAB" #'consult-company
+             :i "M-v" #'consult-yank-from-kill-ring)
 
-(map! :i "s-1" #'+workspace/switch-to-0
-      :i "s-2" #'+workspace/switch-to-1
-      :i "s-3" #'+workspace/switch-to-2
-      :i "s-4" #'+workspace/switch-to-3
-      :i "s-5" #'+workspace/switch-to-4)
+       (map! :v "s-x" #'execute-extended-command)
 
-(map! :n "g f" #'dired-sidebar-jump-to-sidebar
-      :n "g b" #'pb-ibuffer_sidebar-focus)
+       (map! :i "s-1" #'+workspace/switch-to-0
+             :i "s-2" #'+workspace/switch-to-1
+             :i "s-3" #'+workspace/switch-to-2
+             :i "s-4" #'+workspace/switch-to-3
+             :i "s-5" #'+workspace/switch-to-4)
 
-(map! :n "g j" #'evil-scroll-line-to-top
-      :n "g k" #'evil-scroll-line-to-bottom)
+       (map! :n "g f" #'dired-sidebar-jump-to-sidebar
+             :n "g b" #'pb-ibuffer_sidebar-focus)
+
+       (map! :n "g j" #'evil-scroll-line-to-top
+             :n "g k" #'evil-scroll-line-to-bottom))
 
 (map! :leader
 
@@ -273,7 +274,7 @@
        :i "C-k" #'evil-previous-line
        ;; trigger sorg mode
        :ni "<return>" #'sorg--return
-       :ni "s-l" #'evil-pb-lisp-state)
+       :ni "s-l" #'symex-mode-interface)
 
       (:map gptel-mode-map
        :i "C-e" #'gptel-send
