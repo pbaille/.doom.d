@@ -224,38 +224,54 @@ XS is a list alternating paths and update-fns."
 Also handles lists of keyword maps."
          (let ((indent (make-string (or indentation-lvl 0) ?\s)))
            (cond
-            ((and (listp m) (cl-every #'km? m))
-             (concat "("
-                     (mapconcat (lambda (km) (km_pp km (1+ indentation-lvl))) m (concat "\n " indent))
-                     ")"))
-            ((not (km? m))
-             (prin1-to-string m))
             ((null m) "nil")
-            (t
+            ((km? m)
              (let ((entries (km_entries m)))
                (if (null entries)
                    "(km)"
-                 (let ((lines (mapcar
-                               (lambda (entry)
-                                 (let* ((k (car entry))
-                                        (v (cdr entry))
-                                        (v-str (km_pp v
-                                                      (+ (or indentation-lvl 0)
-                                                         (1+ (length (symbol-name k)))))))
-                                   (format "%s %s" k v-str)))
-                               entries)))
-                   (concat "(km "
-                           (car lines)
-                           (if (cdr lines) "\n" "")
-                           (replace-regexp-in-string "^" (concat indent "    ")
-                                                     (mapconcat #'identity (cdr lines) "\n"))
-                           ")"))))))))
+                 (concat "(km "
+                         (mapconcat
+                          (lambda (entry)
+                            (let* ((k (car entry))
+                                   (v (cdr entry))
+                                   (v-str (km_pp v
+                                                 (+ (or indentation-lvl 0)
+                                                    4
+                                                    (1+ (length (symbol-name k)))))))
+                              (format "%s %s" k v-str)))
+                          entries
+                          (concat "\n" indent "    "))
+                         ")"))))
+            ((listp m)
+             (concat "("
+                     (mapconcat (lambda (km) (km_pp km (1+ (or indentation-lvl 0))))
+                                m
+                                (concat "\n " indent))
+                     ")"))
+            (t (prin1-to-string m)))))
 
-       '(pb_comment
+       [:tests
+        (km :a 1 :b 2 :tobu (km :c1 3 :c2 5)
+            :b "oiu"
+            :tobu (km :sipos (km :fun 3) :c2 5))
+
         (message (concat "\n"
                          (km_pp (km :a 1 :b 2 :tobu (km :c1 3 :c2 5)
-                                               :b "oiu"
-                                               :tobu (km :sipos (km :fun 3) :c2 5)))))))
+                                    :b "oiu"
+                                    :tobu (km :sipos (km :fun 3) :c2 5)))))
+
+        (pb-prompt_describe-path "~/.doom.d/pb")
+
+        (km :name "pb"
+            :type "dir"
+            :children (km :archived (km :name "archived"
+                                        :type "dir"
+                                        :children (km :pb-lisp.el (km :name "pb-lisp.el"
+                                                                      :type "file"
+                                                                      :content :pouet)
+                                                      :reaper.el (km :name "reaper.el"
+                                                                     :type "file"
+                                                                     :content :pouet)))))])
 
 (defmacro km_let (binding &rest body)
   "Let binding for keyword maps.
