@@ -31,11 +31,11 @@
 
 (defun pb-gptel/request (content options)
   "Send GPT request with formatted CONTENT and OPTIONS.
-CONTENT is a plist or keyword map that will be formatted into an XML-like
-prompt string using `pb-gptel/mk-prompt`.
-OPTIONS is a plist of options to be passed to `gptel-request`.
+   CONTENT is a plist or keyword map that will be formatted into an XML-like
+   prompt string using `pb-gptel/mk-prompt`.
+   OPTIONS is a plist of options to be passed to `gptel-request`.
 
-When called interactively, this prompts for the necessary inputs."
+   When called interactively, this prompts for the necessary inputs."
   (interactive)
   (let ((gptel-max-tokens 64000))
     (apply #'gptel-request
@@ -46,29 +46,31 @@ When called interactively, this prompts for the necessary inputs."
 (defun pb-gptel/mk-request-prompt (path)
   "Generate a formatted prompt string from the values at PATH in `pb-prompt_tree`.
 
-PATH is a list of keywords representing a path in the prompt tree structure.
-For example, [:code :lisp :context] would retrieve all values along that path.
+   PATH is a list of keywords representing a path in the prompt tree structure.
+   For example, [:code :lisp :context] would retrieve all values along that path.
 
-The function retrieves all values along the specified path using
-`pb-tree_get-path-values`, then formats each value using `pb-prompt_mk`,
-and finally concatenates them with double newlines between each part.
+   The function retrieves all values along the specified path using
+   `pb-tree_get-path-values`, then formats each value using `pb-prompt_mk`,
+   and finally concatenates them with double newlines between each part.
 
-This creates a well-structured prompt by combining multiple prompt elements
-from the tree, allowing for modular and reusable prompt components."
+   This creates a well-structured prompt by combining multiple prompt elements
+   from the tree, allowing for modular and reusable prompt components."
   (pb_let [values (pb-tree_get-path-values pb-prompt_tree path)]
     (mapconcat #'pb-prompt_mk values "\n\n")))
 
 
 (progn :context
 
+       (defvar pb-gptel/context ())
+
        (defun pb-gptel/context-files-to-km ()
          "Convert gptel context files to a keyword map structure.
-Transforms the `gptel-context--alist` into a keyword map where:
-- Each key is the filename (without directory) of a context file
-- Each value is the content of that file as a string
+          Transforms the `gptel-context--alist` into a keyword map where:
+          - Each key is the filename (without directory) of a context file
+          - Each value is the content of that file as a string
 
-This creates a structured representation of all files currently
-added to the gptel context, making it easy to include them in prompts."
+          This creates a structured representation of all files currently
+          added to the gptel context, making it easy to include them in prompts."
          (km_into ()
                   (mapcar (lambda (x)
                             (let ((filepath (car x)))
@@ -78,15 +80,15 @@ added to the gptel context, making it easy to include them in prompts."
 
        (defun pb-gptel/directory-to-km (dir-path &optional max-depth current-depth)
          "Convert all files in DIR-PATH into a nested keyword map structure.
-Recursively builds a keyword map where:
-- Keys are the basenames of files and directories
-- File values are the content of those files as strings
-- Directory values are nested keyword maps with their contents
+          Recursively builds a keyword map where:
+          - Keys are the basenames of files and directories
+          - File values are the content of those files as strings
+          - Directory values are nested keyword maps with their contents
 
-Arguments:
-  DIR-PATH: Directory path to process
-  MAX-DEPTH: Optional maximum recursion depth (nil means no limit)
-  CURRENT-DEPTH: Internal parameter for tracking recursion depth"
+          Arguments:
+          DIR-PATH: Directory path to process
+          MAX-DEPTH: Optional maximum recursion depth (nil means no limit)
+          CURRENT-DEPTH: Internal parameter for tracking recursion depth"
          (let ((current-depth (or current-depth 0))
                (max-depth-reached (and max-depth (>= current-depth max-depth)))
                (result ()))
@@ -111,22 +113,46 @@ Arguments:
                                           (buffer-string)))))))))
            result))
 
-       (defun pb-gptel/remove-context-file ()
-         "Let the user choose a file present in context using gptel-context-remove.
-This function presents a completion interface for selecting a file to remove
-from the current gptel context."
+       (defun pb-gptel/remove-context-files ()
+         "Remove multiple files from the current gptel context.
+          This function presents a multi-selection interface for choosing
+          files to remove from the current gptel context."
          (interactive)
          (let* ((context-files (mapcar #'car gptel-context--alist))
-                (selected-file (completing-read "Remove file from context: " context-files nil t)))
-           (when selected-file
-             (gptel-context-remove selected-file)
-             (message "Removed %s from context" selected-file)))))
+                (selected-files (let ((crm-separator "[ 	]* [ 	]*"))
+                                  (completing-read-multiple "Remove files from context: "
+                                                            context-files nil t))))
+           (when  selected-files
+             (dolist (file selected-files)
+               (gptel-context-remove file))
+             (message "Removed %d file(s) from context: %s"
+                      (length selected-files)
+                      (mapconcat #'identity selected-files ", ")))))
+
+       (defun pb-gptel/add-context-files ()
+         "Add multiple files to the current gptel context.
+          This function presents a multi-selection interface for choosing
+          files to add to the current gptel context."
+         (interactive)
+         (let* ((default-directory (or (projectile-project-root)
+                                       default-directory))
+                (files (let ((crm-separator "[ 	]* [ 	]*"))
+                         (completing-read-multiple "Add files to context: "
+                                                   ;#'read-file-name-internal
+                                                   (projectile-current-project-files)
+                                                   nil t))))
+           (when files
+             (dolist (file files)
+               (gptel-context-add-file file))
+             (message "Added %d file(s) to context: %s"
+                      (length files)
+                      (mapconcat #'identity files ", "))))))
 
 (defun pb-gptel/current-symex-request-handler (res info)
   "Replace current symbolic expression with GPT model response.
-RES is the response text from the language model.
-INFO is the information plist provided by gptel containing request metadata.
-Performs proper navigation and cleanup after replacement."
+   RES is the response text from the language model.
+   INFO is the information plist provided by gptel containing request metadata.
+   Performs proper navigation and cleanup after replacement."
   (symex-change 1)
   (insert res)
   (symex-mode-interface)
@@ -135,18 +161,18 @@ Performs proper navigation and cleanup after replacement."
 (defun pb-gptel/current-symex-request (&optional options)
   "Request a language model to rewrite the current symbolic expression.
 
-OPTIONS is a plist or keyword map that may contain:
-- `prompt`: A string with instructions for the language model (prompted
+   OPTIONS is a plist or keyword map that may contain:
+   - `prompt`: A string with instructions for the language model (prompted
   for interactively if not provided)
-- `callback`: A function to handle the response (defaults to
+   - `callback`: A function to handle the response (defaults to
   `pb-gptel/replace-current-symex-request-handler` which replaces
   the current expression)
 
-This function creates a structured request with the current buffer context,
-the specified prompt, and the current symbolic expression, then sends it
-to the language model using `pb-gptel/request`.
+   This function creates a structured request with the current buffer context,
+   the specified prompt, and the current symbolic expression, then sends it
+   to the language model using `pb-gptel/request`.
 
-When called interactively, prompts for instructions to guide the modification."
+   When called interactively, prompts for instructions to guide the modification."
   (interactive)
   (pb_let [(km_keys prompt callback) options]
     (pb-gptel/request
@@ -174,17 +200,17 @@ When called interactively, prompts for instructions to guide the modification."
 (defun pb-gptel/current-buffer-request (&optional options)
   "Request a language model to rewrite the current buffer contents.
 
-OPTIONS is a plist or keyword map that may contain:
-- `prompt`: A string with instructions for the language model (prompted
+   OPTIONS is a plist or keyword map that may contain:
+   - `prompt`: A string with instructions for the language model (prompted
   for interactively if not provided)
-- `callback`: A function to handle the response (defaults to a
+   - `callback`: A function to handle the response (defaults to a
   function that replaces the entire buffer content)
 
-This function creates a structured request with the current buffer context,
-the specified prompt, and sends it to the language model using
-`pb-gptel/request`. The response will replace the entire buffer content.
+   This function creates a structured request with the current buffer context,
+   the specified prompt, and sends it to the language model using
+   `pb-gptel/request`. The response will replace the entire buffer content.
 
-When called interactively, prompts for instructions to guide the modification."
+   When called interactively, prompts for instructions to guide the modification."
   (interactive)
   (pb_let [(km_keys prompt callback) options]
     (pb-gptel/request
@@ -213,10 +239,10 @@ When called interactively, prompts for instructions to guide the modification."
 
 (defun pb-gptel/fill-holes ()
   "Fill holes (denoted by __) in the current expression.
-This function sends the current expression to the language model with
-instructions to complete any placeholder holes marked with __ without
-modifying the rest of the code. The response will replace the current
-expression."
+   This function sends the current expression to the language model with
+   instructions to complete any placeholder holes marked with __ without
+   modifying the rest of the code. The response will replace the current
+   expression."
   (interactive)
   (pb-gptel/current-symex-request
    (km :prompt "Complete the holes (denoted by __) in the given expression, do not change anything else!")))
@@ -224,23 +250,23 @@ expression."
 (defun pb-gptel/current-buffer-chat (&optional options)
   "Create a chat buffer to discuss code with GPT based on OPTIONS.
 
-OPTIONS is a plist or keyword map that may contain:
-- `prompt': A string with instructions for the language model
+   OPTIONS is a plist or keyword map that may contain:
+   - `prompt': A string with instructions for the language model
    (prompted for interactively if not provided)
-- `selection': The code excerpt to discuss (defaults to region if active,
+   - `selection': The code excerpt to discuss (defaults to region if active,
    otherwise current symbolic expression if not provided)
 
-This function creates a dedicated chat buffer in `org-mode' with the
-following structure:
-1. A level-1 header with the file name
-2. A code block containing the selected code (when provided)
-3. A level-2 header with the prompt/question
-4. The GPT response formatted as org content
+   This function creates a dedicated chat buffer in `org-mode' with the
+   following structure:
+   1. A level-1 header with the file name
+   2. A code block containing the selected code (when provided)
+   3. A level-2 header with the prompt/question
+   4. The GPT response formatted as org content
 
-The chat buffer is set up for further interaction with the model using
-gptel-mode, allowing for back-and-forth conversation about the code.
-After the GPT response is inserted, a new level-2 header is added
-to continue the conversation."
+   The chat buffer is set up for further interaction with the model using
+   gptel-mode, allowing for back-and-forth conversation about the code.
+   After the GPT response is inserted, a new level-2 header is added
+   to continue the conversation."
   (interactive)
   (pb_let [(km_keys prompt selection) options]
     (let* ((source-buffer (current-buffer))
@@ -354,17 +380,17 @@ to continue the conversation."
 
 (defun pb-gptel/current-symex-chat ()
   "Create a chat buffer to discuss the current symbolic expression.
-This function opens a dedicated chat buffer in `org-mode' containing
-the current symbolic expression and initiates a conversation with GPT.
-The user will be prompted to enter a question or topic for discussion
-about the expression. The resulting buffer will contain:
+   This function opens a dedicated chat buffer in `org-mode' containing
+   the current symbolic expression and initiates a conversation with GPT.
+   The user will be prompted to enter a question or topic for discussion
+   about the expression. The resulting buffer will contain:
 
-1. A header with the current file name
-2. A code block with the current symbolic expression
-3. The user's question/prompt
-4. GPT's response formatted as org content
+   1. A header with the current file name
+   2. A code block with the current symbolic expression
+   3. The user's question/prompt
+   4. GPT's response formatted as org content
 
-The chat buffer supports ongoing conversation through gptel-mode."
+   The chat buffer supports ongoing conversation through gptel-mode."
   (interactive)
   (pb-gptel/current-buffer-chat
    (km :selection (pb-symex_current-as-string))))
@@ -399,7 +425,43 @@ The chat buffer supports ongoing conversation through gptel-mode."
 
        (setq gptel-tools
              (list pb-gptel/elisp-evaluation-tool
-                   pb-gptel/clojure-evaluation-tool)))
+                   pb-gptel/clojure-evaluation-tool))
+
+       (progn :incub
+
+              (defvar pb-gptel/file-insert-at-point
+                (gptel-make-tool
+                 :name "edit_file"
+                 :function (lambda (file_path content position)
+                             (let ((filepath (expand-file-name file_path)))
+                               (if (file-exists-p filepath)
+                                   (with-current-buffer (find-file-noselect filepath)
+                                     (save-excursion
+                                       (cond
+                                        ((eq position 'beginning)
+                                         (goto-char (point-min)))
+                                        ((eq position 'end)
+                                         (goto-char (point-max)))
+                                        ((numberp position)
+                                         (goto-char position))
+                                        (t nil))
+                                       (insert content)
+                                       (save-buffer))
+                                     (format "Content inserted at %s in file %s" position filepath))
+                                 (format "Error: File %s not found" filepath))))
+                 :description "Inserts text at a specified position in a file from the context."
+                 :args (list '(:name "file_path"
+                               :type string
+                               :description "Path to the file to edit, relative to project root")
+                             '(:name "content"
+                               :type string
+                               :description "Content to insert into the file")
+                             '(:name "position"
+                               :type string
+                               :description "Where to insert content: 'beginning', 'end', or line number"))
+                 :category "file-editing"
+                 :confirm t)
+                "A tool that allows editing source files in the current context by inserting content at specified positions.")))
 
 (pb_comment
  :coerce-non-utf-8-char-to-unicode
