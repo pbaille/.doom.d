@@ -318,8 +318,10 @@ accordingly:
                                       (let* ((desc (pb-prompt/-context-item-description item)))
                                         ;; Store in our map for later retrieval
                                         (puthash desc item item-map)
-                                        ;; Return the display candidate
-                                        (propertize desc 'consult--group type)))
+                                        ;; Return the display candidate with item properties
+                                        (propertize desc
+                                                    'consult--group type
+                                                    'context-item item)))
                                     items)))
                                items-by-type))
                   ;; Define group function for consult
@@ -330,7 +332,7 @@ accordingly:
                   ;; Get selections using consult--read
                   (picked (consult--read candidates
                                          :prompt "Select items to remove: "
-                                         :category 'context-item
+                                         :category 'pb-prompt-context-item
                                          :group group-function
                                          :require-match t
                                          :sort nil))
@@ -349,7 +351,104 @@ accordingly:
                (setq pb-prompt/context
                      (seq-remove (lambda (item)
                                    (equal (km_get item :id) (km_get to-remove :id)))
-                                 pb-prompt/context)))))))
+                                 pb-prompt/context))))))
+
+       ;; Define embark actions for context items
+       (with-eval-after-load 'embark
+
+         (setq embark-quit-after-action
+               '((pb-prompt/browse-context-item . t)
+                 (pb-prompt/describe-context-item . nil)
+                 (pb-prompt/remove-context-item . nil)
+                 (t . t)))
+
+         (defun pb-prompt/browse-context-item (candidate)
+           "Open or display the content of the selected context item."
+           (let* (;; (setq embark-quit-after-action t)
+                  (item (get-text-property 0 'context-item candidate))
+                  (type (km_get item :type)))
+             (cond
+              ((string= type "buffer")
+               (pop-to-buffer (km_get item :buffer-name)))
+              ((string= type "file")
+               (find-file (km_get item :path)))
+              ((string= type "dir")
+               (dired (km_get item :path)))
+              ((string= type "selection")
+               (with-current-buffer (get-buffer-create "*Context Item Selection*")
+                 (erase-buffer)
+                 (insert (km_get item :content))
+                 (goto-char (point-min))
+                 (when-let ((path (km_get item :path)))
+                   (setq buffer-file-name path)
+                   (set-auto-mode))
+                 (pop-to-buffer (current-buffer))))
+              (t (message "Don't know how to browse item of type: %s" type)))))
+
+         (defun pb-prompt/describe-context-item (candidate)
+           "Show detailed information about the context item."
+           (with-current-buffer (get-buffer-create "*Context Item Details*")
+             (erase-buffer)
+             (let* ((item (get-text-property 0 'context-item candidate))
+                    (id (km_get item :id))
+                    (type (km_get item :type))
+                    (path (km_get item :path)))
+               (insert (format "ID: %s\n" id)
+                       (format "Type: %s\n" type))
+               (when path
+                 (insert (format "Path: %s\n" path)))
+
+               (dolist (key (mapcar #'car (km_entries item)))
+                 (unless (member key '(:id :type :path :content))
+                   (insert (format "%s: %s\n"
+                                   (substring (symbol-name key) 1)
+                                   (km_get item key)))))
+
+               (when-let ((content (km_get item :content)))
+                 (insert "\nContent:\n---------\n")
+                 (insert content)))
+             (goto-char (point-min))
+             (pop-to-buffer (current-buffer))))
+
+         (defun pb-prompt/remove-context-item-action (candidate)
+           "Remove the selected context item from the prompt context."
+           (let* ((item (get-text-property 0 'context-item candidate))
+                  (id (km_get item :id)))
+             (message "Removing context item: %s (ID: %s)"
+                      (km_get item :type) id)
+             (setq pb-prompt/context
+                   (seq-remove (lambda (ctx-item)
+                                 (equal (km_get ctx-item :id) id))
+                               pb-prompt/context))))
+
+         ;; Register the category and its actions
+         ;; Register our context item category with Embark
+         ;; This associates the 'pb-prompt-context-item category with our custom keymap,
+         ;; so when Embark is triggered on items with this category,
+         ;; it will use our pb-prompt-context-item-map for available actions
+
+         (add-to-list 'embark-keymap-alist '(pb-prompt-context-item . pb-prompt-context-item-map))
+
+         ;; how does this pb-prompt-context-item category is used ?
+         ;; ;; The pb-prompt-context-item category is used in the consult--read function
+         ;; in pb-prompt/remove-context-item function where we set the :category property
+         ;; to 'pb-prompt-context-item. This allows Embark to recognize items from this
+         ;; completion as belonging to this category and use our custom keymap.
+         ;;
+         ;; When a user selects an item during completion and triggers Embark (typically
+         ;; with a key like C-. or M-.), Embark looks up the category of the item and
+         ;; uses the associated keymap to present relevant actions.
+
+         (defvar pb-prompt-context-item-map
+           (make-sparse-keymap))
+
+         (map!
+          (:map pb-prompt-context-item-map
+           :desc "Browse item" "b" #'pb-prompt/browse-context-item
+           :desc "Describe item details" "d" #'pb-prompt/describe-context-item
+           :desc "Remove item" "r" #'pb-prompt/remove-context-item-action
+           :desc "Kill/delete item" "k" #'pb-prompt/remove-context-item-action))))
+
 (provide 'pb-prompt)
 
 
