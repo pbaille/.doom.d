@@ -221,7 +221,7 @@ XS is a list alternating paths and update-fns."
 
        (defun km_pp (m &optional indentation-lvl)
          "Get a pretty string representing M. Entries are stacked vertically, and nested kms are processed recursively and indented.
-Also handles lists of keyword maps."
+          Also handles lists of keyword maps."
          (let ((indent (make-string (or indentation-lvl 0) ?\s)))
            (cond
             ((null m) "nil")
