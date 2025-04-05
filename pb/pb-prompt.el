@@ -152,54 +152,88 @@ accordingly:
             :path path
             :content (pb_slurp path)))))
 
-(defun pb-prompt/add-path ()
-  (interactive)
-  (let ((path (read-file-name "Select directory or file: " nil nil t)))
-    (when path
-      (setq pb-prompt/context
-            (cons (km :type (cond
-                             ((file-directory-p path) "dir")
-                             ((file-regular-p path) "file")
-                             (t "unknown"))
-                      :path path)
-                  pb-prompt/context)))))
+(progn :context-add
 
-(defun pb-prompt/add-selection ()
-  "Add the current selection to the prompt context.
-   Adds either the active region or current symex if in symex-mode."
-  (interactive)
-  (let ((selection
-         (cond
-          ;; If region is active, use region
-          ((use-region-p)
-           (buffer-substring-no-properties (region-beginning) (region-end)))
+       (defun pb-prompt/with-id (context-item)
+         "Add a unique identifier to CONTEXT-ITEM.
 
-          ;; If we're in symex-mode, use current symex
-          ((and (boundp 'symex-mode) symex-mode)
-           (pb-symex_current-as-string))
+          This function adds a unique identifier key to the provided keyword map.
+          The identifier is constructed by creating an MD5 hash of the current timestamp
+          and taking its first 8 characters, prefixed with 'pb-prompt/context-item-'.
 
-          ;; Default fallback message
-          (t
-           (user-error "No selection or symex available")))))
-    (when selection
-      (setq pb-prompt/context
-            (cons (km :type "selection"
-                      :path (buffer-file-name)
-                      :at (point)
-                      :content selection)
-                  pb-prompt/context)))))
+          The identifier helps track and reference context items individually within
+          the prompt system.
 
-(defun pb-prompt/add-buffer ()
-  "Add the current buffer to the prompt context.
-   This collects the buffer name, file path, major mode, and content
-   for inclusion in the prompt context."
-  (interactive)
-  (setq pb-prompt/context
-        (cons (km :type "buffer"
+          Argument CONTEXT-ITEM is a keyword map to which the ID will be added.
+
+          Returns the CONTEXT-ITEM with the unique ID added."
+         (km_put context-item
+                 :id
+                 (substring
+                  (md5 (format "%s" (time-convert nil 'list)))
+                  0 8)))
+
+       (defun pb-prompt/add-item! (item)
+         "Add ITEM to context with a unique identifier.
+
+          This function attaches a unique :id key to ITEM before adding it to
+          `pb-prompt/context'. The ID is generated using MD5 hash of the current
+          timestamp, ensuring uniqueness across context items. Items are added
+          to the front of the context list, making more recent additions appear
+          first when processing context items later.
+
+          Example:
+          (pb-prompt/add-item! (km :type \"selection\" :content \"my code\"))
+          ;; Adds selection with a unique ID to the context"
+         (setq pb-prompt/context
+               (cons (pb-prompt/with-id item)
+                     pb-prompt/context)))
+
+       (defun pb-prompt/add-path ()
+         (interactive)
+         (let ((path (read-file-name "Select directory or file: " nil nil t)))
+           (when path
+             (pb-prompt/add-item!
+              (km :type (cond
+                         ((file-directory-p path) "dir")
+                         ((file-regular-p path) "file")
+                         (t "unknown"))
+                  :path path)))))
+
+       (defun pb-prompt/add-selection ()
+         "Add the current selection to the prompt context.
+          Adds either the active region or current symex if in symex-mode."
+         (interactive)
+         (let ((selection
+                (cond
+                 ;; If region is active, use region
+                 ((use-region-p)
+                  (buffer-substring-no-properties (region-beginning) (region-end)))
+
+                 ;; If we're in symex-mode, use current symex
+                 ((and (boundp 'symex-mode) symex-mode)
+                  (pb-symex_current-as-string t))
+
+                 ;; Default fallback message
+                 (t
+                  (user-error "No selection or symex available")))))
+           (when selection
+             (pb-prompt/add-item!
+              (km :type "selection"
                   :path (buffer-file-name)
-                  :buffer-name (buffer-name)
-                  :major-mode (symbol-name major-mode))
-              pb-prompt/context)))
+                  :at (point)
+                  :content selection)))))
+
+       (defun pb-prompt/add-buffer ()
+         "Add the current buffer to the prompt context.
+          This collects the buffer name, file path, major mode, and content
+          for inclusion in the prompt context."
+         (interactive)
+         (pb-prompt/add-item!
+          (km :type "buffer"
+              :path (buffer-file-name)
+              :buffer-name (buffer-name)
+              :major-mode (symbol-name major-mode)))))
 
 (defun pb-prompt/context-prompt ()
   "Generate a prompt from the current context.
@@ -218,68 +252,104 @@ accordingly:
                                  (buffer-substring-no-properties (point-min) (point-max)))))
              ((member type (list "file" "dir"))
               (pb-prompt/describe-path (km_get ctx-item :path)))
+
              (t ctx-item))))
         pb-prompt/context))))
 
-(defun pb-prompt/remove-context-items ()
-  "Let the user interactively remove some items from pb-prompt/context.
-   The items are grouped by type in the completion UI via category property."
-  (interactive)
-  (when pb-prompt/context
-    (let* ((items-by-type (seq-group-by
-                           (lambda (item) (km_get item :type))
-                           pb-prompt/context))
-           ;; Create candidates with proper properties for grouping
-           (candidates (mapcan
-                        (lambda (type-group)
-                          (let ((type (car type-group))
-                                (items (cdr type-group)))
-                            (mapcar
-                             (lambda (item)
-                               (let* ((path (km_get item :path))
-                                      (desc (cond
-                                             ((string= type "buffer")
-                                              (km_get item :buffer-name))
-                                             ((string= type "file")
-                                              path)
-                                             ((string= type "dir")
-                                              path)
-                                             ((string= type "selection")
-                                              path)
-                                             (t (format "Item of type: %s" type)))))
-                                 ;; Store item as property for retrieval later
-                                 (propertize desc
-                                             'consult--group type
-                                             'context-item item)))
-                             items)))
-                        items-by-type))
-           ;; Define group function for consult
-           (group-function (lambda (cand transform)
-                             (if transform
-                                 cand
-                               (get-text-property 0 'consult--group cand))))
-           ;; Define annotation function
-           (annotate-function (lambda (cand)
-                                (let ((type (get-text-property 0 'consult--group cand)))
-                                  (concat " " (propertize type 'face 'marginalia-type)))))
-           ;; Get selections using consult--read
-           (to-remove (mapcar (lambda (cand)
-                                (get-text-property 0 'context-item cand))
-                              (consult--read candidates
-                                             :prompt "Select items to remove: "
-                                             :category 'context-item
-                                             :group group-function
-                                        ;:annotate annotate-function
-                                             :require-match t
-                                             :sort nil))))
+(progn :consult-context
 
-      ;; Update the context by removing selected items
-      (setq pb-prompt/context
-            (seq-difference pb-prompt/context to-remove #'equal))
-      (message "Removed %d item(s) from context" (length to-remove)))))
+       (defun pb-prompt/-format-relative-path (path)
+         "Format PATH as a relative path to project root or home directory.
+          If PATH is in a project, return it relative to the project root.
+          If PATH is in the home directory, return it with ~ prefix.
+          Otherwise, return the expanded path."
+         (let* ((project-root (when (and (fboundp 'project-current)
+                                         (project-current))
+                                (project-root (project-current))))
+                (expanded-path (expand-file-name path))
+                (relative-path (cond
+                                ((and project-root
+                                      (string-prefix-p project-root expanded-path))
+                                 (substring expanded-path (length project-root)))
+                                ((string-prefix-p (expand-file-name "~") expanded-path)
+                                 (concat "~" (substring expanded-path (length (expand-file-name "~")))))
+                                (t expanded-path))))
+           relative-path))
 
+       (defun pb-prompt/-context-item-description (item)
+         "Format a description for a context ITEM based on its type.
+          Returns a human-readable string representation of the item.
 
+          For buffer items, returns the buffer name.
+          For file or directory items, returns the relative path.
+          For selection items, returns the first line (truncated if needed).
+          For other types, returns a generic description with the type name."
+         (let ((type (km_get item :type))
+               (path (km_get item :path)))
+           (cond
+            ((string= type "buffer")
+             (km_get item :buffer-name))
+            ((member type (list "file" "dir"))
+             (pb-prompt/-format-relative-path path))
+            ((string= type "selection")
+             (let* ((content (km_get item :content))
+                    (first-line (car (split-string content "\n")))
+                    (truncated-line (truncate-string-to-width first-line 80 nil nil "...")))
+               truncated-line))
+            (t (format "Item of type: %s" type)))))
 
+       (defun pb-prompt/remove-context-item ()
+         "Let the user interactively remove some items from pb-prompt/context.
+          The items are grouped by type in the completion UI via category property."
+         (interactive)
+         (when pb-prompt/context
+           (let* ((items-by-type (seq-group-by
+                                  (lambda (item) (km_get item :type))
+                                  pb-prompt/context))
+                  ;; Create a mapping from display strings to actual items
+                  (item-map (make-hash-table :test 'equal))
+                  ;; Create candidates with proper properties for grouping
+                  (candidates (mapcan
+                               (lambda (type-group)
+                                 (let ((type (car type-group))
+                                       (items (cdr type-group)))
+                                   (mapcar
+                                    (lambda (item)
+                                      (let* ((desc (pb-prompt/-context-item-description item)))
+                                        ;; Store in our map for later retrieval
+                                        (puthash desc item item-map)
+                                        ;; Return the display candidate
+                                        (propertize desc 'consult--group type)))
+                                    items)))
+                               items-by-type))
+                  ;; Define group function for consult
+                  (group-function (lambda (cand transform)
+                                    (if transform
+                                        cand
+                                      (get-text-property 0 'consult--group cand))))
+                  ;; Get selections using consult--read
+                  (picked (consult--read candidates
+                                         :prompt "Select items to remove: "
+                                         :category 'context-item
+                                         :group group-function
+                                         :require-match t
+                                         :sort nil))
+                  ;; Retrieve the item from our map
+                  (to-remove (gethash picked item-map)))
+
+             ;; Log what we're removing with proper error checking
+             (if to-remove
+                 (message "Removing context item: %s (ID: %s)"
+                          (or (km_get to-remove :type) "unknown")
+                          (km_get to-remove :id))
+               (message "Warning: No item selected for removal (Key: %s)" picked))
+
+             ;; Update the context by removing selected item
+             (when to-remove
+               (setq pb-prompt/context
+                     (seq-remove (lambda (item)
+                                   (equal (km_get item :id) (km_get to-remove :id)))
+                                 pb-prompt/context)))))))
 (provide 'pb-prompt)
 
 
