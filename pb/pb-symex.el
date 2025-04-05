@@ -262,8 +262,10 @@ If inside string or comment, toggle insert state."
         (call-interactively #'+lookup/references))
     (call-interactively #'+lookup/references)))
 
-(defun pb-symex_current-as-string ()
-  (buffer-substring-no-properties (point) (symex--get-end-point 1)))
+(defun pb-symex_current-as-string (&optional with-properties)
+  (if with-properties
+      (buffer-substring (point) (symex--get-end-point 1))
+    (buffer-substring-no-properties (point) (symex--get-end-point 1))))
 
 (defun pb-symex_yank-from-ring ()
   "Replace current symex using consult-yank-from-kill-ring"
