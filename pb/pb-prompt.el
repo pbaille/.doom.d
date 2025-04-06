@@ -65,8 +65,8 @@
 
 (defun pb-prompt/indent-content (content &optional indent-size)
   "Indent each line of CONTENT with spaces if it contains newlines.
-If CONTENT is a single line, return it unchanged.
-Optional argument INDENT-SIZE specifies the number of spaces to use (defaults to 2)."
+   If CONTENT is a single line, return it unchanged.
+   Optional argument INDENT-SIZE specifies the number of spaces to use (defaults to 2)."
   (if (string-match-p "\n" content)
       (let ((spaces (make-string (or indent-size 2) ?\s)))
         (replace-regexp-in-string
@@ -78,19 +78,19 @@ Optional argument INDENT-SIZE specifies the number of spaces to use (defaults to
 (defun pb-prompt_mk (x)
   "Generate a formatted prompt based on input X.
 
-This function processes X, which can be a string, function,
-keyword map, vector, or list, and returns a formatted string
-accordingly:
+   This function processes X, which can be a string, function,
+   keyword map, vector, or list, and returns a formatted string
+   accordingly:
 
-- If X is a string, it returns X as-is.
-- If X is a function, it calls the function and processes the
+   - If X is a string, it returns X as-is.
+   - If X is a function, it calls the function and processes the
   result recursively.
-- If X is a keyword map, it formats each key-value pair into
+   - If X is a keyword map, it formats each key-value pair into
   XML-like tags, with multiline content indented for better
   readability.
-- If X is a vector, it concatenates the elements separated by
+   - If X is a vector, it concatenates the elements separated by
   newlines.
-- If X is a list, it converts the list to a string representation."
+   - If X is a list, it converts the list to a string representation."
   (cond ((stringp x) x)
         ((functionp x) (pb-prompt_mk (funcall x)))
         ((km? x)
@@ -221,6 +221,8 @@ accordingly:
              (pb-prompt/add-item!
               (km :type "selection"
                   :path (buffer-file-name)
+                  :major-mode major-mode
+                  :symex symex-mode
                   :at (point)
                   :content selection)))))
 
@@ -298,9 +300,7 @@ accordingly:
                truncated-line))
             (t (format "Item of type: %s" type)))))
 
-       (defun pb-prompt/remove-context-item ()
-         "Let the user interactively remove some items from pb-prompt/context.
-          The items are grouped by type in the completion UI via category property."
+       (defun pb-prompt/select-context-item ()
          (interactive)
          (when pb-prompt/context
            (let* ((items-by-type (seq-group-by
@@ -331,123 +331,187 @@ accordingly:
                                       (get-text-property 0 'consult--group cand))))
                   ;; Get selections using consult--read
                   (picked (consult--read candidates
-                                         :prompt "Select items to remove: "
+                                         :prompt "Select context item: "
                                          :category 'pb-prompt-context-item
                                          :group group-function
                                          :require-match t
-                                         :sort nil))
-                  ;; Retrieve the item from our map
-                  (to-remove (gethash picked item-map)))
+                                         :sort nil)))
 
-             ;; Log what we're removing with proper error checking
-             (if to-remove
-                 (message "Removing context item: %s (ID: %s)"
-                          (or (km_get to-remove :type) "unknown")
-                          (km_get to-remove :id))
-               (message "Warning: No item selected for removal (Key: %s)" picked))
+             (gethash picked item-map))))
 
-             ;; Update the context by removing selected item
-             (when to-remove
-               (setq pb-prompt/context
-                     (seq-remove (lambda (item)
-                                   (equal (km_get item :id) (km_get to-remove :id)))
-                                 pb-prompt/context))))))
+       (defun pb-prompt/remove-context-item (&optional item)
+         "Let the user interactively remove some items from pb-prompt/context.
+          The items are grouped by type in the completion UI via category property."
+         (interactive)
+         (if-let ((to-remove (or item (pb-prompt/select-context-item))))
+
+             (progn (message "Removing context item: %s (ID: %s)"
+                             (or (km_get to-remove :type) "unknown")
+                             (km_get to-remove :id))
+                    (setq pb-prompt/context
+                          (seq-remove (lambda (item)
+                                        (equal (km_get item :id) (km_get to-remove :id)))
+                                      pb-prompt/context)))
+
+           (message "Warning: No item selected for removal (Key: %s)"
+                    picked)))
+
+       (defun pb-prompt/browse-context-item (&optional item)
+         "Open or display the content of the selected context item."
+         (interactive)
+         (let* (;; (setq embark-quit-after-action t)
+                (item (or item (pb-prompt/select-context-item)))
+                (type (km_get item :type)))
+           (cond
+            ((string= type "buffer")
+             (switch-to-buffer (km_get item :buffer-name)))
+            ((string= type "file")
+             (find-file (km_get item :path)))
+            ((string= type "dir")
+             (dired (km_get item :path)))
+            ((string= type "selection")
+             (with-current-buffer (get-buffer-create "*Context Item Selection*")
+               (erase-buffer)
+               (insert (km_get item :content))
+               (goto-char (point-min))
+               (when-let ((path (km_get item :path))
+                          (mode (km_get item :major-mode)))
+                 (funcall mode)
+                 (when (km_get item :symex)
+                   (symex-mode-interface)
+                   (symex-tidy)))
+               (switch-to-buffer (current-buffer))))
+            (t (message "Don't know how to browse item of type: %s" type)))))
+
+       (defun pb-prompt/describe-context-item (&optional item)
+         "Show detailed information about the context item."
+         (with-current-buffer (get-buffer-create "*Context Item Details*")
+           (erase-buffer)
+           (let* ((item (or item (pb-prompt/select-context-item)))
+                  (id (km_get item :id))
+                  (type (km_get item :type))
+                  (path (km_get item :path)))
+             (insert (format "ID: %s\n" id)
+                     (format "Type: %s\n" type))
+             (when path
+               (insert (format "Path: %s\n" path)))
+
+             (dolist (key (mapcar #'car (km_entries item)))
+               (unless (member key '(:id :type :path :content))
+                 (insert (format "%s: %s\n"
+                                 (substring (symbol-name key) 1)
+                                 (km_get item key)))))
+
+             (when-let ((content (km_get item :content)))
+               (insert "\nContent:\n---------\n")
+               (insert content)))
+           (goto-char (point-min))
+           (pop-to-buffer (current-buffer))))
+
+       (defun pb-prompt/consult-context ()
+         (interactive)
+         (pb-prompt/browse-context-item))
 
        ;; Define embark actions for context items
        (with-eval-after-load 'embark
 
+         (defun pb-prompt/embark-browse-context-item (candidate)
+           (if-let ((item (get-text-property 0 'context-item candidate)))
+             (pb-prompt/browse-context-item item)))
+
+         (defun pb-prompt/embark-describe-context-item (candidate)
+           "Display detailed information about the context item from embark."
+           (if-let ((item (get-text-property 0 'context-item candidate)))
+               (pb-prompt/describe-context-item item)
+             (message "No context item found in candidate")))
+
+         (defun pb-prompt/embark-remove-context-item (candidate)
+           "Remove the context item from embark candidate."
+           (if-let ((item (get-text-property 0 'context-item candidate)))
+               (pb-prompt/remove-context-item item)
+             (message "No context item found in candidate")))
+
          (setq embark-quit-after-action
-               '((pb-prompt/browse-context-item . t)
-                 (pb-prompt/describe-context-item . nil)
-                 (pb-prompt/remove-context-item . nil)
+               '((pb-prompt/embark-browse-context-item . t)
+                 (pb-prompt/embark-describe-context-item . nil)
+                 (pb-prompt/embark-remove-context-item . nil)
                  (t . t)))
 
-         (defun pb-prompt/browse-context-item (candidate)
-           "Open or display the content of the selected context item."
-           (let* (;; (setq embark-quit-after-action t)
-                  (item (get-text-property 0 'context-item candidate))
-                  (type (km_get item :type)))
-             (cond
-              ((string= type "buffer")
-               (pop-to-buffer (km_get item :buffer-name)))
-              ((string= type "file")
-               (find-file (km_get item :path)))
-              ((string= type "dir")
-               (dired (km_get item :path)))
-              ((string= type "selection")
-               (with-current-buffer (get-buffer-create "*Context Item Selection*")
-                 (erase-buffer)
-                 (insert (km_get item :content))
-                 (goto-char (point-min))
-                 (when-let ((path (km_get item :path)))
-                   (setq buffer-file-name path)
-                   (set-auto-mode))
-                 (pop-to-buffer (current-buffer))))
-              (t (message "Don't know how to browse item of type: %s" type)))))
-
-         (defun pb-prompt/describe-context-item (candidate)
-           "Show detailed information about the context item."
-           (with-current-buffer (get-buffer-create "*Context Item Details*")
-             (erase-buffer)
-             (let* ((item (get-text-property 0 'context-item candidate))
-                    (id (km_get item :id))
-                    (type (km_get item :type))
-                    (path (km_get item :path)))
-               (insert (format "ID: %s\n" id)
-                       (format "Type: %s\n" type))
-               (when path
-                 (insert (format "Path: %s\n" path)))
-
-               (dolist (key (mapcar #'car (km_entries item)))
-                 (unless (member key '(:id :type :path :content))
-                   (insert (format "%s: %s\n"
-                                   (substring (symbol-name key) 1)
-                                   (km_get item key)))))
-
-               (when-let ((content (km_get item :content)))
-                 (insert "\nContent:\n---------\n")
-                 (insert content)))
-             (goto-char (point-min))
-             (pop-to-buffer (current-buffer))))
-
-         (defun pb-prompt/remove-context-item-action (candidate)
-           "Remove the selected context item from the prompt context."
-           (let* ((item (get-text-property 0 'context-item candidate))
-                  (id (km_get item :id)))
-             (message "Removing context item: %s (ID: %s)"
-                      (km_get item :type) id)
-             (setq pb-prompt/context
-                   (seq-remove (lambda (ctx-item)
-                                 (equal (km_get ctx-item :id) id))
-                               pb-prompt/context))))
-
-         ;; Register the category and its actions
-         ;; Register our context item category with Embark
-         ;; This associates the 'pb-prompt-context-item category with our custom keymap,
-         ;; so when Embark is triggered on items with this category,
-         ;; it will use our pb-prompt-context-item-map for available actions
-
-         (add-to-list 'embark-keymap-alist '(pb-prompt-context-item . pb-prompt-context-item-map))
-
-         ;; how does this pb-prompt-context-item category is used ?
-         ;; ;; The pb-prompt-context-item category is used in the consult--read function
-         ;; in pb-prompt/remove-context-item function where we set the :category property
-         ;; to 'pb-prompt-context-item. This allows Embark to recognize items from this
-         ;; completion as belonging to this category and use our custom keymap.
-         ;;
-         ;; When a user selects an item during completion and triggers Embark (typically
-         ;; with a key like C-. or M-.), Embark looks up the category of the item and
-         ;; uses the associated keymap to present relevant actions.
+         (add-to-list 'embark-keymap-alist
+                      '(pb-prompt-context-item . pb-prompt-context-item-map))
 
          (defvar pb-prompt-context-item-map
            (make-sparse-keymap))
 
          (map!
           (:map pb-prompt-context-item-map
-           :desc "Browse item" "b" #'pb-prompt/browse-context-item
-           :desc "Describe item details" "d" #'pb-prompt/describe-context-item
-           :desc "Remove item" "r" #'pb-prompt/remove-context-item-action
-           :desc "Kill/delete item" "k" #'pb-prompt/remove-context-item-action))))
+           :desc "Browse item" "b" #'pb-prompt/embark-browse-context-item
+           :desc "Describe item details" "d" #'pb-prompt/embark-describe-context-item
+           :desc "Remove item" "r" #'pb-prompt/embark-remove-context-item
+           :desc "Kill/delete item" "k" #'pb-prompt/embark-remove-context-item))))
+
+(progn :context-persist
+
+       (defvar pb-prompt/saved-contexts
+         (make-hash-table :test 'equal))
+
+       (defun pb-prompt/save-context (name)
+         "Save the current context with NAME for later retrieval.
+          If a context with NAME already exists, it will be overwritten after confirmation."
+         (interactive "sSave context as: ")
+         (when (and (gethash name pb-prompt/saved-contexts)
+                    (not (yes-or-no-p (format "Context '%s' already exists. Overwrite? " name))))
+           (user-error "Aborted"))
+
+         (puthash name
+                  (copy-tree pb-prompt/context)
+                  pb-prompt/saved-contexts)
+
+         (message "Context saved as '%s'" name))
+
+       (defun pb-prompt/load-context (name)
+         "Load a previously saved context with NAME.
+          If the current context is not empty, it will be replaced after confirmation."
+         (interactive
+          (list (completing-read "Load context: "
+                                 (hash-table-keys pb-prompt/saved-contexts) nil t)))
+         (let ((saved-context (gethash name pb-prompt/saved-contexts)))
+           (unless saved-context
+             (user-error "No context found with name '%s'" name))
+
+           (when (and pb-prompt/context
+                      (not (yes-or-no-p "Replace current context? ")))
+             (user-error "Aborted"))
+
+           (setq pb-prompt/context (copy-tree saved-context))
+           (message "Loaded context '%s' with %d items"
+                    name (length pb-prompt/context))))
+
+       (defun pb-prompt/append-context (name)
+         "Append items from a saved context with NAME to the current context."
+         (interactive
+          (list (completing-read "Append context: "
+                                 (hash-table-keys pb-prompt/saved-contexts) nil t)))
+         (let ((saved-context (gethash name pb-prompt/saved-contexts)))
+           (unless saved-context
+             (user-error "No context found with name '%s'" name))
+
+           (setq pb-prompt/context
+                 (append pb-prompt/context (copy-sequence saved-context)))
+           (message "Appended %d items from context '%s'"
+                    (length saved-context) name)))
+
+       (defun pb-prompt/delete-saved-context (name)
+         "Delete a saved context with NAME."
+         (interactive
+          (list (completing-read "Delete context: "
+                                 (hash-table-keys pb-prompt/saved-contexts) nil t)))
+         (if (gethash name pb-prompt/saved-contexts)
+             (progn
+               (remhash name pb-prompt/saved-contexts)
+               (message "Deleted context '%s'" name))
+           (message "No context found with name '%s'" name)))
+)
 
 (provide 'pb-prompt)
 
