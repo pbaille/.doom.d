@@ -151,16 +151,40 @@
                  "h" #'previous-buffer))
 
  (:prefix ("s-q" . "LLMs")
-          (:desc "gptel" "s-q" #'gptel)
-          (:desc "new session above" "n" #'pb-gptel/new-session-above)
-          (:desc "chat: current expression" "e" #'pb-gptel/current-symex-chat)
-          (:desc "chat: current buffer" "b" #'pb-gptel/current-buffer-chat)
-          (:desc "chat: directory" "s-d" #'pb-gptel/directory-chat)
-          (:desc "interactive request" "i" #'gptel-menu)
-          (:desc "gptel menu" "m" #'gptel-menu)
-          (:desc "add file to context" "f" #'gptel-context-add-file)
-          (:desc "remove files from context" "d" #'pb-gptel/remove-context-files)
-          (:desc "remove all context" "D" #'gptel-context-remove-all)
+
+          (:desc "gptel"
+                 "s-q" #'gptel)
+          (:desc "gptel menu"
+                 "m" #'gptel-menu)
+          (:desc "chat: current expression"
+                 "e" #'pb-gptel/current-symex-chat)
+          (:desc "chat: current buffer"
+                 "b" #'pb-gptel/current-buffer-chat)
+          (:desc "chat: directory"
+                 "s-d" #'pb-gptel/directory-chat)
+          (:desc "interactive request"
+                 "i" #'gptel-menu)
+          (:desc "add file to context"
+                 "f" #'gptel-context-add-file)
+          (:desc "remove files from context"
+                 "d" #'pb-gptel/remove-context-files)
+          (:desc "remove all context"
+                 "D" #'gptel-context-remove-all)
+
+          (:desc "consult-context"
+                 "s-c" #'pb-prompt/browse-context-item)
+
+          (:prefix ("c" . "context")
+                   (:prefix ("a" . "add")
+                            (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
+                            (:desc "add file to context" "f" #'pb-prompt/add-path)
+                            (:desc "add selection to context" "s" #'pb-prompt/add-selection)
+                            (:desc "append saved context" "c" #'pb-prompt/append-context))
+
+                   (:desc "delete item" "d" #'pb-prompt/remove-context-item)
+
+                   (:desc "save" "s" #'pb-prompt/save-context)
+                   (:desc "load" "l" #'pb-prompt/load-context))
 
           (:prefix ("t" . "tools")
                    (:desc "enable" "e" (lambda () (interactive) (setq-local gptel-use-tools t)))
