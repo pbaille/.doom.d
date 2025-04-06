@@ -108,6 +108,32 @@ in this case V is added at the end of the LST."
                            (lambda (e) (equal x (cdr e))))))
       (car found)))
 
+(defun sq/group-by (function sequence)
+  "Group elements in SEQUENCE by result of FUNCTION applied to them.
+   Returns an alist of (VALUE . ELEMENTS) where VALUE is the result of
+   applying FUNCTION to an element of SEQUENCE, and ELEMENTS is a list
+   of all elements for which FUNCTION returns that value."
+  (let ((groups (make-hash-table :test 'equal)))
+    (seq-doseq (elt sequence)
+      (let ((key (funcall function elt)))
+        (puthash key (cons elt (gethash key groups nil)) groups)))
+    (let (result)
+      (maphash (lambda (k v) (push (cons k (nreverse v)) result)) groups)
+      result)))
+
+(defun sq/count-by (function sequence)
+  "Count elements in SEQUENCE grouped by result of FUNCTION applied to them.
+Returns an alist of (VALUE . COUNT) where VALUE is the result of
+applying FUNCTION to elements of SEQUENCE, and COUNT is the number
+of elements for which FUNCTION returns that value."
+  (let ((counts (make-hash-table :test 'equal)))
+    (seq-doseq (elt sequence)
+      (let ((key (funcall function elt)))
+        (puthash key (1+ (gethash key counts 0)) counts)))
+    (let (result)
+      (maphash (lambda (k v) (push (cons k v) result)) counts)
+      result)))
+
 (defun sq_test ()
   "Test."
   (cl-assert
@@ -175,7 +201,18 @@ in this case V is added at the end of the LST."
                4)
 
         (not (sq_index-of (list :a 's 3 :b "er" 'c "er")
-                          "ert")))))
+                          "ert"))))
+
+  (cl-assert
+   (and (equal (sq/group-by (lambda (s) (substring s 0 1))
+                            '("apple" "banana" "apricot" "blueberry" "cherry" "avocado"))
+               '(("c" "cherry") ("b" "banana" "blueberry") ("a" "apple" "apricot" "avocado")))
+        (equal (sq/group-by (lambda (n) (if (zerop (mod n 2)) 'even 'odd))
+                            '(1 2 3 4 5 6 7 8 9 10))
+               '((even 2 4 6 8 10) (odd 1 3 5 7 9)))
+
+        (equal (sq/group-by #'length '("a" "bb" "ccc" "dd" "eee" "f" "ggg"))
+               '((3 "ccc" "eee" "ggg") (2 "bb" "dd") (1 "a" "f"))))))
 
 (sq_test)
 
