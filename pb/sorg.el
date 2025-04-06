@@ -90,7 +90,8 @@ it enters edition mode."
                 (save-excursion (let ((element (org-element-at-point)))
                                   (goto-char (org-element-property :begin element)))
                                 (pb-org-babel_add-treesit-range-for-block))
-                (evil-pb-lisp-state 1))
+                ;; (evil-pb-lisp-state 1)
+                (symex-mode-interface))
                (t (evil-sorg-state))
 
                (nil (pb-org_maybe-edit-block))))
@@ -98,10 +99,15 @@ it enters edition mode."
         (t (evil-sorg-state)
            (print (list :block? (pb-org_at-lisp-block-p)))
            (cond ((pb-org_at-lisp-block-p)
-                  (pb-org-babel_add-treesit-range-for-block)
-                  (evil-sorg-state -1)
-                  (evil-next-line)
-                  (evil-pb-lisp-state 1))
+                  '(progn :pb-lisp
+                          (pb-org-babel_add-treesit-range-for-block)
+                          (evil-sorg-state -1)
+                          (evil-next-line)
+                          (evil-pb-lisp-state 1))
+                  (progn :symex
+                         (evil-sorg-state -1)
+                         (evil-next-line)
+                         (symex-mode-interface)))
 
                  (nil (pb-org_maybe-edit-block))))))
 
