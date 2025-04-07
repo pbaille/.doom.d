@@ -36,7 +36,7 @@
        (defvar-local pb-lisp/current-node nil)
 
        (defvar pb-lisp/major-mode->treesit-lang
-         '((emacs-list . elisp)
+         '((emacs-lisp-mode . elisp)
            (clojure-mode . clojure)
            (clojurescript-mode . clojure)
            (clojurec-mode . clojure)
@@ -54,9 +54,9 @@
          (when (member major-mode pb-lisp/modes)
            (pb-lisp/parser-setup)
            (hl-line-mode -1)
-           (setq pb-lisp/selection-count 0)
+           (setq-local pb-lisp/selection-size 1)
            (goto-char (car (pb-lisp/get-current-node-bounds)))
-           (pb-lisp/select-current-node)))
+           (pb-lisp/update-overlay)))
 
        (defun pb-lisp/exit-mode ()
          "Run on exiting sorg mode."
@@ -68,7 +68,7 @@
 (progn :selection
 
        (defvar-local pb-lisp/selection-size 1)
-       (setq pb-lisp/selection-size 1)
+       (setq-local pb-lisp/selection-size 1)
 
        (defun pb-lisp/extend-selection ()
          (pb-lisp/clear-current-node)
@@ -95,28 +95,18 @@
              (let* ((first-node (treesit-node-at start parser-lang))
                     (first-node (pb-lisp/get-topmost-node first-node))
                     (node-start (treesit-node-start first-node))
-                    (parent (treesit-node-parent first-node))
-                    (siblings nil)
-                    (count 0))
+                    (count 0)
+                    (current-node first-node))
                ;; Set current-node to the first node in the selection
                (setq-local pb-lisp/current-node first-node)
-
                ;; Calculate how many siblings are in the selection
-               (when parent
-                 (let* ((idx (treesit-node-index first-node t))
-                        (child-count (treesit-node-child-count parent t)))
-                   (setq siblings (list first-node))
-                   (setq count 0)
-                   (cl-loop for i from (1+ idx) below child-count
-                            for sibling = (treesit-node-child parent i t)
-                            for sibling-end = (treesit-node-end sibling)
-                            while (<= sibling-end end)
-                            do (progn
-                                 (push sibling siblings)
-                                 (setq count (1+ count))))))
+               (while (and current-node
+                           (<= (treesit-node-end current-node) end))
+                 (setq current-node (treesit-node-next-sibling current-node t))
+                 (when current-node (setq count (1+ count))))
 
                ;; Update selection size
-               (setq pb-lisp/selection-size (1+ count))
+               (setq-local pb-lisp/selection-size (max 1 count))
 
                ;; Go to start of selection and update overlay
                (goto-char node-start)
@@ -701,8 +691,15 @@
                          (progn (backward-char) (looking-at-p "\\s-")))
                (delete-char 1))))
            (goto-char target-pos)
-           (pb-lisp/indent-parent-node t)
-           (pb-lisp/select-current-node)))
+           (pb-lisp/indent-parent-node t)))
+
+       (defun pb-lisp/yank-and-select (&optional content)
+         (let ((end-point (save-excursion (if content
+                                              (insert content)
+                                            (yank))
+                                          (point))))
+           (pb-lisp/set-selection (cons (point) end-point))
+           (pb-lisp/indent-parent-node t)))
 
        (defun pb-lisp/yank-after ()
          "Yank clipboard contents after the current node."
@@ -714,9 +711,7 @@
              (if (> (count-lines (treesit-node-start node) (treesit-node-end node)) 1)
                  (insert "\n")
                (insert " ")))
-           (save-excursion (yank))
-           (pb-lisp/indent-parent-node t)
-           (pb-lisp/select-current-node)))
+           (pb-lisp/yank-and-select)))
 
        (defun pb-lisp/yank-before ()
          "Yank clipboard contents before the current node."
@@ -724,11 +719,7 @@
          (let* ((node (pb-lisp/get-current-node))
                 (start (treesit-node-start node)))
            (goto-char start)
-           (save-excursion
-             (yank)
-             (insert " "))
-           (pb-lisp/indent-parent-node t)
-           (pb-lisp/select-current-node)))
+           (pb-lisp/yank-and-select)))
 
        (defun pb-lisp/replace-selection (&optional content)
          "Replace the current selection with clipboard contents."
@@ -737,13 +728,7 @@
                (end (pb-lisp/selection-end)))
            (delete-region start end)
            (goto-char start)
-           (save-excursion (if content (insert content) (yank)))
-           (pb-lisp/indent-parent-node t)
-           (pb-lisp/set-selection
-            (cons start
-                  (if content
-                      (+ start (length content))
-                    end)))))
+           (pb-lisp/yank-and-select content)))
 
        (defun pb-lisp/change-selection ()
          "Delete the current selection and enter insert state."
@@ -758,8 +743,7 @@
        (defun pb-lisp/insert-after ()
          "Enter insert state after the current node."
          (interactive)
-         (let* ((node (pb-lisp/get-current-node))
-                (end (treesit-node-end node)))
+         (let* ((end (pb-lisp/selection-end)))
            (goto-char end)
            (insert " ")
            (save-excursion
@@ -771,8 +755,7 @@
        (defun pb-lisp/insert-before ()
          "Enter insert state before the current node."
          (interactive)
-         (let* ((node (pb-lisp/get-current-node))
-                (start (treesit-node-start node)))
+         (let* ((start (pb-lisp/selection-start)))
            (goto-char start)
            (save-excursion (insert " "))
            (pb-lisp/indent-parent-node t)
@@ -782,8 +765,7 @@
          "Enter insert state at the beginning of the current node's content."
          (interactive)
          (let* ((node (pb-lisp/get-current-node))
-                (start (treesit-node-start node))
-                (node-type (treesit-node-type node)))
+                (start (treesit-node-start node)))
            (pb-lisp/clear-current-node)
            ;; For lists, move inside the opening paren
            (if (> (treesit-node-child-count node t)
@@ -801,9 +783,7 @@
          "Enter insert state at the end of the current node's content."
          (interactive)
          (let* ((node (pb-lisp/get-current-node))
-                (end (treesit-node-end node))
-                (node-type (treesit-node-type node)))
-           ;; (print node-type)
+                (end (treesit-node-end node)))
            (pb-lisp/clear-current-node)
            ;; For lists, move inside the closing paren
            (if (> (treesit-node-child-count node t)
@@ -820,16 +800,14 @@
        (defun pb-lisp/paren-wrap ()
          "Wrap the current node in parentheses."
          (interactive)
-         (let* ((node (pb-lisp/get-current-node))
-                (start (treesit-node-start node))
-                (end (treesit-node-end node)))
+         (let* ((start (pb-lisp/selection-start))
+                (end (pb-lisp/selection-end)))
            (save-excursion
              (goto-char end)
              (insert ")")
              (goto-char start)
              (insert "("))
            (pb-lisp/indent-parent-node t)
-           (pb-lisp/select-current-node)
            (goto-char start)))
 
        (defun pb-lisp/raise-node ()
@@ -837,17 +815,15 @@
          (interactive)
          (let* ((node (pb-lisp/get-current-node))
                 (parent (treesit-node-parent node))
-                (node-start (treesit-node-start node))
-                (node-end (treesit-node-end node))
+                (node-start (pb-lisp/selection-start))
+                (node-end (pb-lisp/selection-end))
                 (node-text (buffer-substring-no-properties node-start node-end)))
            (if parent
                (let ((parent-start (treesit-node-start parent))
                      (parent-end (treesit-node-end parent)))
                  (delete-region parent-start parent-end)
                  (goto-char parent-start)
-                 (save-excursion (insert node-text))
-                 (pb-lisp/indent-parent-node t)
-                 (pb-lisp/select-current-node))
+                 (pb-lisp/yank-and-select node-text))
              (message "Cannot raise - no parent node"))))
 
        (defun pb-lisp/splice-node ()
@@ -876,19 +852,16 @@
        (defun pb-lisp/move-node-down-one-line ()
          "Move the current node or selection down one line."
          (interactive)
-         (let* ((node (pb-lisp/get-current-node))
-                (start (treesit-node-start node)))
+         (let* ((start (pb-lisp/selection-start)))
            (save-excursion
              (goto-char start)
              (insert "\n"))
-           (pb-lisp/indent-parent-node t)
-           (pb-lisp/select-current-node)))
+           (pb-lisp/indent-parent-node t)))
 
        (defun pb-lisp/move-node-up-one-line ()
          "Move the current node or selection up one line."
          (interactive)
-         (let* ((node (pb-lisp/get-current-node))
-                (start (treesit-node-start node))
+         (let* ((start (pb-lisp/selection-start))
                 (first-non-whitespace-char-of-line
                  (= (point)
                     (save-excursion
@@ -908,8 +881,7 @@
                (progn
                  (delete-indentation)
                  (forward-char 1)))
-             (pb-lisp/indent-parent-node t)
-             (pb-lisp/select-current-node)))))
+             (pb-lisp/indent-parent-node t)))))
 
 (progn :evaluation
 
