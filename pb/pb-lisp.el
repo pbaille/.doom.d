@@ -54,6 +54,7 @@
          (when (member major-mode pb-lisp/modes)
            (pb-lisp/parser-setup)
            (hl-line-mode -1)
+           (setq pb-lisp/selection-count 0)
            (goto-char (car (pb-lisp/get-current-node-bounds)))
            (pb-lisp/select-current-node)))
 
@@ -214,6 +215,12 @@
        (defun pb-lisp/refresh-current-node ()
          "Get the tree-sitter node at point."
          (setq-local pb-lisp/current-node (pb-lisp/get-current-node t)))
+
+       (defun pb-lisp/clear-current-node ()
+         "Clear the current node selection.
+          Sets `pb-lisp/current-node' to nil for the current buffer,
+          effectively removing any node selection state."
+         (setq-local pb-lisp/current-node nil))
 
        (defun pb-lisp/get-current-node-bounds ()
          "Get the start and end positions of the current tree-sitter node.
@@ -469,18 +476,26 @@ Skips over closing delimiters and continues to the next valid node."
                                         (concat (substring text 0 27) "...")
                                       text)))
 
-               (list parent child-count nodes (cons first-idx last-idx))))))
+               ;; (print nodes)
+
+               (let ((first-node (nth first-idx nodes))
+                     (last-node (nth last-idx nodes)))
+                 (km :parent parent
+                     :child-count child-count
+                     :nodes nodes
+                     :first-node first-node
+                     :last-node last-node
+                     :indices (cons first-idx last-idx)
+                     :bounds (cons (treesit-node-start first-node)
+                                   (treesit-node-end last-node))))))))
 
        (defun pb-lisp/shrink-selection-from-end ()
          "Shrink the current selection by excluding the last sibling."
          (interactive)
-         (let* ((selection-data (pb-lisp/get-selected-nodes))
-                (start (car pb-lisp/selection)))
-           (if (and selection-data
-                    (> (cdr (nth 3 selection-data)) (car (nth 3 selection-data))))
-               (let* ((nodes (nth 2 selection-data))
-                      (indices (nth 3 selection-data))
-                      (new-last-idx (1- (cdr indices)))
+         (pb_let [(km_keys parent nodes indices) (pb-lisp/get-selected-nodes)
+                  start (car pb-lisp/selection)]
+           (if (and parent (> (cdr indices) (car indices)))
+               (let* ((new-last-idx (1- (cdr indices)))
                       (new-last-node (nth new-last-idx nodes))
                       (new-end (treesit-node-end new-last-node)))
                  (pb-lisp/set-selection (cons start new-end)))
@@ -489,13 +504,10 @@ Skips over closing delimiters and continues to the next valid node."
        (defun pb-lisp/shrink-selection-from-beg ()
          "Shrink the current selection by excluding the first sibling."
          (interactive)
-         (let* ((selection-data (pb-lisp/get-selected-nodes))
-                (end (cdr pb-lisp/selection)))
-           (if (and selection-data
-                    (< (car (nth 3 selection-data)) (cdr (nth 3 selection-data))))
-               (let* ((nodes (nth 2 selection-data))
-                      (indices (nth 3 selection-data))
-                      (new-first-idx (1+ (car indices)))
+         (pb_let [(km_keys parent nodes indices) (pb-lisp/get-selected-nodes)
+                  end (cdr pb-lisp/selection)]
+           (if (and parent (< (car indices) (cdr indices)))
+               (let* ((new-first-idx (1+ (car indices)))
                       (new-first-node (nth new-first-idx nodes))
                       (new-start (treesit-node-start new-first-node)))
                  (goto-char new-start)
@@ -504,7 +516,7 @@ Skips over closing delimiters and continues to the next valid node."
 
 (progn :move-expressions
 
-       (defun pb-lisp/swap-siblings (direction)
+       (defun pb-lisp/swap-siblings_old (direction)
          "Transpose the current node with its next or previous sibling.
          DIRECTION should be 'next or 'prev."
          (let* ((node (pb-lisp/get-current-node))
@@ -520,6 +532,7 @@ Skips over closing delimiters and continues to the next valid node."
                 (sibling-text (and sibling (buffer-substring-no-properties sibling-start sibling-end))))
 
            (when (and parent sibling)
+             (pb-lisp/clear-current-node)
              (save-excursion
                ;; We need to handle the order of deletion/insertion differently
                ;; depending on which sibling comes first in the buffer
@@ -552,6 +565,51 @@ Skips over closing delimiters and continues to the next valid node."
            (unless sibling
              (message "No %s sibling to swap with" direction))))
 
+       (defun pb-lisp/swap-siblings (direction)
+         "Transpose the current node with its next or previous sibling.
+         DIRECTION should be 'next or 'prev."
+         (pb_let [(km_keys parent last-node first-node bounds) (pb-lisp/get-selected-nodes)
+                  (cons start-point end-point) bounds
+                  sibling (cond ((eq direction 'next) (treesit-node-next-sibling last-node t))
+                                ((eq direction 'prev) (treesit-node-prev-sibling first-node t))
+                                (t nil))
+                  selection-text (buffer-substring-no-properties start-point end-point)
+                  sibling-start (and sibling (treesit-node-start sibling))
+                  sibling-end (and sibling (treesit-node-end sibling))
+                  sibling-text (and sibling (buffer-substring-no-properties sibling-start sibling-end))]
+           (print (kmq bounds
+                       selection-text))
+           (when (and parent sibling)
+             (pb-lisp/clear-current-node)
+             (save-excursion
+               ;; We need to handle the order of deletion/insertion differently
+               ;; depending on which sibling comes first in the buffer
+               (if (< start-point sibling-start)
+                   ;; Node comes before sibling
+                   (progn
+                     (delete-region sibling-start sibling-end)
+                     (goto-char sibling-start)
+                     (insert selection-text)
+                     (delete-region start-point end-point)
+                     (goto-char start-point)
+                     (insert sibling-text))
+                 ;; Sibling comes before node
+                 (progn
+                   (delete-region start-point end-point)
+                   (goto-char start-point)
+                   (insert sibling-text)
+                   (delete-region sibling-start sibling-end)
+                   (goto-char sibling-start)
+                   (insert selection-text))))
+
+             ;; Reindent the region spanning both the original node and sibling
+             (let ((indent-region-start (min start-point sibling-start))
+                   (indent-region-end (max end-point sibling-end)))
+               (indent-region indent-region-start indent-region-end))
+
+             (cond ((eq direction 'next) (pb-lisp/goto-next-sibling))
+                   ((eq direction 'prev) (pb-lisp/goto-prev-sibling))))))
+
        (defun pb-lisp/swap-with-next-sibling ()
          "Swap the current node with its next sibling."
          (interactive)
@@ -570,6 +628,7 @@ Skips over closing delimiters and continues to the next valid node."
          close to the last element of the enclosing expression.
          Operates on region between START and END."
          (interactive "r")
+         (pb-lisp/clear-current-node)
          (save-excursion
            (goto-char start)
            (while (re-search-forward "^[ \t]*\\()\\|\\]\\|}\\)" end t)
@@ -586,9 +645,11 @@ Skips over closing delimiters and continues to the next valid node."
            (pb-lisp/join-trailing-delimiters start end)
            (indent-region start end)))
 
-       (defun pb-lisp/indent-parent-node ()
+       (defun pb-lisp/indent-parent-node (&optional clear-current-node)
          "Indent the parent node of the current node."
          (interactive)
+         (when clear-current-node
+           (pb-lisp/clear-current-node))
          (let* ((node (pb-lisp/get-current-node))
                 (parent (treesit-node-parent node))
                 (current-index (pb-lisp/get-node-child-index node parent)))
@@ -604,7 +665,7 @@ Skips over closing delimiters and continues to the next valid node."
 
 (progn :edition
 
-       '(a (ert
+       '(a (erter
             dfg)
          (ert
           dfg))
@@ -642,7 +703,7 @@ Skips over closing delimiters and continues to the next valid node."
             (next-sibling
              ;; Delete forward whitespace
              (while (and (< (point) (point-max))
-                         (looking-at-p "\\s-"))
+                         (looking-at-p "[ \t\n]"))
                (delete-char 1)))
             (prev-sibling
              ;; Delete backward whitespace
@@ -650,7 +711,7 @@ Skips over closing delimiters and continues to the next valid node."
                          (progn (backward-char) (looking-at-p "\\s-")))
                (delete-char 1))))
            (goto-char target-pos)
-           (pb-lisp/indent-parent-node)
+           (pb-lisp/indent-parent-node t)
            (pb-lisp/select-current-node)))
 
        (defun pb-lisp/yank-after ()
@@ -664,7 +725,7 @@ Skips over closing delimiters and continues to the next valid node."
                  (insert "\n")
                (insert " ")))
            (save-excursion (yank))
-           (pb-lisp/indent-parent-node)
+           (pb-lisp/indent-parent-node t)
            (pb-lisp/select-current-node)))
 
        (defun pb-lisp/yank-before ()
@@ -676,7 +737,7 @@ Skips over closing delimiters and continues to the next valid node."
            (save-excursion
              (yank)
              (insert " "))
-           (pb-lisp/indent-parent-node)
+           (pb-lisp/indent-parent-node t)
            (pb-lisp/select-current-node)))
 
        (defun pb-lisp/replace-selection (&optional content)
@@ -687,7 +748,7 @@ Skips over closing delimiters and continues to the next valid node."
            (delete-region start end)
            (goto-char start)
            (save-excursion (if content (insert content) (yank)))
-           (pb-lisp/indent-parent-node)
+           (pb-lisp/indent-parent-node t)
            (pb-lisp/set-selection
             (cons start
                   (if content
@@ -701,7 +762,7 @@ Skips over closing delimiters and continues to the next valid node."
                (end (cdr pb-lisp/selection)))
            (delete-region start end)
            (goto-char start)
-           '(pb-lisp/indent-parent-node)
+           (pb-lisp/indent-parent-node t)
            (evil-insert-state 1)))
 
        (defun pb-lisp/insert-after ()
@@ -714,8 +775,7 @@ Skips over closing delimiters and continues to the next valid node."
            (save-excursion
              (when (member (char-after) '(?\( ?\[ ?\{))
                (insert " ")))
-           '(pb-lisp/refresh-current-node)
-           '(pb-lisp/indent-parent-node)
+           (pb-lisp/indent-parent-node t)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-before ()
@@ -725,7 +785,7 @@ Skips over closing delimiters and continues to the next valid node."
                 (start (treesit-node-start node)))
            (goto-char start)
            (save-excursion (insert " "))
-           '(pb-lisp/indent-parent-node)
+           (pb-lisp/indent-parent-node t)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-at-begining ()
@@ -734,6 +794,7 @@ Skips over closing delimiters and continues to the next valid node."
          (let* ((node (pb-lisp/get-current-node))
                 (start (treesit-node-start node))
                 (node-type (treesit-node-type node)))
+           (pb-lisp/clear-current-node)
            ;; For lists, move inside the opening paren
            (if (> (treesit-node-child-count node t)
                   0)
@@ -752,7 +813,8 @@ Skips over closing delimiters and continues to the next valid node."
          (let* ((node (pb-lisp/get-current-node))
                 (end (treesit-node-end node))
                 (node-type (treesit-node-type node)))
-           (print node-type)
+           ;; (print node-type)
+           (pb-lisp/clear-current-node)
            ;; For lists, move inside the closing paren
            (if (> (treesit-node-child-count node t)
                   0)
@@ -776,7 +838,7 @@ Skips over closing delimiters and continues to the next valid node."
              (insert ")")
              (goto-char start)
              (insert "("))
-           (pb-lisp/indent-parent-node)
+           (pb-lisp/indent-parent-node t)
            (pb-lisp/select-current-node)
            (goto-char start)))
 
@@ -794,7 +856,7 @@ Skips over closing delimiters and continues to the next valid node."
                  (delete-region parent-start parent-end)
                  (goto-char parent-start)
                  (save-excursion (insert node-text))
-                 (pb-lisp/indent-parent-node)
+                 (pb-lisp/indent-parent-node t)
                  (pb-lisp/select-current-node))
              (message "Cannot raise - no parent node"))))
 
@@ -811,16 +873,13 @@ Skips over closing delimiters and continues to the next valid node."
                  (let* ((last-child-idx (1- child-count))
                         (last-child (treesit-node-child node last-child-idx t))
                         (content (buffer-substring-no-properties
-                                  (1+ start) ;; Skip opening delimiter
-                                  (1- end)))) ;; Skip closing delimiter
-                   ;; Delete the node entirely
+                                  (1+ start)
+                                  (1- end))))
+                   (pb-lisp/clear-current-node)
                    (delete-region start end)
-                   ;; Insert just the content (without delimiters)
                    (goto-char start)
                    (insert content)
-                   ;; Reindent the spliced content
                    (indent-region start (+ start (length content)))
-                   ;; Update selection overlay
                    (pb-lisp/set-selection (cons start (+ start (length content))))))
              (message "Cannot splice - node must have children"))))
 
@@ -832,7 +891,7 @@ Skips over closing delimiters and continues to the next valid node."
            (save-excursion
              (goto-char start)
              (insert "\n"))
-           (pb-lisp/indent-parent-node)
+           (pb-lisp/indent-parent-node t)
            (pb-lisp/select-current-node)))
 
        (defun pb-lisp/move-node-up-one-line ()
@@ -859,36 +918,36 @@ Skips over closing delimiters and continues to the next valid node."
                (progn
                  (delete-indentation)
                  (forward-char 1)))
-             (pb-lisp/indent-parent-node)
+             (pb-lisp/indent-parent-node t)
              (pb-lisp/select-current-node)))))
 
 (progn :evaluation
 
-       (setq pb-lisp/elisp-methods
-             (km :eval
-                 (lambda (node-text)
-                   (interactive)
-                   (eval (read node-text)))
+       (defvar pb-lisp/elisp-methods
+         (km :eval
+             (lambda (node-text)
+               (interactive)
+               (eval (read node-text)))
 
-                 :eval-pretty
-                 (lambda (node-text)
-                   (interactive)
-                   (pb-elisp_display-expression (eval (read node-text))))))
+             :eval-pretty
+             (lambda (node-text)
+               (interactive)
+               (pb-elisp_display-expression (eval (read node-text))))))
 
-       (setq pb-lisp/clojure-methods
-             (km :eval
-                 (lambda (_)
-                   (interactive)
-                   (save-excursion
-                     (goto-char (cdr pb-lisp/selection))
-                     (cider-eval-last-sexp)))
+       (defvar pb-lisp/clojure-methods
+         (km :eval
+             (lambda (_)
+               (interactive)
+               (save-excursion
+                 (goto-char (cdr pb-lisp/selection))
+                 (cider-eval-last-sexp)))
 
-                 :eval-pretty
-                 (lambda (code-string)
-                   (interactive)
-                   (save-excursion
-                     (goto-char (cdr pb-lisp/selection))
-                     (cider-pprint-eval-last-sexp)))))
+             :eval-pretty
+             (lambda (code-string)
+               (interactive)
+               (save-excursion
+                 (goto-char (cdr pb-lisp/selection))
+                 (cider-pprint-eval-last-sexp)))))
 
        (defvar pb-lisp/major-mode->methods
          `((emacs-lisp-mode ,@pb-lisp/elisp-methods)
@@ -924,9 +983,68 @@ Skips over closing delimiters and continues to the next valid node."
          (funcall (pb-lisp/get-method :eval-pretty)
                   (pb-lisp/current-selection-as-string))))
 
+(quote
+ (progn :improved-selection
+
+  ;; Main state variables
+  (defvar-local pb-lisp/current-node nil
+    "The current primary node (cursor position)")
+
+  (defvar-local pb-lisp/selection-count 0
+    "Number of additional siblings selected after the current node")
+
+  (defun pb-lisp/get-selected-nodes ()
+    "Return list of currently selected nodes starting from current node."
+    (print (list 'pb-lisp/get-selected-nodes
+                 pb-lisp/selection-count))
+    (let* ((node (pb-lisp/get-current-node))
+           (parent (treesit-node-parent node))
+           (idx (treesit-node-index node t))
+           (child-count (treesit-node-child-count parent t))
+           (end-idx (min (+ idx pb-lisp/selection-count) (1- child-count))))
+      (print (kmq child-count
+                  end-idx))
+      (cons node
+            (cl-loop for i from idx to end-idx
+                     collect (treesit-node-child parent i t)))))
+
+  (defun pb-lisp/update-overlay-from-nodes ()
+    "Update overlay based on selected nodes."
+    (pb-lisp/delete-overlay)
+    (let* ((nodes (pb-lisp/get-selected-nodes))
+           (start (treesit-node-start (car nodes)))
+           (end (treesit-node-end (car (last nodes)))))
+      (let ((overlay (make-overlay start end)))
+        (overlay-put overlay 'face 'pb-lisp/overlay-face)
+        (push overlay pb-lisp/overlays))))
+
+  (defun pb-lisp/extend-selection-forward ()
+    "Extend the current selection to include the next sibling node."
+    (interactive)
+    (let* ((node (pb-lisp/get-current-node))
+           (parent (treesit-node-parent node))
+           (idx (treesit-node-index node t))
+           (child-count (treesit-node-child-count parent t)))
+      (when (< (+ idx pb-lisp/selection-count) (1- child-count))
+        (setq pb-lisp/selection-count (1+ pb-lisp/selection-count))
+        (pb-lisp/update-overlay-from-nodes))))
+
+  (defun pb-lisp/shrink-selection-forward ()
+    "Shrink the current selection by removing the last node in the forward direction."
+    (interactive)
+    (when (> pb-lisp/selection-count 0)
+      (setq pb-lisp/selection-count (1- pb-lisp/selection-count))
+      (pb-lisp/update-overlay-from-nodes)))
+
+  (defun pb-lisp/reset-selection ()
+    "Reset to single node selection."
+    (interactive)
+    (setq pb-lisp/selection-count 0)
+    (pb-lisp/update-overlay-from-nodes))))
+
 (progn :bindings
 
-       (+ 2 3)
+       (+ 3 2)
 
        (defun pb-lisp/exit ()
          (interactive)
@@ -949,7 +1067,7 @@ Skips over closing delimiters and continues to the next valid node."
                "H" #'pb-lisp/extend-selection-to-prev-sibling
                "J" #'pb-lisp/shrink-selection-from-beg
                "K" #'pb-lisp/shrink-selection-from-end
-               ;; should use alt instead of ctrl
+
                (kbd "M-l") #'pb-lisp/swap-with-next-sibling
                (kbd "M-h") #'pb-lisp/swap-with-prev-sibling
                (kbd "M-j") #'pb-lisp/paren-wrap
@@ -982,40 +1100,41 @@ Skips over closing delimiters and continues to the next valid node."
            (cadr binding))))
 
 '(a b (d
-       (i (et)
-          (et))
+       (i (et) (et))
        c)
   d e)
 
 (message "pb-lisp (treesit) loaded")
 
-(require 'pb-gptel)
+(progn :gptel-current-node
 
-(defun pb-lisp/gptel-request-replace (&optional options)
-  (interactive)
-  (pb_let [(km_keys prompt callback) options]
-    (pb-gptel/request
+       (require 'pb-gptel)
 
-     (km :context
-         (km :current-file
-             (km :editor "emacs"
-                 :buffer-name (buffer-file-name)
-                 :major-mode (symbol-name major-mode)
-                 :file-content (buffer-substring-no-properties (point-min) (point-max)))
-             :additional-files
-             (pb-gptel/context-files-to-km))
-         :instructions
-         (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
-             :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
-                               "Don't use markdown code block syntax or any non-valid code in your output."]
-             :expression (pb-lisp/current-selection-as-string)
-             :task (or prompt
-                       (read-string "Edit current selection: "))))
+       (defun pb-lisp/gptel-request-replace (&optional options)
+         (interactive)
+         (pb_let [(km_keys prompt callback) options]
+           (pb-gptel/request
 
-     (km :callback
-         (or callback
-             (lambda (res info)
-               (pb-lisp/replace-selection res)))))))
+            (km :context
+                (km :current-file
+                    (km :editor "emacs"
+                        :buffer-name (buffer-file-name)
+                        :major-mode (symbol-name major-mode)
+                        :file-content (buffer-substring-no-properties (point-min) (point-max)))
+                    :additional-files
+                    (pb-gptel/context-files-to-km))
+                :instructions
+                (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+                    :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
+                                      "Don't use markdown code block syntax or any non-valid code in your output."]
+                    :expression (pb-lisp/current-selection-as-string)
+                    :task (or prompt
+                              (read-string "Edit current selection: "))))
+
+            (km :callback
+                (or callback
+                    (lambda (res info)
+                      (pb-lisp/replace-selection res))))))))
 
 (provide 'pb-lisp)
 ;;; pb-lisp.el ends here
