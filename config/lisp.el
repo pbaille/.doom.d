@@ -119,7 +119,7 @@
           ("h" . symex-go-backward)
           ("l" . symex-go-forward)
           ("j" . pb-symex_go-up)
-          ("k" . symex-go-down)
+          ("k" . pb-symex_go-down)
 
           ;; move current symex
           ("J" . symex-join-lines ;; pb-symex_wrap
@@ -209,7 +209,7 @@
 
   (general-define-key
    :states 'insert
-   :keymaps pb-config_lisp-modes
+   :keymaps (cons 'evil-org-mode-map pb-config_lisp-modes)
    [escape] #'pb-symex_escape-insert-mode
    [mouse-1] #'pb-symex_click
    ";" (lambda () (interactive) (insert "-"))

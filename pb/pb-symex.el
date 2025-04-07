@@ -79,6 +79,16 @@ If inside string or comment, toggle insert state."
     (if (= p (point))
         (symex-go-forward 1))))
 
+(defun pb-symex_go-down ()
+  (interactive)
+  (let ((p (point)))
+    (symex-go-down 1)
+    (if (= (point) p)
+        (when (equal major-mode 'org-mode)
+          (require 'sorg)
+          (pb-org_code-block-goto-beg)
+          (evil-sorg-state 1)))))
+
 (defun pb-symex_go-down-folding ()
   (interactive)
   (symex-go-down 1)
