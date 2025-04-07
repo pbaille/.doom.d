@@ -80,6 +80,11 @@
          (setq-local pb-lisp/selection-size (max 1 (1- pb-lisp/selection-size)))
          (pb-lisp/update-overlay))
 
+       (defun pb-lisp/reset-selection ()
+         (pb-lisp/clear-current-node)
+         (setq-local pb-lisp/selection-size 1)
+         (pb-lisp/update-overlay))
+
        (defun pb-lisp/selection-start ()
          (treesit-node-start (car (pb-lisp/get-selected-nodes))))
 
@@ -349,6 +354,7 @@
          (interactive)
          (let* ((node (pb-lisp/get-current-node))
                 (parent (treesit-node-parent node)))
+           (pb-lisp/reset-selection)
            (pb-lisp/goto-node parent "No parent node found")))
 
        (defun pb-lisp/get-node-child-index (node parent)
@@ -446,8 +452,7 @@
          "Move to the first child of current node."
          (interactive)
          (if (> pb-lisp/selection-size 1)
-             (progn (setq-local pb-lisp/selection-size 1)
-                    (pb-lisp/update-overlay))
+             (pb-lisp/reset-selection)
            (let* ((node (pb-lisp/get-current-node))
                   (child (and node (treesit-node-child node 0 t))))
              (pb-lisp/goto-node (or child node) "No child node found"))))
@@ -747,9 +752,8 @@
            (goto-char end)
            (insert " ")
            (save-excursion
-             (when (member (char-after) '(?\( ?\[ ?\{))
+             (when (not (member (char-after) '(?\) ?\] ?\} ?\s ?\t ?\n)))
                (insert " ")))
-           (pb-lisp/indent-parent-node t)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-before ()
@@ -758,7 +762,7 @@
          (let* ((start (pb-lisp/selection-start)))
            (goto-char start)
            (save-excursion (insert " "))
-           (pb-lisp/indent-parent-node t)
+           ;; (pb-lisp/indent-parent-node t)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-at-begining ()
