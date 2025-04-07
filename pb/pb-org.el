@@ -414,13 +414,22 @@ If buffer is narrowed, widen it and narrow the previous node"
       (kill-whole-line))))
 
 (defun pb-org_create-code-block ()
-  "Create a code block after current node."
+  "Create a code block after current node, prompting for language."
   (interactive)
-  (pb-org_insert-after)
-  (insert "#+begin_src ")
-  (let ((p (point)))
-    (insert "\n\n#+end_src\n")
-    (goto-char p)))
+  (let* ((langs (append pb-org_lisp-flavors
+                        '("python" "shell" "sql" "js" "typescript"
+                          "rust" "c" "c++" "java" "go"
+                          "ruby" "html" "css" "plantuml" "dot"
+                          "mermaid" "bash" "sh")))
+         (lang (completing-read "Language: " langs)))
+    (print lang)
+    (pb-org_insert-after)
+    (insert "#+begin_src " lang "\n")
+    (save-excursion (insert "\n#+end_src\n"))
+    (when (member lang pb-org_lisp-flavors)
+      (insert "()")
+      (when (fboundp 'symex-mode-interface)
+        (symex-mode-interface)))))
 
 (defun pb-org_get-current-code-block-mode ()
   "Get the major mode corresponding to the current source block language."
@@ -464,11 +473,19 @@ Return a cons cell with (start . end) positions of the content."
   (when (org-at-block-p)
     (save-excursion
       (let ((element (org-element-at-point)))
-        (print (cadr element))
+        ;; (print (cadr element))
         (when (eq (org-element-type element) 'src-block)
           (let* ((value (org-element-property :value element)))
             (forward-line 1)
             (cons (point) (+ (point) (length value)))))))))
+
+(defun pb-org_code-block-goto-beg ()
+  "If cursor is within a code block, goes back to the very beginning of it."
+  (interactive)
+  (when (org-in-src-block-p)
+    (let ((element (org-element-at-point)))
+      (when (eq (org-element-type element) 'src-block)
+        (goto-char (org-element-property :begin element))))))
 
 (defun pb-org_code-block-language ()
   "Return the language of the src block at point."
