@@ -73,8 +73,6 @@
          "^\\(.\\)" (concat spaces "\\1") content))
     content))
 
-
-
 (defun pb-prompt_mk (x)
   "Generate a formatted prompt based on input X.
 
@@ -91,7 +89,8 @@
    - If X is a vector, it concatenates the elements separated by
   newlines.
    - If X is a list, it converts the list to a string representation."
-  (cond ((stringp x) x)
+  (cond ((null x) "nil")
+        ((stringp x) (substring-no-properties x))
         ((functionp x) (pb-prompt_mk (funcall x)))
         ((km? x)
          (mapconcat (lambda (entry)
@@ -111,7 +110,10 @@
                                          2)
                                         "\n</context-item>"))
                               x
-                              "\n"))))
+                              "\n"))
+        ((or (booleanp x)
+             (numberp x))
+         (format "%s" x))))
 
 (defun pb-prompt/describe-path (path)
   "Create a structured representation of a file or directory at PATH.
@@ -200,9 +202,7 @@
                          (t "unknown"))
                   :path path)))))
 
-       (defun pb-prompt/add-selection ()
-         "Add the current selection to the prompt context.
-          Adds either the active region or current symex if in symex-mode."
+       (defun pb-prompt/current-selection ()
          (interactive)
          (let ((selection
                 (cond
@@ -218,13 +218,19 @@
                  (t
                   (user-error "No selection or symex available")))))
            (when selection
-             (pb-prompt/add-item!
-              (km :type "selection"
-                  :path (buffer-file-name)
-                  :major-mode major-mode
-                  :symex symex-mode
-                  :at (point)
-                  :content selection)))))
+             (km :type "selection"
+                 :path (buffer-file-name)
+                 :major-mode major-mode
+                 :symex symex-mode
+                 :at (point)
+                 :content selection))))
+
+       (defun pb-prompt/add-selection ()
+         "Add the current selection to the prompt context.
+          Adds either the active region or current symex if in symex-mode."
+         (interactive)
+         (when-let ((selection (pb-prompt/current-selection)))
+           (pb-prompt/add-item! selection)))
 
        (defun pb-prompt/add-buffer ()
          "Add the current buffer to the prompt context.
@@ -237,7 +243,6 @@
               :buffer-name (buffer-name)
               :major-mode (symbol-name major-mode))))
 
-       pb-prompt/context
        (defun pb-prompt/add-function ()
          "Add a function (that generates context-item) to the context.
           This allows adding dynamic content to the prompt context that can be
@@ -315,7 +320,7 @@
                  (message "Edit lambda function in buffer. Press C-c C-c when done"))
                (switch-to-buffer buffer)))))))
 
-(defun pb-prompt/context-prompt ()
+(defun pb-prompt/context-prompt (&optional context)
   "Generate a prompt from the current context.
    This function formats the collected context elements into a structured
    prompt suitable for an LLM, using the pb-prompt_mk function."
@@ -337,9 +342,25 @@
               (call-interactively (km_get ctx-item :function)))
 
              (t ctx-item))))
-        pb-prompt/context))))
+        (or context
+            pb-prompt/context)))))
 
 ;; (pb-prompt/context-prompt)
+
+(progn :simple-request
+
+       (defun pb-prompt/simple-request ()
+         (interactive)
+         (gptel-request
+             (pb-prompt_mk (km :instructions
+                               (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+                                   :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
+                                                     "Don't use markdown code block syntax or any non-valid code in your output."]
+                                   :selection (pb-prompt/current-selection)
+                                   :task (read-string "Edit current expression: "))))
+
+           :system (pb-prompt/context-prompt)
+           :callback #'pb-gptel/current-symex-request-handler)))
 
 (progn :consult-context
 
@@ -769,10 +790,28 @@
                 (pb-prompt/load-contexts-from-file))
 
               ;; Add hook to save contexts when Emacs exits
-              (add-hook 'kill-emacs-hook #'pb-prompt/save-contexts-to-file))
-)
+              (add-hook 'kill-emacs-hook #'pb-prompt/save-contexts-to-file)))
+
 
 (provide 'pb-prompt)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 [
