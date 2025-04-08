@@ -7,7 +7,7 @@
 ;; context-specific interactions with LLMs.
 ;;
 ;; The main features include:
-;; - Prompt formatting with the `pb-prompt_mk` function
+;; - Prompt formatting with the `pb-prompt/mk` function
 ;; - File and directory description functionality
 ;; - A tree-based prompt organization system
 
@@ -73,7 +73,7 @@
          "^\\(.\\)" (concat spaces "\\1") content))
     content))
 
-(defun pb-prompt_mk (x)
+(defun pb-prompt/mk (x)
   "Generate a formatted prompt based on input X.
 
    This function processes X, which can be a string, function,
@@ -91,11 +91,11 @@
    - If X is a list, it converts the list to a string representation."
   (cond ((null x) "nil")
         ((stringp x) (substring-no-properties x))
-        ((functionp x) (pb-prompt_mk (funcall x)))
+        ((functionp x) (pb-prompt/mk (funcall x)))
         ((km? x)
          (mapconcat (lambda (entry)
                       (let* ((key-str (substring (symbol-name (car entry)) 1))
-                             (content (pb-prompt_mk (cdr entry))))
+                             (content (pb-prompt/mk (cdr entry))))
                         ;; Format each entry as XML-like tags with indented content
                         (concat "<" key-str ">\n"
                                 (pb-prompt/indent-content content 2)
@@ -106,7 +106,7 @@
         ((listp x) (mapconcat (lambda (item)
                                 (concat "<context-item>\n"
                                         (pb-prompt/indent-content
-                                         (pb-prompt_mk item)
+                                         (pb-prompt/mk item)
                                          2)
                                         "\n</context-item>"))
                               x
@@ -323,9 +323,9 @@
 (defun pb-prompt/context-prompt (&optional context)
   "Generate a prompt from the current context.
    This function formats the collected context elements into a structured
-   prompt suitable for an LLM, using the pb-prompt_mk function."
+   prompt suitable for an LLM, using the pb-prompt/mk function."
   (interactive)
-  (pb-prompt_mk
+  (pb-prompt/mk
    (km :context
        (mapcar
         (lambda (ctx-item)
@@ -352,7 +352,7 @@
        (defun pb-prompt/simple-request ()
          (interactive)
          (gptel-request
-             (pb-prompt_mk (km :instructions
+             (pb-prompt/mk (km :instructions
                                (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
                                    :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
                                                      "Don't use markdown code block syntax or any non-valid code in your output."]

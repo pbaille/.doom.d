@@ -26,7 +26,7 @@
           :error (nrepl-dict-get response "err")))))
 
 (defun pb-clojure_gptel-tool-function (code)
-  (pb-prompt_mk
+  (pb-prompt/mk
    (km :clojure
        (km :expression code
            :evaluation (km_filter (pb-clojure_eval-string code)

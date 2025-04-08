@@ -39,7 +39,7 @@
   (interactive)
   (let ((gptel-max-tokens 64000))
     (apply #'gptel-request
-           (encode-coding-string (pb-prompt_mk content)
+           (encode-coding-string (pb-prompt/mk content)
                                  'utf-8)
            options)))
 
@@ -50,13 +50,13 @@
    For example, [:code :lisp :context] would retrieve all values along that path.
 
    The function retrieves all values along the specified path using
-   `pb-tree_get-path-values`, then formats each value using `pb-prompt_mk`,
+   `pb-tree_get-path-values`, then formats each value using `pb-prompt/mk`,
    and finally concatenates them with double newlines between each part.
 
    This creates a well-structured prompt by combining multiple prompt elements
    from the tree, allowing for modular and reusable prompt components."
   (pb_let [values (pb-tree_get-path-values pb-prompt_tree path)]
-    (mapconcat #'pb-prompt_mk values "\n\n")))
+    (mapconcat #'pb-prompt/mk values "\n\n")))
 
 
 (progn :context
@@ -305,7 +305,7 @@
             (org-mode)
             (erase-buffer)
             (gptel-mode)
-            (setq-local gptel--system-message (pb-prompt_mk full-prompt)
+            (setq-local gptel--system-message (pb-prompt/mk full-prompt)
                         gptel-use-tools nil
                         gptel-max-tokens 64000)
 
@@ -356,7 +356,7 @@
           (org-mode)
           (erase-buffer)
           (gptel-mode)
-          (setq-local gptel--system-message (pb-prompt_mk full-prompt)
+          (setq-local gptel--system-message (pb-prompt/mk full-prompt)
                       gptel-use-tools nil
                       gptel-max-tokens 64000)
           (evil-normal-state)
