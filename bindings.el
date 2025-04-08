@@ -179,6 +179,11 @@
                  "s-c" #'pb-prompt/browse-context-item)
           (:desc "prompt: simple request"
                  "r" #'pb-prompt/simple-request)
+
+          (:desc "prompt: consult saved contexts"
+                 "s-i" #'pb-prompt/list-saved-contexts)
+          (:desc "prompt: browse current context"
+                 "i" #'pb-prompt/browse-current-context)
           (:prefix ("c" . "prompt: context")
                    (:prefix ("a" . "add")
                             (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
