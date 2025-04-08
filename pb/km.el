@@ -260,7 +260,7 @@ XS is a list alternating paths and update-fns."
                                     :b "oiu"
                                     :tobu (km :sipos (km :fun 3) :c2 5)))))
 
-        (pb-prompt_describe-path "~/.doom.d/pb")
+        (pb-prompt/describe-path "~/.doom.d/pb")
 
         (km :name "pb"
             :type "dir"

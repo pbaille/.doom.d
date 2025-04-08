@@ -44,7 +44,7 @@
            options)))
 
 (defun pb-gptel/mk-request-prompt (path)
-  "Generate a formatted prompt string from the values at PATH in `pb-prompt_tree`.
+  "Generate a formatted prompt string from the values at PATH in `pb-prompt/tree`.
 
    PATH is a list of keywords representing a path in the prompt tree structure.
    For example, [:code :lisp :context] would retrieve all values along that path.
@@ -55,7 +55,7 @@
 
    This creates a well-structured prompt by combining multiple prompt elements
    from the tree, allowing for modular and reusable prompt components."
-  (pb_let [values (pb-tree_get-path-values pb-prompt_tree path)]
+  (pb_let [values (pb-tree_get-path-values pb-prompt/tree path)]
     (mapconcat #'pb-prompt/mk values "\n\n")))
 
 

@@ -20,7 +20,7 @@
 
 (defvar pb-prompt/context ())
 
-(defvar pb-prompt_tree
+(defvar pb-prompt/tree
 
   (pb-tree "You are a useful assistant that lives in the holly emacs editor."
            :code
@@ -832,14 +832,14 @@
   (file-directory-p "~/.doom.d/pb")
   (file-name-directory "~/.doom.d/pb")
   (file-name-nondirectory "~/.doom.d/pb")
-  (pb-prompt_describe-path "~/.doom.d/pb")
+  (pb-prompt/describe-path "~/.doom.d/pb")
   (pb-gptel/directory-to-km "~/.doom.d/pb")
   (file-exists-p "/Users/pierrebaille/.doom.d/pb/archived/reaper.el"))
 
  (pb_comment
-  (pb-tree_get-path-values pb-prompt_tree [:code :lisp :context])
+  (pb-tree_get-path-values pb-prompt/tree [:code :lisp :context])
 
-  (pb-tree_select pb-prompt_tree [:code :lisp :context]))]
+  (pb-tree_select pb-prompt/tree [:code :lisp :context]))]
 
 
 
