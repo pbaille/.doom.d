@@ -558,7 +558,7 @@
            :desc "Remove item" "r" #'pb-prompt/embark-remove-context-item
            :desc "Kill/delete item" "k" #'pb-prompt/embark-remove-context-item))))
 
-(progn :context-persist
+(progn :saved-contexts
 
        (defvar pb-prompt/saved-contexts
          (make-hash-table :test 'equal))
@@ -626,9 +626,9 @@
                 "Show a list of all saved contexts with item counts."
                 (interactive)
                 (with-current-buffer (get-buffer-create "*Saved Contexts*")
-                  (erase-buffer)
                   (let ((contexts (hash-table-keys pb-prompt/saved-contexts))
                         (inhibit-read-only t))
+                    (erase-buffer)
                     (if (null contexts)
                         (insert "No saved contexts found.\n")
                       (insert "Saved Contexts:\n\n")
@@ -666,7 +666,7 @@
               ;; Create a keymap for the mode that works with evil
               (defvar pb-prompt/saved-contexts-mode-map
                 (let ((map (make-sparse-keymap)))
-                  (define-key map (kbd "RET") #'pb-prompt/open-context-at-point)
+                  (define-key map (kbd "RET") #'pb-prompt/browse-context-from-saved)
                   (define-key map (kbd "d") #'pb-prompt/delete-context-at-point)
                   (define-key map (kbd "l") #'pb-prompt/load-context-at-point)
                   (define-key map (kbd "a") #'pb-prompt/append-context-at-point)
@@ -678,7 +678,7 @@
               (with-eval-after-load 'evil
                 (evil-set-initial-state 'pb-prompt/saved-contexts-mode 'normal)
                 (evil-define-key 'normal pb-prompt/saved-contexts-mode-map
-                  (kbd "RET") #'pb-prompt/open-context-at-point
+                  (kbd "RET") #'pb-prompt/browse-context-from-saved
                   (kbd "d") #'pb-prompt/delete-context-at-point
                   (kbd "l") #'pb-prompt/load-context-at-point
                   (kbd "a") #'pb-prompt/append-context-at-point
@@ -791,6 +791,159 @@
 
               ;; Add hook to save contexts when Emacs exits
               (add-hook 'kill-emacs-hook #'pb-prompt/save-contexts-to-file)))
+
+(progn :context-browser
+
+       (defvar-local pb-prompt/context-browser-focus
+           nil)
+
+       (defvar pb-prompt/context-browser-mode-map
+         (let ((map (make-sparse-keymap)))
+           (define-key map (kbd "RET") #'pb-prompt/browse-context-item-at-point)
+           (define-key map (kbd "d") #'pb-prompt/delete-context-item-at-point)
+           (define-key map (kbd "v") #'pb-prompt/view-context-item-at-point)
+           (define-key map (kbd "r") #'pb-prompt/refresh-context-browser)
+           (define-key map (kbd "a f") #'pb-prompt/add-path)
+           (define-key map (kbd "q") #'quit-window)
+           map)
+         "Keymap for `pb-prompt/context-browser-mode'.")
+
+       (define-derived-mode pb-prompt/context-browser-mode special-mode "Context Browser"
+         "Major mode for browsing context items.
+                 \\{pb-prompt/context-browser-mode-map}"
+         (setq buffer-read-only t))
+
+       ;; Ensure evil respects our keymap in normal state
+       (with-eval-after-load 'evil
+         (evil-set-initial-state 'pb-prompt/context-browser-mode 'normal)
+         (evil-define-key 'normal pb-prompt/context-browser-mode-map
+           (kbd "RET") #'pb-prompt/browse-context-item-at-point
+           (kbd "d") #'pb-prompt/delete-context-item-at-point
+           (kbd "v") #'pb-prompt/view-context-item-at-point
+           (kbd "r") #'pb-prompt/refresh-context-browser
+           (kbd "a f") #'pb-prompt/add-path
+           (kbd "q") #'quit-window))
+
+       (defun pb-prompt/browse-context-items (&optional name)
+         "Browse items in CONTEXT in a dedicated buffer.
+          If CONTEXT is nil, use `pb-prompt/context`.
+          Optional NAME is used for the buffer title."
+         (interactive)
+         (print (list "visit context " name))
+         (let* ((context (or (gethash name pb-prompt/saved-contexts)
+                             pb-prompt/context))
+                (buffer (get-buffer-create "*Context Browser*"))
+                (inhibit-read-only t))
+           (with-current-buffer buffer
+             (erase-buffer)
+             (setq-local pb-prompt/context-browser-focus name)
+             (print (list "setted: " pb-prompt/context-browser-focus))
+             (if (null context)
+                 (insert "No context items found.\n")
+               (let* ((title (if name
+                                 (format "Context: %s (%d items)" name (length context))
+                               (format "Current Context (%d items)" (length context))))
+                      (items-by-type (seq-group-by
+                                      (lambda (item) (km_get item :type))
+                                      context)))
+
+                 (insert title "\n")
+                 (insert (make-string (length title) ?=) "\n\n")
+
+                 ;; Group by type
+                 (dolist (type-group (sort items-by-type
+                                           (lambda (a b) (string< (car a) (car b)))))
+                   (let ((type (car type-group))
+                         (items (cdr type-group)))
+                     (insert (format "== %s (%d items) ==\n\n" type (length items)))
+
+                     ;; List items of this type
+                     (dolist (item items)
+                       (let* ((id (km_get item :id))
+                              (desc (pb-prompt/-context-item-description item))
+                              (line (format "• %s [%s]\n" desc id)))
+                         ;; Add properties to make the item retrievable
+                         (add-text-properties 0 (length line)
+                                              `(context-item ,item
+                                                context-item-id ,id)
+                                              line)
+                         (insert line)))
+                     (insert "\n")))))
+
+             ;; Set mode and header line
+             (pb-prompt/context-browser-mode)
+             (setq-local header-line-format
+                         "RET: browse, d: delete, v: view details, r: refresh, q: quit"))
+
+           (pop-to-buffer buffer)))
+
+       (defun pb-prompt/context-item-at-point ()
+         "Get the context item at point in the browser buffer."
+         (get-text-property (point) 'context-item))
+
+       (defun pb-prompt/browse-context-item-at-point ()
+         "Browse the context item at point."
+         (interactive)
+         (when-let ((item (pb-prompt/context-item-at-point)))
+           (pb-prompt/browse-context-item item)))
+
+       (defun pb-prompt/view-context-item-at-point ()
+         "View detailed information about the context item at point."
+         (interactive)
+         (when-let ((item (pb-prompt/context-item-at-point)))
+           (pb-prompt/describe-context-item item)))
+
+       (defun pb-prompt/delete-context-item-at-point ()
+         "Delete the context item at point from the current context."
+         (interactive)
+         (when-let* ((item (pb-prompt/context-item-at-point))
+                     (id (km_get item :id)))
+           (if (yes-or-no-p (format "Delete item %s? "
+                                    (pb-prompt/-context-item-description item)))
+               (progn
+                 ;; Remove from actual context
+                 (if pb-prompt/context-browser-focus
+                     (let ((focused-context (gethash name pb-prompt/saved-contexts)))
+                       (puthash name pb-prompt/saved-contexts
+                                (seq-remove (lambda (i)
+                                              (equal (km_get i :id) id))
+                                            focused-context)))
+                   (setq pb-prompt/context
+                         (seq-remove (lambda (i)
+                                       (equal (km_get i :id) id))
+                                     pb-prompt/context)))
+                 ;; Refresh the browser
+                 (pb-prompt/refresh-context-browser)
+                 (message "Item deleted"))
+             (message "Deletion cancelled"))))
+
+       (defun pb-prompt/refresh-context-browser ()
+         "Refresh the context browser buffer."
+         (interactive)
+         (when (eq major-mode 'pb-prompt/context-browser-mode)
+           (let ((line (line-number-at-pos)))
+             (pb-prompt/browse-context-items pb-prompt/context-browser-focus)
+             (goto-char (point-min))
+             (forward-line (1- line)))))
+
+       ;; Add browser command to saved contexts mode
+       (with-eval-after-load 'evil
+         (evil-define-key 'normal pb-prompt/saved-contexts-mode-map
+           (kbd "b") #'pb-prompt/browse-context-from-saved))
+
+       (defun pb-prompt/browse-context-from-saved ()
+         "Browse the context at point in saved contexts buffer."
+         (interactive)
+         (when-let* ((name (pb-prompt/context-name-at-point))
+                     (trimmed-name (string-trim name))
+                     (context (gethash trimmed-name pb-prompt/saved-contexts)))
+           (pb-prompt/browse-context-items trimmed-name)))
+
+       ;; Add context browser to context management commands
+       (defun pb-prompt/browse-current-context ()
+         "Browse the current context in a dedicated buffer."
+         (interactive)
+         (pb-prompt/browse-context-items)))
 
 
 (provide 'pb-prompt)
