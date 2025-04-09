@@ -66,125 +66,125 @@
 
            :task (lambda ()
                    "Enter main instructions."
-                   )
+                   (km :task (read-string "Task: ")))))
 
-(do :prompt-string
+(progn :prompt-string
 
-    (defun pb-prompt/indent-content (content &optional indent-size)
-      "Indent each line of CONTENT with spaces if it contains newlines.
-       If CONTENT is a single line, return it unchanged.
-       Optional argument INDENT-SIZE specifies the number of spaces to use (defaults to 2)."
-      (if (string-match-p "\n" content)
-          (let ((spaces (make-string (or indent-size 2) ?\s)))
-            (replace-regexp-in-string
-             "^\\(.\\)" (concat spaces "\\1") content))
-        content))
+       (defun pb-prompt/indent-content (content &optional indent-size)
+         "Indent each line of CONTENT with spaces if it contains newlines.
+          If CONTENT is a single line, return it unchanged.
+          Optional argument INDENT-SIZE specifies the number of spaces to use (defaults to 2)."
+         (if (string-match-p "\n" content)
+             (let ((spaces (make-string (or indent-size 2) ?\s)))
+               (replace-regexp-in-string
+                "^\\(.\\)" (concat spaces "\\1") content))
+           content))
 
-  (defun pb-prompt/mk (x)
-    "Generate a formatted prompt based on input X.
+       (defun pb-prompt/mk (x)
+         "Generate a formatted prompt based on input X.
 
-     This function processes X, which can be a string, function,
-     keyword map, vector, or list, and returns a formatted string
-     accordingly:
+          This function processes X, which can be a string, function,
+          keyword map, vector, or list, and returns a formatted string
+          accordingly:
 
-     - If X is a string, it returns X as-is.
-     - If X is a function, it calls the function and processes the
-     result recursively.
-     - If X is a keyword map, it formats each key-value pair into
-     XML-like tags, with multiline content indented for better
-     readability.
-     - If X is a vector, it concatenates the elements separated by
-     newlines.
-     - If X is a list, it converts the list to a string representation."
-    (cond ((null x) "nil")
-          ((stringp x) (substring-no-properties x))
-          ((functionp x) (pb-prompt/mk (funcall x)))
-          ((km? x)
-           (mapconcat (lambda (entry)
-                        (let* ((key-str (substring (symbol-name (car entry)) 1))
-                               (content (pb-prompt/mk (cdr entry))))
-                          ;; Format each entry as XML-like tags with indented content
-                          (concat "<" key-str ">\n"
-                                  (pb-prompt/indent-content content 2)
-                                  "\n</" key-str ">")))
-                      (km_entries x)
-                      "\n\n"))          ; Execute functions to get their content
-          ((vectorp x) (mapconcat #'identity x "\n"))
-          ((listp x) (mapconcat (lambda (item)
-                                  (concat "<context-item>\n"
-                                          (pb-prompt/indent-content
-                                           (pb-prompt/mk item)
-                                           2)
-                                          "\n</context-item>"))
-                                x
-                                "\n"))
-          ((or (booleanp x)
-               (numberp x))
-           (format "%s" x))))
+          - If X is a string, it returns X as-is.
+          - If X is a function, it calls the function and processes the
+          result recursively.
+          - If X is a keyword map, it formats each key-value pair into
+          XML-like tags, with multiline content indented for better
+          readability.
+          - If X is a vector, it concatenates the elements separated by
+          newlines.
+          - If X is a list, it converts the list to a string representation."
+         (cond ((null x) "nil")
+               ((stringp x) (substring-no-properties x))
+               ((functionp x) (pb-prompt/mk (funcall x)))
+               ((km? x)
+                (mapconcat (lambda (entry)
+                             (let* ((key-str (substring (symbol-name (car entry)) 1))
+                                    (content (pb-prompt/mk (cdr entry))))
+                               ;; Format each entry as XML-like tags with indented content
+                               (concat "<" key-str ">\n"
+                                       (pb-prompt/indent-content content 2)
+                                       "\n</" key-str ">")))
+                           (km_entries x)
+                           "\n\n"))          ; Execute functions to get their content
+               ((vectorp x) (mapconcat #'identity x "\n"))
+               ((listp x) (mapconcat (lambda (item)
+                                       (concat "<context-item>\n"
+                                               (pb-prompt/indent-content
+                                                (pb-prompt/mk item)
+                                                2)
+                                               "\n</context-item>"))
+                                     x
+                                     "\n"))
+               ((or (booleanp x)
+                    (numberp x))
+                (format "%s" x))))
 
-  (defun pb-prompt/describe-path (path)
-    "Create a structured representation of a file or directory at PATH.
-     When PATH is a directory, recursively creates a nested structure that
-     includes all non-hidden files and subdirectories.
+       (defun pb-prompt/describe-path (path)
+         "Create a structured representation of a file or directory at PATH.
+          When PATH is a directory, recursively creates a nested structure that
+          includes all non-hidden files and subdirectories.
 
-     For directories, returns a keyword map with the following keys:
-     - :path - the full path
-     - :filename - the name of the directory without parent path
-     - :file-type - always \"directory\"
-     - :children - a list of similar structures for each child node
+          For directories, returns a keyword map with the following keys:
+          - :path - the full path
+          - :filename - the name of the directory without parent path
+          - :file-type - always \"directory\"
+          - :children - a list of similar structures for each child node
 
-     For files, returns a keyword map with the following keys:
-     - :path - the full path
-     - :filename - the name of the file without parent path
-     - :file-extension - the file extension if any
-     - :file-type - always \"file\"
-     - :content - the file content as a string
+          For files, returns a keyword map with the following keys:
+          - :path - the full path
+          - :filename - the name of the file without parent path
+          - :file-extension - the file extension if any
+          - :file-type - always \"file\"
+          - :content - the file content as a string
 
-     Returns nil if PATH does not exist or is nil."
-    (if (and path (file-exists-p path))
-        (if (file-directory-p path)
-            (km :name (file-name-nondirectory (if (and path (string-match-p "/$" path))
-                                                  (substring path 0 -1)
-                                                path))
-                :type "dir"
-                :path path
-                :children (seq-reduce (lambda (ret p)
-                                        (pb_let [(as x (km_keys name))
-                                                 (pb-prompt/describe-path p)]
-                                          (if name
-                                              (km_put ret (pb_keyword name) x)
-                                            ret)))
-                                      (directory-files path t "^[^.].*")
-                                      ()))
-          (km :name (file-name-nondirectory path)
-              :type "file"
-              :path path
-              :content (pb_slurp path)))))
+          Returns nil if PATH does not exist or is nil."
+         (if (and path (file-exists-p path))
+             (if (file-directory-p path)
+                 (km :name (file-name-nondirectory (if (and path (string-match-p "/$" path))
+                                                       (substring path 0 -1)
+                                                     path))
+                     :type "dir"
+                     :path path
+                     :children (seq-reduce (lambda (ret p)
+                                             (pb_let [(as x (km_keys name))
+                                                      (pb-prompt/describe-path p)]
+                                               (if name
+                                                   (km_put ret (pb_keyword name) x)
+                                                 ret)))
+                                           (directory-files path t "^[^.].*")
+                                           ()))
+               (km :name (file-name-nondirectory path)
+                   :type "file"
+                   :path path
+                   :content (pb_slurp path)))))
 
-  (defun pb-prompt/context-prompt (&optional context)
-    "Generate a prompt from the current context.
-     This function formats the collected context elements into a structured
-     prompt suitable for an LLM, using the pb-prompt/mk function."
-    (interactive)
-    (pb-prompt/mk
-     (km :context
-         (mapcar
-          (lambda (ctx-item)
-            (let ((type (km_get ctx-item :type)))
-              (cond
-               ((string= type "buffer")
-                (km_put ctx-item
-                        :content (with-current-buffer (km_get ctx-item :buffer-name)
-                                   (buffer-substring-no-properties (point-min) (point-max)))))
-               ((member type (list "file" "dir"))
-                (pb-prompt/describe-path (km_get ctx-item :path)))
+       (defun pb-prompt/context-prompt (&optional context)
+         "Generate a prompt from the current context.
+          This function formats the collected context elements into a structured
+          prompt suitable for an LLM, using the pb-prompt/mk function."
+         (interactive)
+         (pb-prompt/mk
+          (km :context
+              (mapcar
+               (lambda (ctx-item)
+                 (let ((type (km_get ctx-item :type)))
+                   (cond
+                    ((string= type "buffer")
+                     (km_put ctx-item
+                             :content (with-current-buffer (km_get ctx-item :buffer-name)
+                                        (buffer-substring-no-properties (point-min) (point-max)))))
+                    ((member type (list "file" "dir"))
+                     (pb-prompt/describe-path (km_get ctx-item :path)))
 
-               ((string= type "function")
-                (call-interactively (km_get ctx-item :function)))
+                    ((string= type "function")
+                     (call-interactively (km_get ctx-item :function)))
 
-               (t ctx-item))))
-          (or context
-              pb-prompt/context))))))
+                    (t ctx-item))))
+               (or context
+                   pb-prompt/context))))))
 
 (progn :context-add
 
@@ -390,8 +390,6 @@
                    (use-local-map (make-composed-keymap map (current-local-map))))
                  (message "Edit lambda function in buffer. Press C-c C-c when done"))
                (switch-to-buffer buffer)))))))
-
-;; (pb-prompt/context-prompt)
 
 (progn :simple-request
 
