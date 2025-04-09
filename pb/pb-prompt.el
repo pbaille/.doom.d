@@ -661,12 +661,49 @@
                (message "Deleted context '%s'" name))
            (message "No context found with name '%s'" name)))
 
+       (progn :item-navigation
+
+              (defun pb-prompt/goto-next-item ()
+                "Move to the next item in the buffer."
+                (interactive)
+                (let ((orig-point (point))
+                      (found nil))
+                  (forward-line 1)
+                  (while (and (not (eobp))
+                              (not found))
+                    (beginning-of-line)
+                    (if (looking-at "^•")
+                        (setq found t)
+                      (forward-line 1)))
+                  (when (not found)
+                    (goto-char orig-point)
+                    (message "No next context found"))))
+
+              (defun pb-prompt/goto-previous-item ()
+                "Move to the previous item in the buffer."
+                (interactive)
+                (let ((orig-point (point))
+                      (found nil))
+                  (forward-line -1)
+                  (while (and (not (bobp))
+                              (not found))
+                    (beginning-of-line)
+                    (if (looking-at "^•")
+                        (setq found t)
+                      (forward-line -1)))
+                  (when (not found)
+                    (goto-char orig-point)
+                    (message "No previous context found")))))
+
        (progn :saved-contexts
 
-              (defun pb-prompt/list-saved-contexts ()
+              (defvar pb-prompt/saved-context-buffer-name
+                "*Saved Contexts*")
+
+              '(defun pb-prompt/list-saved-contexts ()
                 "Show a list of all saved contexts with item counts."
                 (interactive)
-                (with-current-buffer (get-buffer-create "*Saved Contexts*")
+                (with-current-buffer (get-buffer-create pb-prompt/saved-context-buffer-name)
                   (let ((contexts (hash-table-keys pb-prompt/saved-contexts))
                         (inhibit-read-only t))
                     (erase-buffer)
@@ -697,7 +734,57 @@
                     (pb-prompt/saved-contexts-mode)
                     (setq-local header-line-format
                                 "RET: open, d: delete, l: load, a: append, q: quit"))
-                  (pop-to-buffer (current-buffer))))
+                  (pop-to-buffer (current-buffer))
+                  (goto-char (point-min))
+                  (pb-prompt/goto-next-item)))
+
+              (defun pb-prompt/list-saved-contexts ()
+                "Show a list of all saved contexts with item counts.
+                 Displays contexts with syntax highlighting for better readability."
+                (interactive)
+
+                (with-current-buffer (get-buffer-create pb-prompt/saved-context-buffer-name)
+                  (let ((contexts (hash-table-keys pb-prompt/saved-contexts))
+                        (inhibit-read-only t))
+                    (erase-buffer)
+                    (if (null contexts)
+                        (insert (propertize "No saved contexts found.\n" 'face 'font-lock-comment-face))
+                      ;; Header with custom face
+                      (insert (propertize "Saved Contexts:\n\n" 'face 'font-lock-keyword-face))
+                      (dolist (name (sort contexts #'string<))
+                        (let* ((context (gethash name pb-prompt/saved-contexts))
+                               (count (length context))
+                               (types (mapcar (lambda (item) (km_get item :type)) context))
+                               (type-counts (seq-reduce
+                                             (lambda (acc type)
+                                               (let ((count (or (alist-get type acc) 0)))
+                                                 (setf (alist-get type acc) (1+ count))
+                                                 acc))
+                                             types
+                                             nil)))
+                          ;; Context name with bullet and count
+                          (insert (propertize "• " 'face '(:foreground "pink"))
+                                  name
+                                  "\n")
+
+                          ;; Types section with different face
+                          (let ((type-strs
+                                 (mapcar (lambda (type)
+                                           (concat (propertize (car type) 'face 'font-lock-doc-face)
+                                                   (propertize (format " %d" (cdr type))
+                                                               'face 'font-lock-type-face)))
+                                         type-counts)))
+                            (insert "  ")
+                            (insert (mapconcat #'identity type-strs ", "))
+                            (insert "\n\n"))))))
+
+                  (goto-char (point-min))
+                  (pb-prompt/saved-contexts-mode)
+                  (setq-local header-line-format
+                              (propertize "RET: open, d: delete, l: load, a: append, q: quit"
+                                          'face 'header-line))
+                  (pop-to-buffer (current-buffer))
+                  (pb-prompt/goto-next-item)))
 
               ;; Define a specialized mode for saved contexts buffer
               (define-derived-mode pb-prompt/saved-contexts-mode special-mode "PB-Prompt Contexts"
@@ -723,13 +810,17 @@
                   (kbd "d") #'pb-prompt/delete-context-at-point
                   (kbd "l") #'pb-prompt/load-context-at-point
                   (kbd "a") #'pb-prompt/append-context-at-point
-                  (kbd "q") #'pb-prompt/exit-saved-contexts))
+                  (kbd "q") #'pb-prompt/exit-saved-contexts
+                  (kbd "k") #'pb-prompt/exit-saved-contexts
+                  (kbd "l") #'pb-prompt/goto-next-item
+                  (kbd "h") #'pb-prompt/goto-previous-item
+                  (kbd "j") #'pb-prompt/browse-context-from-saved))
 
               (defun pb-prompt/context-name-at-point ()
                 "Get context name at point in the saved contexts buffer."
                 (save-excursion
                   (beginning-of-line)
-                  (when (looking-at "• \\([^(]+\\)")
+                  (when (looking-at "• \\(.+\\)")
                     (match-string-no-properties 1))))
 
               (defun pb-prompt/open-context-at-point ()
@@ -788,8 +879,7 @@
                 "Exit the saved contexts buffer, kill the buffer, and quit the window."
                 (interactive)
                 (let ((buffer (current-buffer)))
-                  (quit-window t)
-                  (kill-buffer buffer))))
+                  (quit-window t))))
 
        (progn :persist-contexts
 
@@ -860,46 +950,72 @@
            (kbd "v") #'pb-prompt/view-context-item-at-point
            (kbd "r") #'pb-prompt/refresh-context-browser
            (kbd "a f") #'pb-prompt/add-path-to-focused-context
-           (kbd "q") #'quit-window))
+           (kbd "q") #'quit-window
+           (kbd "k") #'pb-prompt/back-to-saved-contexts
+           (kbd "l") #'pb-prompt/goto-next-item
+           (kbd "h") #'pb-prompt/goto-previous-item))
+
+       (defun pb-prompt/back-to-saved-contexts ()
+         "Return to the saved contexts listing view from the context browser.
+          This function closes the current context browser and opens the saved contexts list."
+         (interactive)
+         (when (eq major-mode 'pb-prompt/context-browser-mode)
+           (let ((buffer (current-buffer))
+                 (current-context-name pb-prompt/context-browser-focus))
+             (quit-window)
+             (pb-prompt/list-saved-contexts)
+             (when current-context-name
+               (with-current-buffer pb-prompt/saved-context-buffer-name
+                 (print current-context-name)
+                 (print (current-buffer))
+                 (goto-char (point-min))
+                 (when (search-forward current-context-name nil t)
+                   (beginning-of-line)))))))
 
        (defun pb-prompt/browse-context-items (&optional name)
          "Browse items in CONTEXT in a dedicated buffer.
-          If CONTEXT is nil, use `pb-prompt/context`.
+          If CONTEXT is nil, use =pb-prompt/context=.
           Optional NAME is used for the buffer title."
          (interactive)
          (let* ((context (if name
                              (gethash name pb-prompt/saved-contexts)
-                             pb-prompt/context))
+                           pb-prompt/context))
                 (buffer (get-buffer-create "*Context Browser*"))
                 (inhibit-read-only t))
            (with-current-buffer buffer
              (erase-buffer)
-             (setq-local pb-prompt/context-browser-focus name)
-             (print (list "setted: " pb-prompt/context-browser-focus))
              (if (null context)
-                 (insert "No context items found.\n")
+                 (insert (propertize "No context items found.\n" 'face 'font-lock-comment-face))
                (let* ((title (if name
-                                 (format "Context: %s (%d items)" name (length context))
-                               (format "Current Context (%d items)" (length context))))
+                                 (concat "* " name)
+                               "Current Context"))
                       (items-by-type (seq-group-by
                                       (lambda (item) (km_get item :type))
                                       context)))
 
-                 (insert title "\n")
-                 (insert (make-string (length title) ?=) "\n\n")
+                 ;; Insert title with face
+                 (insert (propertize title 'face 'font-lock-keyword-face) "\n")
+                 (insert (propertize (make-string (length title) ?-) 'face 'font-lock-comment-face) "\n\n")
 
                  ;; Group by type
                  (dolist (type-group (sort items-by-type
                                            (lambda (a b) (string< (car a) (car b)))))
                    (let ((type (car type-group))
                          (items (cdr type-group)))
-                     (insert (format "== %s (%d items) ==\n\n" type (length items)))
+                     ;; Type header with face
+                     (insert (concat (propertize ": " 'face 'font-lock-doc-face)
+                                     (propertize type 'face 'font-lock-type-face)
+                                     (propertize (format " (%d)" (length items)) 'face 'font-lock-doc-face))
+                             "\n\n")
 
                      ;; List items of this type
                      (dolist (item items)
                        (let* ((id (km_get item :id))
                               (desc (pb-prompt/-context-item-description item))
-                              (line (format "• %s [%s]\n" desc id)))
+                              ;; Format line with colored bullet and ID with a different face
+                              (bullet (propertize "• " 'face '(:foreground "pink")))
+                              (id-text (propertize (format "[%s]" id) 'face 'font-lock-doc-face))
+                              (line (format "%s%s %s\n" bullet desc id-text)))
                          ;; Add properties to make the item retrievable
                          (add-text-properties 0 (length line)
                                               `(context-item ,item
@@ -908,11 +1024,14 @@
                          (insert line)))
                      (insert "\n")))))
 
+             (goto-char (point-min))
              ;; Set mode and header line
              (pb-prompt/context-browser-mode)
+             (pb-prompt/goto-next-item)
              (setq-local pb-prompt/context-browser-focus name)
              (setq-local header-line-format
-                         "RET: browse, d: delete, v: view details, r: refresh, q: quit"))
+                         (propertize "RET: browse, d: delete, v: view details, r: refresh, q: quit"
+                                     'face 'header-line)))
 
            (switch-to-buffer buffer)))
 
