@@ -92,7 +92,7 @@ it enters edition mode."
                                   (goto-char (org-element-property :begin element)))
                                 (pb-org-babel_add-treesit-range-for-block))
                 ;; (evil-pb-lisp-state 1)
-                (symex-mode-interface))
+                (pb-symex_enter))
                (t (evil-sorg-state))
 
                (nil (pb-org_maybe-edit-block))))
@@ -108,7 +108,7 @@ it enters edition mode."
                   (progn :symex
                          (evil-sorg-state -1)
                          (evil-next-line)
-                         (symex-mode-interface)))
+                         (pb-symex_enter)))
 
                  (nil (pb-org_maybe-edit-block))))))
 

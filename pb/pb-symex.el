@@ -14,6 +14,12 @@
 (require 'symex)
 
 
+(defun pb-symex_enter ()
+  "Enter symex mode and select the nearest expression."
+  (interactive)
+  (pb-symex_select-nearest-in-line)
+  (symex-mode-interface))
+
 (defun pb-symex_escape-insert-mode ()
   "Exit evil insert state and enter symex mode.
    Adjust cursor position for better navigation when exiting near word boundaries."
@@ -24,18 +30,18 @@
                    (not (looking-back "\\\\" 2))))
           (symex-mode-interface)
         (evil-normal-state))
-      (progn
-        (evil-normal-state)
-        (forward-char)
-        (if (and (not (looking-at "\\w"))
-                 (looking-back "\\w" 1))
-            (backward-char))
-        (pb-symex_select-nearest-in-line)
-        (symex-mode-interface))))
+    (progn
+      (evil-normal-state)
+      (forward-char)
+      (if (and (not (looking-at "\\w"))
+               (looking-back "\\w" 1))
+          (backward-char))
+      (pb-symex_select-nearest-in-line)
+      (symex-mode-interface))))
 
 (defun pb-symex_click ()
   "Focus the clicked symex if possible.
-If inside string or comment, toggle insert state."
+   If inside string or comment, toggle insert state."
   (interactive)
   (if (lispy--in-string-or-comment-p)
       (evil-insert-state)

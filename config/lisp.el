@@ -224,7 +224,7 @@
    [mouse-1] #'pb-symex_click
    [mouse-3] (lambda (event) (interactive "e") (posn-set-point (event-end event)) (evil-insert-state))
    ;; "C-w" (lambda () (interactive) (evil-insert 1) (pb-misc_insert-open-paren))
-   "RET" #'symex-mode-interface)
+   "RET" #'pb-symex_enter)
 
   (general-define-key
    :states 'normal
