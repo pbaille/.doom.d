@@ -20,6 +20,11 @@
 
 (defvar pb-prompt/context ())
 
+(defvar pb-prompt/saved-contexts
+  (make-hash-table :test 'equal))
+
+(defvar-local pb-prompt/context-browser-focus nil)
+
 (defvar pb-prompt/tree
 
   (pb-tree "You are a useful assistant that lives in the holly emacs editor."
@@ -61,98 +66,125 @@
 
            :task (lambda ()
                    "Enter main instructions."
-                   (read-string "main task: "))))
+                   )
 
-(defun pb-prompt/indent-content (content &optional indent-size)
-  "Indent each line of CONTENT with spaces if it contains newlines.
-   If CONTENT is a single line, return it unchanged.
-   Optional argument INDENT-SIZE specifies the number of spaces to use (defaults to 2)."
-  (if (string-match-p "\n" content)
-      (let ((spaces (make-string (or indent-size 2) ?\s)))
-        (replace-regexp-in-string
-         "^\\(.\\)" (concat spaces "\\1") content))
-    content))
+(do :prompt-string
 
-(defun pb-prompt/mk (x)
-  "Generate a formatted prompt based on input X.
+    (defun pb-prompt/indent-content (content &optional indent-size)
+      "Indent each line of CONTENT with spaces if it contains newlines.
+       If CONTENT is a single line, return it unchanged.
+       Optional argument INDENT-SIZE specifies the number of spaces to use (defaults to 2)."
+      (if (string-match-p "\n" content)
+          (let ((spaces (make-string (or indent-size 2) ?\s)))
+            (replace-regexp-in-string
+             "^\\(.\\)" (concat spaces "\\1") content))
+        content))
 
-   This function processes X, which can be a string, function,
-   keyword map, vector, or list, and returns a formatted string
-   accordingly:
+  (defun pb-prompt/mk (x)
+    "Generate a formatted prompt based on input X.
 
-   - If X is a string, it returns X as-is.
-   - If X is a function, it calls the function and processes the
-  result recursively.
-   - If X is a keyword map, it formats each key-value pair into
-  XML-like tags, with multiline content indented for better
-  readability.
-   - If X is a vector, it concatenates the elements separated by
-  newlines.
-   - If X is a list, it converts the list to a string representation."
-  (cond ((null x) "nil")
-        ((stringp x) (substring-no-properties x))
-        ((functionp x) (pb-prompt/mk (funcall x)))
-        ((km? x)
-         (mapconcat (lambda (entry)
-                      (let* ((key-str (substring (symbol-name (car entry)) 1))
-                             (content (pb-prompt/mk (cdr entry))))
-                        ;; Format each entry as XML-like tags with indented content
-                        (concat "<" key-str ">\n"
-                                (pb-prompt/indent-content content 2)
-                                "\n</" key-str ">")))
-                    (km_entries x)
-                    "\n\n")) ; Execute functions to get their content
-        ((vectorp x) (mapconcat #'identity x "\n"))
-        ((listp x) (mapconcat (lambda (item)
-                                (concat "<context-item>\n"
-                                        (pb-prompt/indent-content
-                                         (pb-prompt/mk item)
-                                         2)
-                                        "\n</context-item>"))
-                              x
-                              "\n"))
-        ((or (booleanp x)
-             (numberp x))
-         (format "%s" x))))
+     This function processes X, which can be a string, function,
+     keyword map, vector, or list, and returns a formatted string
+     accordingly:
 
-(defun pb-prompt/describe-path (path)
-  "Create a structured representation of a file or directory at PATH.
-   When PATH is a directory, recursively creates a nested structure that
-   includes all non-hidden files and subdirectories.
+     - If X is a string, it returns X as-is.
+     - If X is a function, it calls the function and processes the
+     result recursively.
+     - If X is a keyword map, it formats each key-value pair into
+     XML-like tags, with multiline content indented for better
+     readability.
+     - If X is a vector, it concatenates the elements separated by
+     newlines.
+     - If X is a list, it converts the list to a string representation."
+    (cond ((null x) "nil")
+          ((stringp x) (substring-no-properties x))
+          ((functionp x) (pb-prompt/mk (funcall x)))
+          ((km? x)
+           (mapconcat (lambda (entry)
+                        (let* ((key-str (substring (symbol-name (car entry)) 1))
+                               (content (pb-prompt/mk (cdr entry))))
+                          ;; Format each entry as XML-like tags with indented content
+                          (concat "<" key-str ">\n"
+                                  (pb-prompt/indent-content content 2)
+                                  "\n</" key-str ">")))
+                      (km_entries x)
+                      "\n\n"))          ; Execute functions to get their content
+          ((vectorp x) (mapconcat #'identity x "\n"))
+          ((listp x) (mapconcat (lambda (item)
+                                  (concat "<context-item>\n"
+                                          (pb-prompt/indent-content
+                                           (pb-prompt/mk item)
+                                           2)
+                                          "\n</context-item>"))
+                                x
+                                "\n"))
+          ((or (booleanp x)
+               (numberp x))
+           (format "%s" x))))
 
-   For directories, returns a keyword map with the following keys:
-   - :path - the full path
-   - :filename - the name of the directory without parent path
-   - :file-type - always \"directory\"
-   - :children - a list of similar structures for each child node
+  (defun pb-prompt/describe-path (path)
+    "Create a structured representation of a file or directory at PATH.
+     When PATH is a directory, recursively creates a nested structure that
+     includes all non-hidden files and subdirectories.
 
-   For files, returns a keyword map with the following keys:
-   - :path - the full path
-   - :filename - the name of the file without parent path
-   - :file-extension - the file extension if any
-   - :file-type - always \"file\"
-   - :content - the file content as a string
+     For directories, returns a keyword map with the following keys:
+     - :path - the full path
+     - :filename - the name of the directory without parent path
+     - :file-type - always \"directory\"
+     - :children - a list of similar structures for each child node
 
-   Returns nil if PATH does not exist or is nil."
-  (if (and path (file-exists-p path))
-      (if (file-directory-p path)
-          (km :name (file-name-nondirectory (if (and path (string-match-p "/$" path))
-                                                (substring path 0 -1)
-                                              path))
-              :type "dir"
+     For files, returns a keyword map with the following keys:
+     - :path - the full path
+     - :filename - the name of the file without parent path
+     - :file-extension - the file extension if any
+     - :file-type - always \"file\"
+     - :content - the file content as a string
+
+     Returns nil if PATH does not exist or is nil."
+    (if (and path (file-exists-p path))
+        (if (file-directory-p path)
+            (km :name (file-name-nondirectory (if (and path (string-match-p "/$" path))
+                                                  (substring path 0 -1)
+                                                path))
+                :type "dir"
+                :path path
+                :children (seq-reduce (lambda (ret p)
+                                        (pb_let [(as x (km_keys name))
+                                                 (pb-prompt/describe-path p)]
+                                          (if name
+                                              (km_put ret (pb_keyword name) x)
+                                            ret)))
+                                      (directory-files path t "^[^.].*")
+                                      ()))
+          (km :name (file-name-nondirectory path)
+              :type "file"
               :path path
-              :children (seq-reduce (lambda (ret p)
-                                      (pb_let [(as x (km_keys name))
-                                               (pb-prompt/describe-path p)]
-                                        (if name
-                                            (km_put ret (pb_keyword name) x)
-                                          ret)))
-                                    (directory-files path t "^[^.].*")
-                                    ()))
-        (km :name (file-name-nondirectory path)
-            :type "file"
-            :path path
-            :content (pb_slurp path)))))
+              :content (pb_slurp path)))))
+
+  (defun pb-prompt/context-prompt (&optional context)
+    "Generate a prompt from the current context.
+     This function formats the collected context elements into a structured
+     prompt suitable for an LLM, using the pb-prompt/mk function."
+    (interactive)
+    (pb-prompt/mk
+     (km :context
+         (mapcar
+          (lambda (ctx-item)
+            (let ((type (km_get ctx-item :type)))
+              (cond
+               ((string= type "buffer")
+                (km_put ctx-item
+                        :content (with-current-buffer (km_get ctx-item :buffer-name)
+                                   (buffer-substring-no-properties (point-min) (point-max)))))
+               ((member type (list "file" "dir"))
+                (pb-prompt/describe-path (km_get ctx-item :path)))
+
+               ((string= type "function")
+                (call-interactively (km_get ctx-item :function)))
+
+               (t ctx-item))))
+          (or context
+              pb-prompt/context))))))
 
 (progn :context-add
 
@@ -171,25 +203,64 @@
           Returns the CONTEXT-ITEM with the unique ID added."
          (km_put context-item
                  :id
-                 (substring
-                  (md5 (format "%s" (time-convert nil 'list)))
-                  0 8)))
+                 (let ((data-string (format "%s" context-item)))
+                   (substring (md5 data-string) 0 8))))
+
+       (defun pb-prompt/update-focused-context (f)
+         "Apply function F to update either focused saved context or current context.
+
+          If `pb-prompt/context-browser-focus' is non-nil, applies F to the
+          corresponding saved context and stores the result back in the
+          `pb-prompt/saved-contexts' hash table.
+
+          If `pb-prompt/context-browser-focus' is nil, applies F to the current
+          `pb-prompt/context' and updates it with the result.
+
+          Argument F should be a function that takes a context (list of items) and
+          returns a modified context."
+         (if pb-prompt/context-browser-focus
+             (when-let ((focused-context
+                         (gethash pb-prompt/context-browser-focus
+                                  pb-prompt/saved-contexts)))
+               (puthash pb-prompt/context-browser-focus
+                        (funcall f focused-context)
+                        pb-prompt/saved-contexts))
+           (setq pb-prompt/context
+                 (funcall f pb-prompt/context))))
+
+       (defun pb-prompt/add-context-item (context item)
+         "Add ITEM to CONTEXT if an item with the same ID doesn't exist.
+
+          This function ensures that no duplicate items (based on :id) are added
+          to the context. If ITEM doesn't have an :id, it's wrapped with
+          pb-prompt/with-id before being added.
+
+          Returns the updated context with the item added (if it wasn't a duplicate)."
+         (let* ((item-with-id (if (km_get item :id)
+                                  item
+                                (pb-prompt/with-id item)))
+                (item-id (km_get item-with-id :id)))
+           (if (seq-find (lambda (ctx-item)
+                           (equal (km_get ctx-item :id) item-id))
+                         context)
+               ;; If item with same ID exists, return unchanged context
+               context
+             ;; Otherwise, add the item to the context
+             (cons item-with-id context))))
 
        (defun pb-prompt/add-item! (item)
-         "Add ITEM to context with a unique identifier.
+         "Add ITEM to the focused context with a unique ID.
 
-          This function attaches a unique :id key to ITEM before adding it to
-          `pb-prompt/context'. The ID is generated using MD5 hash of the current
-          timestamp, ensuring uniqueness across context items. Items are added
-          to the front of the context list, making more recent additions appear
-          first when processing context items later.
+          This function adds the specified ITEM to either the current context or a
+          focused saved context, depending on the value of `pb-prompt/context-browser-focus`.
+          It wraps the item with a unique ID using `pb-prompt/with-id` before adding.
 
-          Example:
-          (pb-prompt/add-item! (km :type \"selection\" :content \"my code\"))
-          ;; Adds selection with a unique ID to the context"
-         (setq pb-prompt/context
-               (cons (pb-prompt/with-id item)
-                     pb-prompt/context)))
+          If `pb-prompt/context-browser-focus` is non-nil, adds the item to the specified
+          saved context. Otherwise, adds it to the current `pb-prompt/context`.
+
+          Argument ITEM should be a keyword map (km) representing context information."
+         (pb-prompt/update-focused-context
+          (lambda (ctx) (pb-prompt/add-context-item ctx item))))
 
        (defun pb-prompt/add-path ()
          (interactive)
@@ -319,31 +390,6 @@
                    (use-local-map (make-composed-keymap map (current-local-map))))
                  (message "Edit lambda function in buffer. Press C-c C-c when done"))
                (switch-to-buffer buffer)))))))
-
-(defun pb-prompt/context-prompt (&optional context)
-  "Generate a prompt from the current context.
-   This function formats the collected context elements into a structured
-   prompt suitable for an LLM, using the pb-prompt/mk function."
-  (interactive)
-  (pb-prompt/mk
-   (km :context
-       (mapcar
-        (lambda (ctx-item)
-          (let ((type (km_get ctx-item :type)))
-            (cond
-             ((string= type "buffer")
-              (km_put ctx-item
-                      :content (with-current-buffer (km_get ctx-item :buffer-name)
-                                 (buffer-substring-no-properties (point-min) (point-max)))))
-             ((member type (list "file" "dir"))
-              (pb-prompt/describe-path (km_get ctx-item :path)))
-
-             ((string= type "function")
-              (call-interactively (km_get ctx-item :function)))
-
-             (t ctx-item))))
-        (or context
-            pb-prompt/context)))))
 
 ;; (pb-prompt/context-prompt)
 
@@ -559,9 +605,6 @@
            :desc "Kill/delete item" "k" #'pb-prompt/embark-remove-context-item))))
 
 (progn :saved-contexts
-
-       (defvar pb-prompt/saved-contexts
-         (make-hash-table :test 'equal))
 
        (defun pb-prompt/save-context (name)
          "Save the current context with NAME for later retrieval.
@@ -794,9 +837,6 @@
 
 (progn :context-browser
 
-       (defvar-local pb-prompt/context-browser-focus
-           nil)
-
        (defvar pb-prompt/context-browser-mode-map
          (let ((map (make-sparse-keymap)))
            (define-key map (kbd "RET") #'pb-prompt/browse-context-item-at-point)
@@ -821,7 +861,7 @@
            (kbd "d") #'pb-prompt/delete-context-item-at-point
            (kbd "v") #'pb-prompt/view-context-item-at-point
            (kbd "r") #'pb-prompt/refresh-context-browser
-           (kbd "a f") #'pb-prompt/add-path
+           (kbd "a f") #'pb-prompt/add-path-to-focused-context
            (kbd "q") #'quit-window))
 
        (defun pb-prompt/browse-context-items (&optional name)
@@ -829,8 +869,8 @@
           If CONTEXT is nil, use `pb-prompt/context`.
           Optional NAME is used for the buffer title."
          (interactive)
-         (print (list "visit context " name))
-         (let* ((context (or (gethash name pb-prompt/saved-contexts)
+         (let* ((context (if name
+                             (gethash name pb-prompt/saved-contexts)
                              pb-prompt/context))
                 (buffer (get-buffer-create "*Context Browser*"))
                 (inhibit-read-only t))
@@ -872,10 +912,11 @@
 
              ;; Set mode and header line
              (pb-prompt/context-browser-mode)
+             (setq-local pb-prompt/context-browser-focus name)
              (setq-local header-line-format
                          "RET: browse, d: delete, v: view details, r: refresh, q: quit"))
 
-           (pop-to-buffer buffer)))
+           (switch-to-buffer buffer)))
 
        (defun pb-prompt/context-item-at-point ()
          "Get the context item at point in the browser buffer."
@@ -893,6 +934,11 @@
          (when-let ((item (pb-prompt/context-item-at-point)))
            (pb-prompt/describe-context-item item)))
 
+       (defun pb-prompt/add-path-to-focused-context ()
+         (interactive)
+         (pb-prompt/add-path)
+         (pb-prompt/refresh-context-browser))
+
        (defun pb-prompt/delete-context-item-at-point ()
          "Delete the context item at point from the current context."
          (interactive)
@@ -901,17 +947,12 @@
            (if (yes-or-no-p (format "Delete item %s? "
                                     (pb-prompt/-context-item-description item)))
                (progn
-                 ;; Remove from actual context
-                 (if pb-prompt/context-browser-focus
-                     (let ((focused-context (gethash name pb-prompt/saved-contexts)))
-                       (puthash name pb-prompt/saved-contexts
-                                (seq-remove (lambda (i)
-                                              (equal (km_get i :id) id))
-                                            focused-context)))
-                   (setq pb-prompt/context
-                         (seq-remove (lambda (i)
-                                       (equal (km_get i :id) id))
-                                     pb-prompt/context)))
+                                        ; Remove from actual context
+                 (pb-prompt/update-focused-context
+                  (lambda (ctx)
+                    (seq-remove (lambda (i)
+                                  (equal (km_get i :id) id))
+                                ctx)))
                  ;; Refresh the browser
                  (pb-prompt/refresh-context-browser)
                  (message "Item deleted"))
