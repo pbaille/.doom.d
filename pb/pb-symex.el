@@ -16,7 +16,7 @@
 
 (defun pb-symex_escape-insert-mode ()
   "Exit evil insert state and enter symex mode.
-Adjust cursor position for better navigation when exiting near word boundaries."
+   Adjust cursor position for better navigation when exiting near word boundaries."
   (interactive)
   (if (lispy--in-string-p)
       (if (or (looking-at "\"")
@@ -30,6 +30,7 @@ Adjust cursor position for better navigation when exiting near word boundaries."
         (if (and (not (looking-at "\\w"))
                  (looking-back "\\w" 1))
             (backward-char))
+        (pb-symex_select-nearest-in-line)
         (symex-mode-interface))))
 
 (defun pb-symex_click ()
