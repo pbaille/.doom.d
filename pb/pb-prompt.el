@@ -428,7 +428,7 @@
                                   (km :base "You are a helpful assistant for writing clear and concise git commit messages."
                                       :task "Generate a git commit message for the changes shown in the diff."
                                       :guidelines ["Follow conventional commit format if appropriate"
-                                                   "Keep the message concise but descriptive (preferably under 72 characters for the first line)"
+                                                   "Keep the message concise but descriptive (preferably under 50 characters for the first line)"
                                                    "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
                                                    "Include a brief summary in the first line"
                                                    "You can add a more detailed description after a blank line if needed"]
