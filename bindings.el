@@ -199,8 +199,8 @@
  (:prefix ("s-g" . "git")
           (:desc "git status" "s-g" #'magit-status)
           (:desc "diff file" "d" #'magit-diff-buffer-file)
-          (:desc "commit" "s-c" #'pb-prompt/commit)
-          (:desc "save and stage" "s" #'pb-git/stage-file))
+          (:desc "commit" "c" #'pb-prompt/commit)
+          (:desc "save, stage, commit" "s-c" (lambda () (interactive) (pb-git/stage-file) (pb-prompt/commit))))
 
  (:prefix ("s-s" . "search")
           (:desc "search file" "s-s" #'+default/search-buffer)
