@@ -184,9 +184,7 @@
    (vertico-group-title :foreground magenta)
    (vertico-group-separator :foreground magenta :strike-through t)
 
-   (symex--current-node-face :background (doom-lighten base3 0.05))
-
-;;;; elscreen
+   ;;;; elscreen
    (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
 
 
