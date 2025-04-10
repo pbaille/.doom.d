@@ -408,41 +408,11 @@
 
 (progn :commit
 
-       (defun magit-diff-as-string ()
-         "Get the current project's magit diff as a string."
-         (let ((current-buffer (current-buffer))
-               (result nil))
-           (magit-diff-staged)
-           (let ((content (with-current-buffer (magit-diff-buffer-file)
-                            (buffer-substring-no-properties (point-min) (point-max)))))
-             (quit-window)
-             content)))
+       (require 'pb-git)
+       (require 'magit)
 
-       (defun git-diff-as-string ()
-         "Get the current project's git diff as a string using git command directly."
+       (defun pb-prompt/generate-commit-message ()
          (interactive)
-         (let ((default-directory (vc-root-dir)))
-           (with-temp-buffer
-             (call-process "git" nil t nil "diff" "--staged")
-             (buffer-string))))
-
-       (defun pb-prompt/add-magit-diff ()
-         "Add the current magit diff content to the prompt context."
-         (interactive)
-         (if (not (derived-mode-p 'magit-diff-mode))
-             (user-error "Not in a magit-diff buffer")
-           (let ((diff-content (pb-prompt/get-magit-diff-content)))
-             (pb-prompt/add-item!
-              (km :type "diff"
-                  :buffer-name (buffer-name)
-                  :content diff-content))
-             (message "Added magit diff to prompt context"))))
-
-       (defun pb-prompt/create-commit-message (&optional file-only)
-         "Generate a commit message based on changes and insert it into a magit commit buffer.
-If FILE-ONLY is non-nil, restrict commit to the current file only.
-Otherwise, include all staged changes plus the current file."
-         (interactive "P")
          (if (not (buffer-file-name))
              (user-error "Current buffer is not visiting a file")
            (let* ((file-path (buffer-file-name))
@@ -452,26 +422,19 @@ Otherwise, include all staged changes plus the current file."
              (if (not default-directory)
                  (user-error "Not in a git repository")
 
-               ;; Stage the file if file-only is non-nil
-               (call-process "git" nil nil nil "add" "--" relative-path)
-
                ;; Start magit commit process
-               (require 'magit)
-               (let* ((process-buffer (magit-commit-create))
-                      (scope (if file-only
-                                 (format "file %s" relative-path)
-                               "repository changes"))
-                      (prompt (pb-prompt/mk
-                               (km :instructions
-                                   (km :base "You are a helpful assistant for writing clear and concise git commit messages."
-                                       :task (format "Generate a git commit message for the changes to %s shown in the diff." scope)
-                                       :guidelines ["Follow conventional commit format if appropriate (e.g., feat, fix, docs, etc.)"
-                                                    "Keep the message concise but descriptive (preferably under 72 characters for the first line)"
-                                                    "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
-                                                    "Include a brief summary in the first line"
-                                                    "You can add a more detailed description after a blank line if needed"]
-                                       :scope scope
-                                       :diff (git-diff-as-string))))))
+               (let ((prompt (pb-prompt/mk
+                              (km :instructions
+                                  (km :base "You are a helpful assistant for writing clear and concise git commit messages."
+                                      :task "Generate a git commit message for the changes shown in the diff."
+                                      :guidelines ["Follow conventional commit format if appropriate (e.g., feat, fix, docs, etc.)"
+                                                   "Keep the message concise but descriptive (preferably under 72 characters for the first line)"
+                                                   "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
+                                                   "Include a brief summary in the first line"
+                                                   "You can add a more detailed description after a blank line if needed"]
+                                      :diff (pb-git/diff-as-string default-directory))))))
+
+                 (or (magit-commit-message-buffer))
 
                  ;; Send the request to generate a commit message
                  (gptel-request
@@ -479,34 +442,24 @@ Otherwise, include all staged changes plus the current file."
                    :callback
                    (lambda (response _info)
                      ;; Find the magit commit message buffer
-                     (when-let ((commit-buffer (get-buffer (cl-find-if (lambda (buf)
-                                                                         (and (buffer-file-name buf)
-                                                                              (string-match-p "COMMIT_EDITMSG$" (buffer-file-name buf))))
-                                                                       (buffer-list)))))
+                     (when-let ((commit-buffer
+                                 (get-buffer
+                                  (cl-find-if (lambda (buf)
+                                                (and (buffer-file-name buf)
+                                                     (string-match-p "COMMIT_EDITMSG$" (buffer-file-name buf))))
+                                              (buffer-list)))))
                        (with-current-buffer commit-buffer
                          ;; Insert the generated message at the beginning of the buffer
                          (goto-char (point-min))
                          (insert response)
                          ;; Notify the user
-                         (message "Generated commit message inserted in magit commit buffer")))))))))
+                         (message "Generated commit message inserted in magit commit buffer"))))))))))
 
-         (defun pb-prompt/execute-commit (file commit-message)
-           "Execute git commit for FILE with COMMIT-MESSAGE."
-           (let ((default-directory (locate-dominating-file file ".git")))
-             (with-temp-buffer
-               ;; Stage the file
-               (call-process "git" nil t nil "add" "--" file)
+       (defun pb-prompt/commit ()
+         (interactive)
+         (magit-commit-create)
+         (pb-prompt/generate-commit-message)))
 
-               ;; Create commit with message
-               (let ((exit-code
-                      (call-process "git" nil t nil
-                                    "commit" "-m" commit-message)))
-
-                 (if (= exit-code 0)
-                     (progn
-                       (kill-buffer "*Commit Message*")
-                       (message "Changes committed successfully"))
-                   (message "Commit failed: %s" (buffer-string))))))))
 
 (progn :consult-context
 
