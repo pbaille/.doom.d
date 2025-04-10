@@ -32,10 +32,6 @@
         (evil-normal-state))
     (progn
       (evil-normal-state)
-      (forward-char)
-      (if (and (not (looking-at "\\w"))
-               (looking-back "\\w" 1))
-          (backward-char))
       (pb-symex_select-nearest-in-line)
       (symex-mode-interface))))
 
