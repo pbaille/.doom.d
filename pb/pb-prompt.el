@@ -406,6 +406,94 @@
            :system (pb-prompt/context-prompt)
            :callback #'pb-gptel/current-symex-request-handler)))
 
+(progn :commit
+
+       (defun pb-prompt/create-commit-message ()
+         "Generate a commit message for the current file based on changes since last commit."
+         (interactive)
+         (if (not (buffer-file-name))
+             (user-error "Current buffer is not visiting a file")
+           (let* ((file-path (buffer-file-name))
+                  (default-directory (locate-dominating-file file-path ".git"))
+                  (relative-path (file-relative-name file-path default-directory)))
+
+             (if (not default-directory)
+                 (user-error "Not in a git repository")
+
+               ;; Get the diff for the current file
+               (let ((diff-output
+                      (with-temp-buffer
+                        (call-process "git" nil t nil "diff" "--" relative-path)
+                        (buffer-string))))
+
+                 (if (string-empty-p diff-output)
+                     (user-error "No changes detected in file since last commit")
+
+                   ;; Create a prompt with the file context and the diff
+                   (let ((prompt (pb-prompt/mk
+                                  (km :instructions
+                                      (km :base "You are a helpful assistant for writing clear and concise git commit messages."
+                                          :task "Generate a git commit message for the changes shown in the diff."
+                                          :guidelines ["Follow conventional commit format if appropriate (e.g., feat, fix, docs, etc.)"
+                                                       "Keep the message concise but descriptive (preferably under 72 characters for the first line)"
+                                                       "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
+                                                       "Include a brief summary in the first line"
+                                                       "You can add a more detailed description after a blank line if needed"]
+                                          :file relative-path
+                                          :diff diff-output)))))
+
+                     ;; Send the request to generate a commit message
+                     (gptel-request
+                         prompt
+                       :callback
+                       (lambda (response _info)
+                         ;; Create a buffer to show and edit the commit message
+                         (let ((buffer (get-buffer-create "*Commit Message*")))
+                           (with-current-buffer buffer
+                             (erase-buffer)
+                             (insert response)
+                             (goto-char (point-min))
+                             ;; Set up the buffer for editing
+                             (text-mode)
+                             (setq-local header-line-format
+                                         (propertize
+                                          "Edit if needed, then use C-c C-c to commit or C-c C-k to cancel"
+                                          'face 'header-line))
+
+                             ;; Set up local keybindings for the commit buffer
+                             (let ((map (make-sparse-keymap)))
+                               (define-key map (kbd "C-c C-c")
+                                           (lambda ()
+                                             (interactive)
+                                             (pb-prompt/execute-commit relative-path (buffer-string))))
+                               (define-key map (kbd "C-c C-k")
+                                           (lambda ()
+                                             (interactive)
+                                             (kill-buffer)
+                                             (message "Commit canceled")))
+                               (use-local-map (make-composed-keymap map (current-local-map)))))
+
+                           ;; Display the buffer
+                           (switch-to-buffer buffer)))))))))))
+
+       (defun pb-prompt/execute-commit (file commit-message)
+         "Execute git commit for FILE with COMMIT-MESSAGE."
+         (let ((default-directory (locate-dominating-file file ".git")))
+           (with-temp-buffer
+             ;; Stage the file
+             (call-process "git" nil t nil "add" "--" file)
+
+             ;; Create commit with message
+             (let ((exit-code
+                    (call-process "git" nil t nil
+                                  "commit" "-m" commit-message)))
+
+               (if (= exit-code 0)
+                   (progn
+                     (kill-buffer "*Commit Message*")
+                     (message "Changes committed successfully"))
+                 (message "Commit failed: %s" (buffer-string))))))))
+
 (progn :consult-context
 
        (defun pb-prompt/-format-relative-path (path)
@@ -1137,114 +1225,21 @@
 
 
 
-(progn :commit
+       (pb_comment
+        :interactive-request
 
-       (defun pb-prompt/create-commit-message ()
-         "Generate a commit message for the current file based on changes since last commit."
-         (interactive)
-         (if (not (buffer-file-name))
-             (user-error "Current buffer is not visiting a file")
-           (let* ((file-path (buffer-file-name))
-                  (default-directory (locate-dominating-file file-path ".git"))
-                  (relative-path (file-relative-name file-path default-directory)))
-
-             (if (not default-directory)
-                 (user-error "Not in a git repository")
-
-               ;; Get the diff for the current file
-               (let ((diff-output
-                      (with-temp-buffer
-                        (call-process "git" nil t nil "diff" "--" relative-path)
-                        (buffer-string))))
-
-                 (if (string-empty-p diff-output)
-                     (user-error "No changes detected in file since last commit")
-
-                   ;; Create a prompt with the file context and the diff
-                   (let ((prompt (pb-prompt/mk
-                                  (km :instructions
-                                      (km :base "You are a helpful assistant for writing clear and concise git commit messages."
-                                          :task "Generate a git commit message for the changes shown in the diff."
-                                          :guidelines ["Follow conventional commit format if appropriate (e.g., feat, fix, docs, etc.)"
-                                                       "Keep the message concise but descriptive (preferably under 72 characters for the first line)"
-                                                       "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
-                                                       "Include a brief summary in the first line"
-                                                       "You can add a more detailed description after a blank line if needed"]
-                                          :file relative-path
-                                          :diff diff-output)))))
-
-                     ;; Send the request to generate a commit message
-                     (gptel-request
-                         prompt
-                       :callback
-                       (lambda (response _info)
-                         ;; Create a buffer to show and edit the commit message
-                         (let ((buffer (get-buffer-create "*Commit Message*")))
-                           (with-current-buffer buffer
-                             (erase-buffer)
-                             (insert response)
-                             (goto-char (point-min))
-                             ;; Set up the buffer for editing
-                             (text-mode)
-                             (setq-local header-line-format
-                                         (propertize
-                                          "Edit if needed, then use C-c C-c to commit or C-c C-k to cancel"
-                                          'face 'header-line))
-
-                             ;; Set up local keybindings for the commit buffer
-                             (let ((map (make-sparse-keymap)))
-                               (define-key map (kbd "C-c C-c")
-                                           (lambda ()
-                                             (interactive)
-                                             (pb-prompt/execute-commit relative-path (buffer-string))))
-                               (define-key map (kbd "C-c C-k")
-                                           (lambda ()
-                                             (interactive)
-                                             (kill-buffer)
-                                             (message "Commit canceled")))
-                               (use-local-map (make-composed-keymap map (current-local-map)))))
-
-                           ;; Display the buffer
-                           (switch-to-buffer buffer)))))))))))
-
-       (defun pb-prompt/execute-commit (file commit-message)
-         "Execute git commit for FILE with COMMIT-MESSAGE."
-         (let ((default-directory (locate-dominating-file file ".git")))
-           (with-temp-buffer
-             ;; Stage the file
-             (call-process "git" nil t nil "add" "--" file)
-
-             ;; Create commit with message
-             (let ((exit-code
-                    (call-process "git" nil t nil
-                                  "commit" "-m" commit-message)))
-
-               (if (= exit-code 0)
-                   (progn
-                     (kill-buffer "*Commit Message*")
-                     (message "Changes committed successfully"))
-                 (message "Commit failed: %s" (buffer-string))))))))
-
-
-
-
-
-
-(pb_comment
- :interactive-request
-
- (defun pb-gptel/simple-select-paths (prompt m)
+        (defun pb-gptel/simple-select-paths (prompt m)
    (interactive)
    (let* ((path-strs (mapcar (lambda (p)
-                               (intern (mapconcat #'pb_keyword-name (car p) ".")))
+         (intern (mapconcat #'pb_keyword-name (car p) ".")))
                              (km_all-paths m))))
      (mapcar (lambda (k)
-               (mapcar #'intern
+         (mapcar #'intern
                        (mapcar (lambda (s) (concat ":" s))
                                (split-string k "\\."))))
              (completing-read-multiple prompt path-strs))))
 
- (defun pb-gptel/select-paths (prompt m)
+        (defun pb-gptel/select-paths (prompt m)
    "Select paths from a map M using PROMPT with aligned annotations.
 Provides completion with vertically aligned hints showing each path's content."
    (interactive)
@@ -1264,10 +1259,10 @@ Provides completion with vertically aligned hints showing each path's content."
           (completion-extra-properties
            (km :affixation-function
                (lambda (candidates)
-                 (let ((max-len (apply #'max (mapcar #'length candidates))))
+         (let ((max-len (apply #'max (mapcar #'length candidates))))
                    (mapcar (lambda (cand)
-                             ;; (print cand)
-                             (let ((content (km_get flatten-tree (intern cand)))
+         ;; (print cand)
+         (let ((content (km_get flatten-tree (intern cand)))
                                    (segments (split-string cand "\\." t)))
                                (list (concat (propertize (mapconcat #'identity
                                                                     (sq_butlast segments)
@@ -1282,16 +1277,16 @@ Provides completion with vertically aligned hints showing each path's content."
                            candidates)))))
           (crm-separator "[ 	]* [ 	]*"))
      (mapcar (lambda (k)
-               (mapcar #'pb_keyword
+         (mapcar #'pb_keyword
                        (split-string (substring k 1) "\\.")))
              (completing-read-multiple prompt (km_keys flatten-tree)))))
 
- (defun pb-gptel/sub-request-tree ()
+        (defun pb-gptel/sub-request-tree ()
    (interactive)
    (let* ((selected-paths (pb-gptel/select-paths "Select request-tree paths: " pb-gptel/request-tree)))
      (km_select-paths* pb-gptel/request-tree selected-paths)))
 
- (defun pb-gptel/interactive-request ()
+        (defun pb-gptel/interactive-request ()
    (interactive)
    (let* ((req (pb-gptel/sub-request-tree))
           (action (read-char-choice
@@ -1301,7 +1296,7 @@ Provides completion with vertically aligned hints showing each path's content."
       req
       (km :callback
           (lambda (res info)
-            (cond
+         (cond
              ((eq action ?i)
               ;; Insert at point
               (insert res))
