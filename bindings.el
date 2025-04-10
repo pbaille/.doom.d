@@ -198,7 +198,8 @@
 
  (:prefix ("s-g" . "git")
           (:desc "git status" "s-g" #'magit-status)
-          (:desc "diff file" "d" #'magit-diff-buffer-file))
+          (:desc "diff file" "d" #'magit-diff-buffer-file)
+          (:desc "commit" "c" #'pb-prompt/create-commit-message))
 
  (:prefix ("s-s" . "search")
           (:desc "search file" "s-s" #'+default/search-buffer)
