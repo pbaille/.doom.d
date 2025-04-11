@@ -444,12 +444,12 @@
        (defun pb-prompt/commit ()
          (interactive)
          (magit-commit-create)
-         (pb-prompt/generate-commit-message))
+         (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
 
        (defun pb-prompt/commit-amend ()
          (interactive)
          (magit-commit-amend)
-         (pb-prompt/generate-commit-message))
+         (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
 
        (defun pb-prompt/diff-branch ()
          "Let the user pick a branch and open magit diff range. Use the diff buffer content to start a chat.
