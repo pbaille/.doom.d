@@ -47,6 +47,12 @@
         (call-process "git" nil t nil "diff" "--staged" relative-path)
         (buffer-string)))))
 
+(defun pb-git/magit-commit-buffer ()
+  (cl-find-if (lambda (buf)
+                (and (buffer-file-name buf)
+                     (string-match-p "COMMIT_EDITMSG$" (buffer-file-name buf))))
+              (buffer-list)))
+
 (provide 'pb-git)
 
 ;;; pb-git.el ends here.

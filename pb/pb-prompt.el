@@ -438,12 +438,7 @@
                    :callback
                    (lambda (response _info)
                      ;; Find the magit commit message buffer
-                     (when-let ((commit-buffer
-                                 (get-buffer
-                                  (cl-find-if (lambda (buf)
-                                                (and (buffer-file-name buf)
-                                                     (string-match-p "COMMIT_EDITMSG$" (buffer-file-name buf))))
-                                              (buffer-list)))))
+                     (when-let ((commit-buffer (pb-git/magit-commit-buffer)))
                        (with-current-buffer commit-buffer
                          ;; Insert the generated message at the beginning of the buffer
                          (goto-char (point-min))
@@ -454,6 +449,11 @@
        (defun pb-prompt/commit ()
          (interactive)
          (magit-commit-create)
+         (pb-prompt/generate-commit-message))
+
+       (defun pb-prompt/commit-amend ()
+         (interactive)
+         (magit-commit-amend)
          (pb-prompt/generate-commit-message))
 
        (defun pb-prompt/diff-branch ()
