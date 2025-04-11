@@ -435,8 +435,7 @@
                  (with-current-buffer commit-buffer
                    ;; Insert the generated message at the beginning of the buffer
                    (goto-char (point-min))
-                   (when-let ((first-comment (save-excursion
-                                          (re-search-forward "^#" nil t))))
+                   (when (save-excursion (re-search-forward "^#" nil t))
                      (delete-region (point-min) (1- (match-beginning 0))))
                    (insert response)
                    ;; Notify the user
