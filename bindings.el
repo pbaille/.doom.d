@@ -223,7 +223,10 @@
                    (:desc "diff file" "f" #'magit-diff-buffer-file)
                    (:desc "diff root" "s" #'magit-diff-staged)
                    (:desc "diff root" "b" #'pb-prompt/diff-branch))
-          (:desc "commit" "c" #'pb-prompt/commit)
+          (:prefix ("c" . "commit")
+                   (:desc "commit" "c" #'pb-prompt/commit)
+                   (:desc "amend" "a" #'pb-prompt/commit-amend))
+          (:desc "save & stage" "s" #'pb-git/stage-file)
           (:desc "save, stage, commit" "s-s" (lambda () (interactive) (pb-git/stage-file) (pb-prompt/commit))))
 
  (:prefix ("s-s" . "search")
@@ -288,7 +291,8 @@
              :n "g b" #'pb-ibuffer_sidebar-focus)
 
        (map! :n "g j" #'evil-scroll-line-to-top
-             :n "g k" #'evil-scroll-line-to-bottom))
+             :n "g k" #'evil-scroll-line-to-bottom
+             :n "g C-h" #'pb-misc/scroll-to-leftmost))
 
 (map! :leader
 
