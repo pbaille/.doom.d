@@ -434,8 +434,6 @@
                                                    "You can add a more detailed description after a blank line if needed"]
                                       :diff (pb-git/diff-as-string default-directory))))))
 
-                 (or (magit-commit-message-buffer))
-
                  ;; Send the request to generate a commit message
                  (gptel-request
                      prompt
