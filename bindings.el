@@ -219,8 +219,10 @@
 
  (:prefix ("s-g" . "git")
           (:desc "git status" "s-g" #'magit-status)
-          (:desc "diff file" "d" #'magit-diff-buffer-file)
-          (:desc "diff root" "s-d" #'magit-diff-staged)
+          (:prefix ("d" . "diff")
+                   (:desc "diff file" "f" #'magit-diff-buffer-file)
+                   (:desc "diff root" "s" #'magit-diff-staged)
+                   (:desc "diff root" "b" #'pb-prompt/diff-branch))
           (:desc "commit" "c" #'pb-prompt/commit)
           (:desc "save, stage, commit" "s-s" (lambda () (interactive) (pb-git/stage-file) (pb-prompt/commit))))
 
