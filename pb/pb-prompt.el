@@ -1192,23 +1192,23 @@
 
 
 
-       (pb_comment
-        :interactive-request
+(pb_comment
+ :interactive-request
 
-        (defun pb-gptel/simple-select-paths (prompt m)
+ (defun pb-gptel/simple-select-paths (prompt m)
    (interactive)
    (let* ((path-strs (mapcar (lambda (p)
-         (intern (mapconcat #'pb_keyword-name (car p) ".")))
+                               (intern (mapconcat #'pb_keyword-name (car p) ".")))
                              (km_all-paths m))))
      (mapcar (lambda (k)
-         (mapcar #'intern
+               (mapcar #'intern
                        (mapcar (lambda (s) (concat ":" s))
                                (split-string k "\\."))))
              (completing-read-multiple prompt path-strs))))
 
-        (defun pb-gptel/select-paths (prompt m)
+ (defun pb-gptel/select-paths (prompt m)
    "Select paths from a map M using PROMPT with aligned annotations.
-Provides completion with vertically aligned hints showing each path's content."
+       Provides completion with vertically aligned hints showing each path's content."
    (interactive)
    (let* ((flatten-tree
            (seq-reduce (pb_fn [m (cons path content)]
@@ -1226,10 +1226,10 @@ Provides completion with vertically aligned hints showing each path's content."
           (completion-extra-properties
            (km :affixation-function
                (lambda (candidates)
-         (let ((max-len (apply #'max (mapcar #'length candidates))))
+                 (let ((max-len (apply #'max (mapcar #'length candidates))))
                    (mapcar (lambda (cand)
-         ;; (print cand)
-         (let ((content (km_get flatten-tree (intern cand)))
+                             ;; (print cand)
+                             (let ((content (km_get flatten-tree (intern cand)))
                                    (segments (split-string cand "\\." t)))
                                (list (concat (propertize (mapconcat #'identity
                                                                     (sq_butlast segments)
@@ -1244,16 +1244,16 @@ Provides completion with vertically aligned hints showing each path's content."
                            candidates)))))
           (crm-separator "[ 	]* [ 	]*"))
      (mapcar (lambda (k)
-         (mapcar #'pb_keyword
+               (mapcar #'pb_keyword
                        (split-string (substring k 1) "\\.")))
              (completing-read-multiple prompt (km_keys flatten-tree)))))
 
-        (defun pb-gptel/sub-request-tree ()
+ (defun pb-gptel/sub-request-tree ()
    (interactive)
    (let* ((selected-paths (pb-gptel/select-paths "Select request-tree paths: " pb-gptel/request-tree)))
      (km_select-paths* pb-gptel/request-tree selected-paths)))
 
-        (defun pb-gptel/interactive-request ()
+ (defun pb-gptel/interactive-request ()
    (interactive)
    (let* ((req (pb-gptel/sub-request-tree))
           (action (read-char-choice
@@ -1263,7 +1263,7 @@ Provides completion with vertically aligned hints showing each path's content."
       req
       (km :callback
           (lambda (res info)
-         (cond
+            (cond
              ((eq action ?i)
               ;; Insert at point
               (insert res))
