@@ -1186,9 +1186,9 @@
   (file-exists-p "/Users/pierrebaille/.doom.d/pb/archived/reaper.el"))
 
  (pb_comment
-  (pb-tree_get-path-values pb-prompt/tree [:code :lisp :context])
+  (pb-tree_get-path-values pb-prompt/tree [:code :lisp :context]))
 
-  ]
+]
 
 
 
