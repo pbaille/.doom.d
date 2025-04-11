@@ -182,7 +182,6 @@
   ;; remove some buffers from ibuffer list
   (setq ibuffer-never-show-predicates
         '("^:~/.*" ;; dired sidebar
-          "^magit"
           (lambda (x) (with-current-buffer x (eq 'dired-mode major-mode)))))
 
   ;; try to collapse default group by default
