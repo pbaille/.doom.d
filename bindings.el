@@ -154,36 +154,52 @@
 
  (:prefix ("s-q" . "LLMs")
 
+          ;; gptel
+
           (:desc "gptel: goto chat"
                  "s-q" #'gptel)
+
           (:desc "gptel: menu"
                  "m" #'gptel-menu)
+
           (:desc "gptel: add file to context"
                  "f" #'gptel-context-add-file)
+
           (:desc "gptel: remove all context"
                  "D" #'gptel-context-remove-all)
+
           (:desc "gptel: remove files from context"
                  "d" #'pb-gptel/remove-context-files)
+
           (:prefix ("t" . "gptel: tools")
                    (:desc "enable" "e" (lambda () (interactive) (setq-local gptel-use-tools t)))
                    (:desc "disable" "d" (lambda () (interactive) (setq-local gptel-use-tools nil))))
 
+          ;; chat
+
           (:desc "chat: current expression"
                  "e" #'pb-gptel/current-symex-chat)
+
           (:desc "chat: current buffer"
                  "b" #'pb-gptel/current-buffer-chat)
+
           (:desc "chat: directory"
                  "s-d" #'pb-gptel/directory-chat)
 
+          ;; pb-prompt
+
           (:desc "prompt: consult-context"
                  "s-c" #'pb-prompt/browse-context-item)
+
           (:desc "prompt: simple request"
                  "r" #'pb-prompt/simple-request)
 
           (:desc "prompt: consult saved contexts"
                  "s-i" #'pb-prompt/list-saved-contexts)
+
           (:desc "prompt: browse current context"
                  "i" #'pb-prompt/browse-current-context)
+
           (:prefix ("c" . "prompt: context")
                    (:prefix ("a" . "add")
                             (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
@@ -194,13 +210,18 @@
                    (:desc "delete item" "d" #'pb-prompt/remove-context-item)
 
                    (:desc "save" "s" #'pb-prompt/save-context)
-                   (:desc "load" "l" #'pb-prompt/load-context)))
+                   (:desc "load" "l" #'pb-prompt/load-context))
+
+          ;; git
+          (:prefix ("g" . "git:")
+                   (:desc "generate commit message" "m" #'pb-prompt/generate-commit-message))
+          )
 
  (:prefix ("s-g" . "git")
           (:desc "git status" "s-g" #'magit-status)
           (:desc "diff file" "d" #'magit-diff-buffer-file)
           (:desc "commit" "c" #'pb-prompt/commit)
-          (:desc "save, stage, commit" "s-c" (lambda () (interactive) (pb-git/stage-file) (pb-prompt/commit))))
+          (:desc "save, stage, commit" "s-s" (lambda () (interactive) (pb-git/stage-file) (pb-prompt/commit))))
 
  (:prefix ("s-s" . "search")
           (:desc "search file" "s-s" #'+default/search-buffer)
