@@ -411,7 +411,7 @@
        (require 'pb-git)
        (require 'magit)
 
-       (defun pb-prompt/generate-commit-message ()
+       (defun pb-prompt/generate-commit-message_old ()
          (interactive)
          (if (not (buffer-file-name))
              (user-error "Current buffer is not visiting a file")
@@ -445,6 +445,37 @@
                          (insert response)
                          ;; Notify the user
                          (message "Generated commit message inserted in magit commit buffer"))))))))))
+
+       (defun pb-prompt/generate-commit-message ()
+         (interactive)
+         (let ((prompt (pb-prompt/mk
+                        (km :instructions
+                            (km :base "You are writing clear and concise git commit messages."
+                                :task "Generate a git commit message for the changes shown in the diff."
+                                :guidelines ["Include a brief summary in the first line (preferably under 50 characters)"
+                                             "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
+                                             "You can add a more detailed description after a blank line if needed"]
+                                :diff (let ((diff-buffer (magit-diff-buffer-file)))
+                                        (if diff-buffer
+                                            (with-current-buffer diff-buffer
+                                              (buffer-substring-no-properties (point-min) (point-max)))
+                                          (with-temp-buffer
+                                            (magit-git-insert "diff" "--no-ext-diff")
+                                            (buffer-string)))))))))
+
+           ;; Send the request to generate a commit message
+           (gptel-request
+               prompt
+             :callback
+             (lambda (response _info)
+               ;; Find the magit commit message buffer
+               (when-let ((commit-buffer (pb-git/magit-commit-buffer)))
+                 (with-current-buffer commit-buffer
+                   ;; Insert the generated message at the beginning of the buffer
+                   (goto-char (point-min))
+                   (insert response)
+                   ;; Notify the user
+                   (message "Generated commit message inserted in magit commit buffer")))))))
 
        (defun pb-prompt/commit ()
          (interactive)
