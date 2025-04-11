@@ -98,6 +98,11 @@
               (doom-modeline-mode 1))
             10000000))
 
+(use-package magit
+  :config
+  (setq git-commit-style-convention-checks
+        (remove 'overlong-summary-line git-commit-style-convention-checks)))
+
 
 (use-package consult
   :config
