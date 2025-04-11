@@ -412,6 +412,9 @@
        (require 'magit)
 
        (defun pb-prompt/generate-commit-message ()
+         "Generate a commit message using GPT from the current magit diff.
+          Uses the magit diff buffer to create a prompt with guidelines for commit message
+          format, then inserts the response into the commit message buffer."
          (interactive)
          (let ((prompt (pb-prompt/mk
                         (km :instructions
@@ -442,18 +445,25 @@
                    (message "Generated commit message inserted in magit commit buffer")))))))
 
        (defun pb-prompt/commit ()
+         "Create a new commit with an AI-generated commit message.
+          Starts the commit process and uses a timer to generate the message after
+          the commit buffer is created."
          (interactive)
          (magit-commit-create)
          (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
 
        (defun pb-prompt/commit-amend ()
+         "Amend the current commit with an AI-generated commit message.
+          Opens the amend commit buffer and uses a timer to generate a new
+          commit message based on the updated diff."
          (interactive)
          (magit-commit-amend)
          (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
 
        (defun pb-prompt/diff-branch ()
-         "Let the user pick a branch and open magit diff range. Use the diff buffer content to start a chat.
-          This function allows comparing the current branch with another branch and discussing the changes with GPT."
+         "Compare current branch with another and discuss changes with GPT.
+          Prompts for a branch to compare against, creates a diff, and opens a chat
+          buffer with the diff content to analyze changes using GPT."
          (interactive)
          (with-temp-buffer
            (let* ((current-branch (magit-get-current-branch))
