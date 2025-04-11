@@ -228,7 +228,8 @@
 
 (use-package yasnippet
   :config
-  (setq yas-global-mode nil))
+  (setq yas-global-mode nil)
+  (add-hook 'emacs-lisp-mode-hook (lambda () (yas-minor-mode -1))))
 
 (use-package gptel
   :config
