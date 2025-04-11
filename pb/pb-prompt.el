@@ -454,7 +454,66 @@
        (defun pb-prompt/commit ()
          (interactive)
          (magit-commit-create)
-         (pb-prompt/generate-commit-message)))
+         (pb-prompt/generate-commit-message))
+
+       (defun pb-prompt/diff-branch ()
+         "Let the user pick a branch and open magit diff range. Use the diff buffer content to start a chat.
+          This function allows comparing the current branch with another branch and discussing the changes with GPT."
+         (interactive)
+         (with-temp-buffer
+           (let* ((current-branch (magit-get-current-branch))
+                  (branches (magit-list-branch-names))
+                  (selected-branch (completing-read
+                                    (format "Compare %s with branch: " current-branch)
+                                    (seq-remove (lambda (branch) (string= branch current-branch))
+                                                branches)
+                                    nil t))
+                  (chat-buffer-name (format "CHAT_DIFF_%s_%s" current-branch selected-branch))
+                  (diff-buffer (magit-diff-range selected-branch))
+                  (diff-output (with-current-buffer diff-buffer
+                                 (buffer-string))))
+             ;; Now create a chat buffer with the diff content
+             (with-current-buffer (get-buffer-create chat-buffer-name)
+               (org-mode)
+               (erase-buffer)
+               (gptel-mode)
+               (setq-local gptel--system-message
+                           (pb-prompt/mk
+                            (km :context
+                                (km :diff-content
+                                    (km :current-branch current-branch
+                                        :compared-branch selected-branch
+                                        :diff diff-output))
+                                :instructions
+                                (km :base "You are a helpful code assistant analyzing git diffs."
+                                    :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
+                                                      "All org headings are level 3, 4, 5 ..."
+                                                      "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
+                                    :task "Analyze this git diff and provide a summary of the changes.")))
+                           gptel-use-tools nil
+                           gptel-max-tokens 64000)
+
+               (evil-normal-state)
+               (symex-mode -1)
+
+               ;; Add key bindings similar to other chat buffers
+               (evil-define-key nil 'local (kbd "s-q <return>")
+                 (lambda () (interactive)
+                   (call-interactively #'gptel-send)
+                   (evil-insert-newline-below)
+                   (goto-char (point-max))))
+
+               ;; Insert the header content
+               (insert (format "* Diff: %s..%s\n\n" current-branch selected-branch))
+               (insert "** Analyze this diff between branches\n\n")
+
+               ;; Position for GPT response
+               (goto-char (point-max))
+
+               ;; Switch to the buffer and start in insert mode
+               (switch-to-buffer (current-buffer))
+               (evil-insert-state)
+               (gptel-send))))))
 
 
 (progn :consult-context
