@@ -250,6 +250,20 @@
                                    (push overlay pb-lisp/overlays))))
                              (forward-line 1))))))))
 
+(pb_comment
+ :fringe
+
+ (defun pb-lisp/set-local-fringe-face (background)
+   (face-remap-add-relative 'fringe :background background)
+   (flycheck-refresh-fringes-and-margins))
+
+ (defun pb-lisp/reset-local-fringe-face ()
+   (face-remap-add-relative 'fringe :background (face-attribute 'default :background))
+   (flycheck-refresh-fringes-and-margins))
+
+ (pb-lisp/reset-local-fringe-face)
+ (pb-lisp/set-local-fringe-face "#3b3042"))
+
 (progn :current-node
 
        (defun pb-lisp/get-topmost-node (node)
