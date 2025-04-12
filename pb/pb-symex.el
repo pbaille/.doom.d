@@ -278,6 +278,10 @@
 (defun pb-symex_lookup-definition ()
   "Find definition of symbol at point, using appropriate backend."
   (interactive)
+  (when (looking-at "\\W")
+    (skip-syntax-forward "^w")
+    (when (not (looking-at "\\w"))
+      (evil-forward-word-begin)))
   (if (or (eq 'clojure-mode major-mode)
           (eq 'clojurec-mode major-mode)
           (eq 'clojurescript-mode major-mode))
@@ -289,6 +293,10 @@
 (defun pb-symex_lookup-references ()
   "Find references to symbol at point, using appropriate backend."
   (interactive)
+  (when (looking-at "\\W")
+    (skip-syntax-forward "^w")
+    (when (not (looking-at "\\w"))
+      (evil-forward-word-begin)))
   (if (or (eq 'clojure-mode major-mode)
           (eq 'clojurec-mode major-mode)
           (eq 'clojurescript-mode major-mode))
