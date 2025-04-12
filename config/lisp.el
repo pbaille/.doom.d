@@ -190,7 +190,8 @@
           ("E" . symex-eval-print)
           ("C-e" . symex-evaluate-pretty)
           ("M-l" . symex-run)
-          (";" . pb-symex_toggle-comment)))
+          (";" . pb-symex_toggle-comment)
+          ("<return>" . (lambda () (interactive) (evil-normal-state 1) (symex-mode-interface) (message "already in symex")))))
 
   (symex-initialize)
 
@@ -225,11 +226,6 @@
    [mouse-3] (lambda (event) (interactive "e") (posn-set-point (event-end event)) (evil-insert-state))
    ;; "C-w" (lambda () (interactive) (evil-insert 1) (pb-misc_insert-open-paren))
    "RET" #'pb-symex_enter)
-
-  (general-define-key
-   :states 'normal
-   :keymaps '(clojure-mode-map)
-   "g :" #'re-frame-jump-to-reg)
 
   (defface doom-modeline-evil-symex-state
     '((t (:inherit doom-modeline-info)))
