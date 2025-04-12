@@ -36,8 +36,7 @@
       (symex-mode-interface))))
 
 (defun pb-symex_click ()
-  "Focus the clicked symex if possible.
-   If inside string or comment, toggle insert state."
+  "Sets cursor to normal state and moves back one character."
   (interactive)
   '(if (lispy--in-string-or-comment-p)
        (evil-insert-state)
