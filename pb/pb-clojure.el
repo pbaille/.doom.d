@@ -48,8 +48,8 @@ Useful for debugging and improving Clojure code by letting the language model
 see both the code and its runtime behavior at once."
   (interactive)
   (pb-gptel/current-symex-request
-   (concat "current expression evaluates to:\n"
-           (pb-clojure_eval-string (pb-symex_current-as-string))
-           "\nFix it if needed.")))
+   (km :prompt (concat "current expression evaluates to:\n"
+                       (pb-clojure_eval-string (pb-symex_current-as-string))
+                       "\nFix it if needed."))))
 
 (provide 'pb-clojure)
