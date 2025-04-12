@@ -148,11 +148,30 @@
                       (length files)
                       (mapconcat #'identity files ", "))))))
 
+(defvar pb-gptel/overlay-color (doom-darken "#232530" 0.4)
+  "Color used to highlight the current s-expression when being edited by GPT.
+This is a darkened version of the default theme background.")
+
 (defun pb-gptel/current-symex-request-handler (res info)
   "Replace current symbolic expression with GPT model response.
-   RES is the response text from the language model.
-   INFO is the information plist provided by gptel containing request metadata.
-   Performs proper navigation and cleanup after replacement."
+   This function handles the response from a GPT model request and replaces
+   the current symbolic expression with that response.
+
+   The function performs the following steps:
+   1. Enter change mode for the current symbolic expression
+   2. Insert the model's response text in place of the original content
+   3. Restore the symbolic expression navigation interface
+   4. Tidy up the edited expression (proper formatting, indentation, etc.)
+
+   Parameters:
+   - RES: The response text from the language model
+   - INFO: A plist containing metadata about the request (provided by gptel)
+
+   This function is used as the default callback for pb-gptel/current-symex-request."
+  (set-face-attribute
+   'symex--current-node-face nil
+   :inherit nil
+   :background (doom-lighten "#232530" 0.03))
   (symex-change 1)
   (insert res)
   (symex-mode-interface)
@@ -163,10 +182,10 @@
 
    OPTIONS is a plist or keyword map that may contain:
    - `prompt`: A string with instructions for the language model (prompted
-  for interactively if not provided)
+     for interactively if not provided)
    - `callback`: A function to handle the response (defaults to
-  `pb-gptel/replace-current-symex-request-handler` which replaces
-  the current expression)
+     `pb-gptel/replace-current-symex-request-handler` which replaces
+     the current expression)
 
    This function creates a structured request with the current buffer context,
    the specified prompt, and the current symbolic expression, then sends it
@@ -175,6 +194,10 @@
    When called interactively, prompts for instructions to guide the modification."
   (interactive)
   (pb_let [(km_keys prompt callback) options]
+    (set-face-attribute
+     'symex--current-node-face nil
+     :inherit nil
+     :background pb-gptel/overlay-color)
     (pb-gptel/request
 
      (km :context
@@ -196,16 +219,17 @@
 
      (km :callback
          (or callback
-             #'pb-gptel/current-symex-request-handler)))))
+             #'pb-gptel/current-symex-request-handler)))
+    (message "Querying...")))
 
 (defun pb-gptel/current-buffer-request (&optional options)
   "Request a language model to rewrite the current buffer contents.
 
    OPTIONS is a plist or keyword map that may contain:
    - `prompt`: A string with instructions for the language model (prompted
-  for interactively if not provided)
+     for interactively if not provided)
    - `callback`: A function to handle the response (defaults to a
-  function that replaces the entire buffer content)
+     function that replaces the entire buffer content)
 
    This function creates a structured request with the current buffer context,
    the specified prompt, and sends it to the language model using
