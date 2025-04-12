@@ -103,7 +103,7 @@
  (:prefix ("s-j" . "buffers")
 
           (:desc "project buffer"
-                 "j" #'+vertico/switch-workspace-buffer)
+                 "j" #'project-switch-to-buffer)
 
           (:desc "consult buffer"
                  "s-j" #'consult-buffer)
