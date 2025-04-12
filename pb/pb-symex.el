@@ -38,13 +38,12 @@
 (defun pb-symex_click ()
   "Set cursor to normal state and move back one character."
   (interactive)
-  '(if (lispy--in-string-or-comment-p)
-       (evil-insert-state)
-     (progn (evil-normal-state)
-            (backward-char)
-            (symex-mode-interface)))
   (evil-normal-state)
-  (backward-char))
+  (backward-char)
+  (when (eq (point)
+            (save-excursion (pb-symex_select-nearest-in-line)
+                            (point)))
+     (symex-mode-interface)))
 
 (defun pb-symex_mark ()
   "Activate mark at current position, then enter symex mode."
