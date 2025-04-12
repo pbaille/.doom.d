@@ -399,7 +399,8 @@
              (pb-prompt/mk (km :instructions
                                (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
                                    :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
-                                                     "Don't use markdown code block syntax or any non-valid code in your output."]
+                                                     "Don't use markdown code block syntax or any non-valid code in your output."
+                                                     "If you have to write prose, use appropriate comment syntax."]
                                    :selection (pb-prompt/current-selection)
                                    :task (read-string "Edit current expression: "))))
 
