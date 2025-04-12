@@ -29,11 +29,11 @@
        (setq evil-pb-lisp-state-cursor
              `(box "magenta"))
 
+       (defvar pb-lisp/overlay-background-color "#3b3042")
+
        (defvar pb-lisp/modes
          '(org-mode clojure-mode clojurescript-mode clojurec-mode
            emacs-lisp-mode fennel-mode sheme-mode racket-mode))
-
-       (defvar-local pb-lisp/current-node nil)
 
        (defvar pb-lisp/major-mode->treesit-lang
          '((emacs-lisp-mode . elisp)
@@ -62,7 +62,6 @@
        (defun pb-lisp/exit-mode ()
          "Run on exiting sorg mode."
          (print "exit pb-lisp")
-         (setq-local pb-lisp/current-node nil)
          (pb-lisp/delete-overlay)
          (hl-line-mode 1)
          (pb-lisp/reset-local-fringe-face)))
@@ -73,17 +72,14 @@
        (setq-local pb-lisp/selection-size 1)
 
        (defun pb-lisp/extend-selection ()
-         (pb-lisp/clear-current-node)
          (setq-local pb-lisp/selection-size (1+ pb-lisp/selection-size))
          (pb-lisp/update-overlay))
 
        (defun pb-lisp/shrink-selection ()
-         (pb-lisp/clear-current-node)
          (setq-local pb-lisp/selection-size (max 1 (1- pb-lisp/selection-size)))
          (pb-lisp/update-overlay))
 
        (defun pb-lisp/reset-selection ()
-         (pb-lisp/clear-current-node)
          (setq-local pb-lisp/selection-size 1)
          (pb-lisp/update-overlay))
 
@@ -124,7 +120,7 @@
               (defface pb-lisp/overlay-face
                 '((t
                    :inherit symex--current-node-face
-                   :extend nil :background "#3b3042"))
+                   :extend nil :background pb-lisp/overlay-background-color))
                 "Face used to highlight the current tree node."
                 :group 'pb-lisp/faces)
 
@@ -171,91 +167,12 @@
                        (overlay (make-overlay start-point end-point)))
                   (setq pb-lisp/selection (cons start-point end-point))
                   (overlay-put overlay 'face 'pb-lisp/overlay-face)
-                  (push overlay pb-lisp/overlays)))
-
-
-              (progn :indented-overlays
-
-                     (defun pb-lisp/update-overlay2 ()
-                       "Update the highlight overlay based on the current selection.
-                       Creates overlays to highlight the region between the start and end
-                       positions specified in `pb-lisp/selection`. Handles multi-line
-                       selections by creating a separate overlay for each line in the
-                       selected region."
-                       (interactive)
-                       (pb-lisp/delete-overlay)
-                       (let* ((beg (pb-lisp/selection-start))
-                              (end (pb-lisp/selection-end))
-                              (column-beg (save-excursion (goto-char beg) (current-column)))
-                              (column-end (save-excursion (goto-char end) (current-column)))
-                              (column-start (min column-beg column-end))
-                              (line-beg (line-number-at-pos beg))
-                              (line-end (line-number-at-pos end)))
-
-                         ;; Create an overlay for each line in the rectangle
-                         (save-excursion
-         (goto-char (point-min))
-         (forward-line (1- line-beg))
-         (while (<= (line-number-at-pos) line-end)
-                             (let ((start (progn (move-to-column column-start t) (point)))
-                                   (end (progn (end-of-line) (min end (point)))))
-                               (let ((overlay (make-overlay start (max (1+ start) end))))
-                                 (overlay-put overlay 'face 'pb-lisp/overlay-face)
-                                 (push overlay pb-lisp/overlays)))
-                             (forward-line 1)))))
-
-                     (defun pb-lisp/update-overlay3 ()
-                       "Update the highlight overlay based on the current selection with improved handling.
-                       Creates overlays to highlight the region between the start and end
-                       positions specified in `pb-lisp/selection`. Intelligently handles multi-line
-                       selections by creating appropriate overlays for each line, ensuring proper
-                       highlighting even when subsequent lines start before the column-start position."
-                       (interactive)
-                       (pb-lisp/delete-overlay)
-                       (let* ((beg (pb-lisp/selection-start))
-                              (end (pb-lisp/selection-end))
-                              (column-beg (save-excursion (goto-char beg) (current-column)))
-                              (column-end (save-excursion (goto-char end) (current-column)))
-                              (column-start (min column-beg column-end))
-                              (line-beg (line-number-at-pos beg))
-                              (line-end (line-number-at-pos end)))
-
-                         ;; Create an overlay for each line in the rectangle
-                         (save-excursion
-         (goto-char (point-min))
-         (forward-line (1- line-beg))
-
-         ;; Handle first line specially - always highlight from beg to end of line
-         (let* ((line-end-pos (line-end-position))
-                                  (effective-end (min end line-end-pos))
-                                  (overlay (make-overlay beg (max (1+ beg) effective-end))))
-                             (overlay-put overlay 'face 'pb-lisp/overlay-face)
-                             (push overlay pb-lisp/overlays))
-
-         ;; Handle subsequent lines
-         (forward-line 1)
-         (while (<= (line-number-at-pos) line-end)
-                             (let* ((line-start-column (save-excursion
-         (back-to-indentation)
-         (current-column)))
-                                    (line-end-pos (line-end-position))
-                                    (effective-start (progn
-         (move-to-column (if (lispy--empty-line-p)
-           column-start
-         (min line-start-column column-start))
-                                                                       t)
-         (point)))
-                                    (effective-end (min end line-end-pos)))
-                               (when (<= effective-end line-end-pos) ; Ensure we don't go past EOL
-                                 (let ((overlay (make-overlay effective-start (max (1+ effective-start) effective-end))))
-                                   (overlay-put overlay 'face 'pb-lisp/overlay-face)
-                                   (push overlay pb-lisp/overlays))))
-                             (forward-line 1))))))))
+                  (push overlay pb-lisp/overlays)))))
 
 (progn :fringe
 
        (defun pb-lisp/set-local-fringe-face ()
-         (face-remap-add-relative 'fringe :background "#3b3042")
+         (face-remap-add-relative 'fringe :background pb-lisp/overlay-background-color)
          (flycheck-refresh-fringes-and-margins))
 
        (defun pb-lisp/reset-local-fringe-face ()
@@ -283,27 +200,16 @@
                    node))
              node)))
 
-       (defun pb-lisp/get-current-node (&optional fresh)
+       (defun pb-lisp/get-current-node ()
          "Get the tree-sitter node at point."
          (if (treesit-parser-list)
-             (or (and (not fresh) pb-lisp/current-node)
-                 (let* ((node (treesit-node-at (point)
-                                               (alist-get major-mode pb-lisp/major-mode->treesit-lang)))
-                        (node (if (member (treesit-node-type node) '(")" "]" "}"))
-                                  (treesit-node-parent node)
-                                node)))
-                   (pb-lisp/get-topmost-node node)))
+             (let* ((node (treesit-node-at (point)
+                                           (alist-get major-mode pb-lisp/major-mode->treesit-lang)))
+                    (node (if (member (treesit-node-type node) '(")" "]" "}"))
+                              (treesit-node-parent node)
+                            node)))
+               (pb-lisp/get-topmost-node node))
            (message "tree-sit not enabled")))
-
-       (defun pb-lisp/refresh-current-node ()
-         "Get the tree-sitter node at point."
-         (setq-local pb-lisp/current-node (pb-lisp/get-current-node t)))
-
-       (defun pb-lisp/clear-current-node ()
-         "Clear the current node selection.
-          Sets `pb-lisp/current-node' to nil for the current buffer,
-          effectively removing any node selection state."
-         (setq-local pb-lisp/current-node nil))
 
        (defun pb-lisp/get-current-node-bounds ()
          "Get the start and end positions of the current tree-sitter node.
@@ -530,7 +436,7 @@
                 (sibling-text (and sibling (buffer-substring-no-properties sibling-start sibling-end))))
 
            (when (and parent sibling)
-             (pb-lisp/clear-current-node)
+
              (save-excursion
                ;; We need to handle the order of deletion/insertion differently
                ;; depending on which sibling comes first in the buffer
@@ -580,7 +486,7 @@
                   sibling-end (and sibling (treesit-node-end sibling))
                   sibling-text (and sibling (buffer-substring-no-properties sibling-start sibling-end))]
            (when (and parent sibling)
-             (pb-lisp/clear-current-node)
+
              (save-excursion
                ;; We need to handle the order of deletion/insertion differently
                ;; depending on which sibling comes first in the buffer
@@ -628,7 +534,7 @@
          close to the last element of the enclosing expression.
          Operates on region between START and END."
          (interactive "r")
-         (pb-lisp/clear-current-node)
+
          (save-excursion
            (goto-char start)
            (while (re-search-forward "^[ \t]*\\()\\|\\]\\|}\\)" end t)
@@ -645,11 +551,9 @@
            (pb-lisp/join-trailing-delimiters start end)
            (indent-region start end)))
 
-       (defun pb-lisp/indent-parent-node (&optional clear-current-node)
+       (defun pb-lisp/indent-parent-node ()
          "Indent the parent node of the current node."
          (interactive)
-         (when clear-current-node
-           (pb-lisp/clear-current-node))
          (let* ((node (pb-lisp/get-current-node))
                 (parent (treesit-node-parent node))
                 (current-index (pb-lisp/get-node-child-index node parent)))
@@ -711,7 +615,7 @@
                          (progn (backward-char) (looking-at-p "\\s-")))
                (delete-char 1))))
            (goto-char target-pos)
-           (pb-lisp/indent-parent-node t)))
+           (pb-lisp/indent-parent-node)))
 
        (defun pb-lisp/yank-and-select (&optional content)
          (let ((end-point (save-excursion (if content
@@ -719,7 +623,7 @@
                                             (yank))
                                           (point))))
            (pb-lisp/set-selection (cons (point) end-point))
-           (pb-lisp/indent-parent-node t)))
+           (pb-lisp/indent-parent-node)))
 
        (defun pb-lisp/yank-after ()
          "Yank clipboard contents after the current node."
@@ -757,7 +661,7 @@
                (end (pb-lisp/selection-end)))
            (delete-region start end)
            (goto-char start)
-           (pb-lisp/indent-parent-node t)
+           (pb-lisp/indent-parent-node)
            (evil-insert-state 1)))
 
        (defun pb-lisp/insert-after ()
@@ -777,7 +681,7 @@
          (let* ((start (pb-lisp/selection-start)))
            (goto-char start)
            (save-excursion (insert " "))
-           ;; (pb-lisp/indent-parent-node t)
+           ;; (pb-lisp/indent-parent-node)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-at-begining ()
@@ -785,7 +689,6 @@
          (interactive)
          (let* ((node (pb-lisp/get-current-node))
                 (start (treesit-node-start node)))
-           (pb-lisp/clear-current-node)
            ;; For lists, move inside the opening paren
            (if (> (treesit-node-child-count node t)
                   0)
@@ -803,7 +706,6 @@
          (interactive)
          (let* ((node (pb-lisp/get-current-node))
                 (end (treesit-node-end node)))
-           (pb-lisp/clear-current-node)
            ;; For lists, move inside the closing paren
            (if (> (treesit-node-child-count node t)
                   0)
@@ -826,7 +728,7 @@
              (insert ")")
              (goto-char start)
              (insert "("))
-           (pb-lisp/indent-parent-node t)
+           (pb-lisp/indent-parent-node)
            (goto-char start)))
 
        (defun pb-lisp/raise-node ()
@@ -860,7 +762,6 @@
                         (content (buffer-substring-no-properties
                                   (1+ start)
                                   (1- end))))
-                   (pb-lisp/clear-current-node)
                    (delete-region start end)
                    (goto-char start)
                    (insert content)
@@ -875,7 +776,7 @@
            (save-excursion
              (goto-char start)
              (insert "\n"))
-           (pb-lisp/indent-parent-node t)))
+           (pb-lisp/indent-parent-node)))
 
        (defun pb-lisp/move-node-up-one-line ()
          "Move the current node or selection up one line."
@@ -900,7 +801,7 @@
                (progn
                  (delete-indentation)
                  (forward-char 1)))
-             (pb-lisp/indent-parent-node t)))))
+             (pb-lisp/indent-parent-node)))))
 
 (progn :evaluation
 
@@ -1119,3 +1020,114 @@
 
 (provide 'pb-lisp)
 ;;; pb-lisp.el ends here
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(pb_comment :indented-overlays
+
+            (defun pb-lisp/update-overlay2 ()
+              "Update the highlight overlay based on the current selection.
+                       Creates overlays to highlight the region between the start and end
+                       positions specified in `pb-lisp/selection`. Handles multi-line
+                       selections by creating a separate overlay for each line in the
+                       selected region."
+              (interactive)
+              (pb-lisp/delete-overlay)
+              (let* ((beg (pb-lisp/selection-start))
+                     (end (pb-lisp/selection-end))
+                     (column-beg (save-excursion (goto-char beg) (current-column)))
+                     (column-end (save-excursion (goto-char end) (current-column)))
+                     (column-start (min column-beg column-end))
+                     (line-beg (line-number-at-pos beg))
+                     (line-end (line-number-at-pos end)))
+
+                ;; Create an overlay for each line in the rectangle
+                (save-excursion
+                  (goto-char (point-min))
+                  (forward-line (1- line-beg))
+                  (while (<= (line-number-at-pos) line-end)
+                    (let ((start (progn (move-to-column column-start t) (point)))
+                          (end (progn (end-of-line) (min end (point)))))
+                      (let ((overlay (make-overlay start (max (1+ start) end))))
+                        (overlay-put overlay 'face 'pb-lisp/overlay-face)
+                        (push overlay pb-lisp/overlays)))
+                    (forward-line 1)))))
+
+            (defun pb-lisp/update-overlay3 ()
+              "Update the highlight overlay based on the current selection with improved handling.
+                       Creates overlays to highlight the region between the start and end
+                       positions specified in `pb-lisp/selection`. Intelligently handles multi-line
+                       selections by creating appropriate overlays for each line, ensuring proper
+                       highlighting even when subsequent lines start before the column-start position."
+              (interactive)
+              (pb-lisp/delete-overlay)
+              (let* ((beg (pb-lisp/selection-start))
+                     (end (pb-lisp/selection-end))
+                     (column-beg (save-excursion (goto-char beg) (current-column)))
+                     (column-end (save-excursion (goto-char end) (current-column)))
+                     (column-start (min column-beg column-end))
+                     (line-beg (line-number-at-pos beg))
+                     (line-end (line-number-at-pos end)))
+
+                ;; Create an overlay for each line in the rectangle
+                (save-excursion
+                  (goto-char (point-min))
+                  (forward-line (1- line-beg))
+
+                  ;; Handle first line specially - always highlight from beg to end of line
+                  (let* ((line-end-pos (line-end-position))
+                         (effective-end (min end line-end-pos))
+                         (overlay (make-overlay beg (max (1+ beg) effective-end))))
+                    (overlay-put overlay 'face 'pb-lisp/overlay-face)
+                    (push overlay pb-lisp/overlays))
+
+                  ;; Handle subsequent lines
+                  (forward-line 1)
+                  (while (<= (line-number-at-pos) line-end)
+                    (let* ((line-start-column (save-excursion
+                                                (back-to-indentation)
+                                                (current-column)))
+                           (line-end-pos (line-end-position))
+                           (effective-start (progn
+                                              (move-to-column (if (lispy--empty-line-p)
+                                                                  column-start
+                                                                (min line-start-column column-start))
+                                                              t)
+                                              (point)))
+                           (effective-end (min end line-end-pos)))
+                      (when (<= effective-end line-end-pos) ; Ensure we don't go past EOL
+                        (let ((overlay (make-overlay effective-start (max (1+ effective-start) effective-end))))
+                          (overlay-put overlay 'face 'pb-lisp/overlay-face)
+                          (push overlay pb-lisp/overlays))))
+                    (forward-line 1))))))
