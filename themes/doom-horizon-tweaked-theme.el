@@ -117,6 +117,8 @@
     :slant 'italic
     :background (if doom-horizon-tweaked-comment-bg (doom-lighten bg 0.03)))
    (fringe :background bg)
+   (button :foreground (doom-blend fg yellow 0.7)
+           :underline t)
    (auto-dim-other-buffers-face :background (doom-darken bg 0.1))
    (auto-dim-other-buffers-hide-face :background (doom-darken bg 0.1))
    (link :foreground yellow :inherit 'underline)
