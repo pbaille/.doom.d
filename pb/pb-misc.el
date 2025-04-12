@@ -258,6 +258,11 @@
 
 (progn :scrolling
 
+       (defun pb-misc/scroll-to-leftmost ()
+         "Scroll window to leftmost position without moving cursor."
+         (interactive)
+         (set-window-hscroll (selected-window) 0))
+
        (defun scroll-up-with-cursor ()
          "Scroll up one line and keep cursor on the same visual line."
          (interactive)
