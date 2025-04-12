@@ -56,14 +56,16 @@
            (hl-line-mode -1)
            (setq-local pb-lisp/selection-size 1)
            (goto-char (car (pb-lisp/get-current-node-bounds)))
-           (pb-lisp/update-overlay)))
+           (pb-lisp/update-overlay)
+           (pb-lisp/set-local-fringe-face)))
 
        (defun pb-lisp/exit-mode ()
          "Run on exiting sorg mode."
          (print "exit pb-lisp")
          (setq-local pb-lisp/current-node nil)
          (pb-lisp/delete-overlay)
-         (hl-line-mode 1)))
+         (hl-line-mode 1)
+         (pb-lisp/reset-local-fringe-face)))
 
 (progn :selection
 
@@ -250,19 +252,18 @@
                                    (push overlay pb-lisp/overlays))))
                              (forward-line 1))))))))
 
-(pb_comment
- :fringe
+(progn :fringe
 
- (defun pb-lisp/set-local-fringe-face (background)
-   (face-remap-add-relative 'fringe :background background)
-   (flycheck-refresh-fringes-and-margins))
+       (defun pb-lisp/set-local-fringe-face ()
+         (face-remap-add-relative 'fringe :background "#3b3042")
+         (flycheck-refresh-fringes-and-margins))
 
- (defun pb-lisp/reset-local-fringe-face ()
-   (face-remap-add-relative 'fringe :background (face-attribute 'default :background))
-   (flycheck-refresh-fringes-and-margins))
+       (defun pb-lisp/reset-local-fringe-face ()
+         (face-remap-add-relative 'fringe :background (face-attribute 'default :background))
+         (flycheck-refresh-fringes-and-margins))
 
- (pb-lisp/reset-local-fringe-face)
- (pb-lisp/set-local-fringe-face "#3b3042"))
+       (pb_comment (pb-lisp/reset-local-fringe-face)
+                   (pb-lisp/set-local-fringe-face)))
 
 (progn :current-node
 
