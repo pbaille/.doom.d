@@ -171,9 +171,13 @@ This is a darkened version of the default theme background.")
   (set-face-attribute
    'symex--current-node-face nil
    :inherit nil
+   ;; this is hardcoding horizon-tweaked theme value :(
    :background (doom-lighten "#232530" 0.03))
   (symex-change 1)
-  (insert res)
+  
+  (if res (insert res)
+    (message (km_pp (km :status (km_get info :http-status)
+                        :error (km_get info :error)))))
   (symex-mode-interface)
   (symex-tidy))
 
