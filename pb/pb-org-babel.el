@@ -123,11 +123,25 @@ SPEC:"
                 (mapcar (pb_fn ((cons lang ranges))
                                (cons (or (alist-get lang pb-org-babel_lang->treesit-lang)
                                          lang)
-                                     (mapcar #'cdr ranges)))
+                                     (seq-reverse (mapcar #'cdr ranges))))
                         (sq/group-by #'car
                                      (pb-org-babel_get-src-blocks))))
 
+              (defun pb-org-babel_setup-language-at-point-function ()
+                (setq-local treesit-language-at-point-function
+                            (lambda (&rest _)
+                              (if (eq major-mode 'org-mode)
+                                  (if-let ((lang-str
+                                            (and (not (pb-org_at-code-block-p))
+                                                 (pb-org_code-block-language))))
+                                      (intern lang-str)
+                                    'org)
+                                (treesit-parser-language (car (treesit-parser-list)))))))
+
               (defun pb-org-babel_init-buffer ()
+                (interactive)
+                (treesit-parser-create 'org)
+                (pb-org-babel_setup-language-at-point-function)
                 (let (parsers)
                   (dolist (x (pb-org-babel_get-lang-ranges) parsers)
                     (pb_let [(cons lang ranges) x
