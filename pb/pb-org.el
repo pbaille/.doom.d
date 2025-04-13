@@ -213,7 +213,9 @@ If buffer is narrowed, widen it and narrow the next node"
 
 (defun pb-org_at-code-block-p ()
   "Check if point is at the start of a Clojure src block in org mode."
-  (eq (org-element-type (org-element-context)) 'src-block))
+  (and
+   (equal (org-element-type (org-element-context)) 'src-block)
+   (equal (org-element-property :begin element) (point))))
 
 (defun pb-org_at-lisp-block-p ()
   "Check if point is at the start of a Clojure src block in org mode."
