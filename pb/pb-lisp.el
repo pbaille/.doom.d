@@ -293,6 +293,8 @@
 
 (progn :motion
 
+       (defvar-local pb-lisp/escape-top-level-function nil)
+
        (defvar pb-lisp/skipped-node-types
          '("\n" ")" "]" "}"))
 
@@ -312,7 +314,11 @@
          (let* ((node (pb-lisp/get-current-node))
                 (parent (treesit-node-parent node)))
            (pb-lisp/reset-selection)
-           (pb-lisp/goto-node parent "No parent node found")))
+           (if parent
+               (pb-lisp/goto-node parent "No parent node found")
+             (if pb-lisp/escape-top-level-function
+                 (funcall pb-lisp/escape-top-level-function)
+               (message "Top level node")))))
 
        (defun pb-lisp/get-node-child-index (node parent)
          "Get the index of NODE among the named children of PARENT.

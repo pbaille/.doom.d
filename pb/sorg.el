@@ -105,6 +105,11 @@ it enters edition mode."
                   (progn :pb-lisp
                          (evil-sorg-state -1)
                          (evil-next-line)
+                         (setq-local pb-lisp/escape-top-level-function
+                                     (lambda () (let ((element (org-element-at-point)))
+                                                  (goto-char (org-element-property :begin element))
+                                                  (evil-pb-lisp-state -1)
+                                                  (evil-sorg-state 1))))
                          (evil-pb-lisp-state 1))
                   '(progn :symex
                           (evil-sorg-state -1)
