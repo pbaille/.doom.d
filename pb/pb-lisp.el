@@ -43,12 +43,12 @@
        (defun pb-lisp/parser-setup ()
          "Setup tree-sitter parser for current elisp buffer."
          (if (eq major-mode 'org-mode)
-             (pb-org-babel_init-buffer)
-             (when-let ((lang (or (treesit-language-at (point))
-                                  (alist-get major-mode pb-lisp/major-mode->treesit-lang))))
-               (print (cons "parser setup " lang))
-               (when (treesit-language-available-p lang)
-                 (treesit-parser-create lang)))))
+             (pb-org-babel_focus-code-block)
+           (when-let ((lang (or (treesit-language-at (point))
+                                (alist-get major-mode pb-lisp/major-mode->treesit-lang))))
+             (print (cons "parser setup " lang))
+             (when (treesit-language-available-p lang)
+               (treesit-parser-create lang)))))
 
        (defun pb-lisp/enter-mode ()
          "Run when on entering sorg mode."
@@ -65,7 +65,8 @@
          "Run on exiting sorg mode."
          (print "exit pb-lisp")
          (pb-lisp/delete-overlay)
-         (hl-line-mode 1)
+         (when (eq major-mode 'org-mode)
+           (pb-org-babel_init-buffer))
          (pb-lisp/reset-local-fringe-face)))
 
 (progn :selection
@@ -620,7 +621,7 @@
          (interactive)
          (let* ((bounds (pb-lisp/selection-bounds))
                 (text (buffer-substring-no-properties (car bounds) (cdr bounds))))
-           (when (and start end)
+           (when bounds
              (kill-new text)
              (message "Copied selection to kill ring"))))
 
