@@ -211,6 +211,10 @@ If buffer is narrowed, widen it and narrow the next node"
 (defvar pb-org_lisp-flavors
   (list "clojure" "racket" "elisp" "emacs-lisp" "scheme" "fennel"))
 
+(defun pb-org_at-code-block-p ()
+  "Check if point is at the start of a Clojure src block in org mode."
+  (eq (org-element-type (org-element-context)) 'src-block))
+
 (defun pb-org_at-lisp-block-p ()
   "Check if point is at the start of a Clojure src block in org mode."
   (let ((element (org-element-context)))
@@ -478,6 +482,14 @@ Return a cons cell with (start . end) positions of the content."
           (let* ((value (org-element-property :value element)))
             (forward-line 1)
             (cons (point) (+ (point) (length value)))))))))
+
+(defun pb-org_in-code-block-p ()
+  "Return non-nil if point is inside a code block.
+More specifically, return the language of the code block."
+  (let ((element (org-element-at-point)))
+    (and (eq (car element) 'src-block)
+         (list (org-element-property :begin element)
+               (org-element-property :end element)))))
 
 (defun pb-org_code-block-goto-beg ()
   "If cursor is within a code block, goes back to the very beginning of it."
