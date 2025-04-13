@@ -463,6 +463,15 @@
 
 (progn :move-expressions
 
+       (defun pb-lisp/copy-selection ()
+         "Copy current selection and add it to the kill ring."
+         (interactive)
+         (let* ((bounds (pb-lisp/selection-bounds))
+                (text (buffer-substring-no-properties (car bounds) (cdr bounds))))
+           (when bounds
+             (kill-new text)
+             (message "Copied selection to kill ring"))))
+
        (defun pb-lisp/swap-siblings_old (direction)
          "Transpose the current node with its next or previous sibling.
          DIRECTION should be 'next or 'prev."
@@ -607,7 +616,11 @@
              (pb-lisp/indent-current-node)
              ;; Return to original child
              (when current-index
-               (pb-lisp/goto-nth-child current-index))))))
+               (pb-lisp/goto-nth-child current-index))
+             ;; TODO not pretty, arange this
+             (when (eq major-mode 'org-mode)
+               (evil-pb-lisp-state -1)
+               (evil-pb-lisp-state 1))))))
 
 (progn :edition
 
@@ -615,15 +628,6 @@
             dfg)
          (ert
           dfg))
-
-       (defun pb-lisp/copy-selection ()
-         "Copy current selection and add it to the kill ring."
-         (interactive)
-         (let* ((bounds (pb-lisp/selection-bounds))
-                (text (buffer-substring-no-properties (car bounds) (cdr bounds))))
-           (when bounds
-             (kill-new text)
-             (message "Copied selection to kill ring"))))
 
        (defun pb-lisp/delete-selection ()
          "Delete current-overlay, adding its content to the kill ring, after deletion goto next node if exists, previous node if exists or parent."
