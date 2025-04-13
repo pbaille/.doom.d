@@ -42,7 +42,8 @@
 
        (defun pb-lisp/parser-setup ()
          "Setup tree-sitter parser for current elisp buffer."
-         (when-let ((lang (alist-get major-mode pb-lisp/major-mode->treesit-lang)))
+         (when-let ((lang (or (treesit-language-at (point))
+                              (alist-get major-mode pb-lisp/major-mode->treesit-lang))))
            (print (cons "parser setup " lang))
            (when (treesit-language-available-p lang)
              (treesit-parser-create lang))))
@@ -206,7 +207,8 @@
                      (treesit-node-check pb-lisp/current-node 'outdated))
                  (pb-lisp/get-topmost-node
                   (treesit-node-at (point)
-                                   (alist-get major-mode pb-lisp/major-mode->treesit-lang)))
+                                   (or (treesit-language-at (point))
+                                       (alist-get major-mode pb-lisp/major-mode->treesit-lang))))
                pb-lisp/current-node)
            (message "tree-sit not enabled")))
 
