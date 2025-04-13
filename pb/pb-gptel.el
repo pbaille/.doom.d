@@ -148,7 +148,7 @@
                       (length files)
                       (mapconcat #'identity files ", "))))))
 
-(defvar pb-gptel/overlay-color (doom-darken "#232530" 0.4)
+(defvar pb-gptel/overlay-color (doom-darken "#232530" 0.2)
   "Color used to highlight the current s-expression when being edited by GPT.
 This is a darkened version of the default theme background.")
 
@@ -168,11 +168,12 @@ This is a darkened version of the default theme background.")
    - INFO: A plist containing metadata about the request (provided by gptel)
 
    This function is used as the default callback for pb-gptel/current-symex-request."
-  (set-face-attribute
-   'symex--current-node-face nil
-   :inherit nil
-   ;; this is hardcoding horizon-tweaked theme value :(
-   :background (doom-lighten "#232530" 0.03))
+
+  ;; this is hardcoding horizon-tweaked theme value :(
+  (progn :style
+    (face-remap-add-relative 'symex--current-node-face
+                             :background (doom-lighten "#232530" 0.03))
+    (setq evil-symex-state-cursor `("cyan" box)))
   (symex-change 1)
   
   (if res (insert res)
@@ -197,11 +198,13 @@ This is a darkened version of the default theme background.")
 
    When called interactively, prompts for instructions to guide the modification."
   (interactive)
-  (pb_let [(km_keys prompt callback) options]
-    (set-face-attribute
-     'symex--current-node-face nil
-     :inherit nil
-     :background pb-gptel/overlay-color)
+  (pb_let [(km_keys prompt callback) options
+           prompt (or prompt
+                      (read-string "Edit current expression: "))]
+    (progn :style
+           (setq evil-symex-state-cursor `("gold" box) )
+           (face-remap-add-relative 'symex--current-node-face
+                                    :background pb-gptel/overlay-color))
     (pb-gptel/request
 
      (km :context
