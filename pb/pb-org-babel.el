@@ -90,79 +90,67 @@ SPEC:"
 
 (advice-add 'org-babel-insert-result :around #'pb-org-babel_insert-result-hook)
 
-(require 'treesit)
+(progn :treesit
+       (require 'treesit)
+       (require 'pb-org)
 
-(defvar pb-org-babel_lang->treesit-lang
-  '((emacs-lisp . elisp)))
+       (defvar pb-org-babel_lang->treesit-lang
+         '((emacs-lisp . elisp)))
 
-(defun pb-org-babel_setup-treesit-ranges ()
-  "Configure treesit parsers for all src blocks in the current org buffer.
-Each src block will get a parser corresponding to its language."
-  (interactive)
-  (when (derived-mode-p 'org-mode)
-    (let ((src-blocks '())
-          (parsers '()))
-      ;; First pass: collect all src blocks and their languages
-      (save-excursion
-        (goto-char (point-min))
-        (while (re-search-forward "^[ \t]*#\\+begin_src[ \t]+\\([^ \t\n]+\\)" nil t)
-          (let* ((lang (match-string-no-properties 1))
-                 (lang-symbol (intern lang))
-                 (beg (match-end 0))
-                 (block-end (save-excursion
-                              (when (re-search-forward "^[ \t]*#\\+end_src" nil t)
-                                (match-beginning 0)))))
-            (when block-end
-              (forward-line)
-              (setq beg (point))
-              (push (list lang-symbol beg block-end) src-blocks)))))
+       (progn :prepare-all-sub-ranges
 
-      ;; Second pass: create parsers for each language
-      (dolist (lang-blocks (seq-group-by #'car src-blocks))
-        (let* ((lang (car lang-blocks))
-               (blocks (cdr lang-blocks))
-               (ranges (mapcar (lambda (block)
-                                 (cons (nth 1 block) (nth 2 block)))
-                               blocks))
-               (lang (or (alist-get lang pb-org-babel_lang->treesit-lang)
-                         lang)))
-          (print lang)
-          (condition-case nil
-              (let ((parser (or (treesit-parser-create lang)
-                                (message "Warning: Could not create parser for %s" lang))))
-                (print parser)
-                (print ranges)
-                (when parser
-                  (push parser parsers)
-                  (treesit-parser-set-included-ranges parser ranges)))
-            (error (message "Failed to configure parser for %s" lang)))))
+              (defun pb-org-babel_get-src-blocks ()
+                (interactive)
+                (when (derived-mode-p 'org-mode)
+                  (let ((src-blocks '()))
+                    ;; First pass: collect all src blocks and their languages
+                    (save-excursion
+                      (goto-char (point-min))
+                      (while (re-search-forward "^[ \t]*#\\+begin_src[ \t]+\\([^ \t\n]+\\)" nil t)
+                        (let* ((lang (match-string-no-properties 1))
+                               (lang-symbol (intern lang))
+                               (beg (match-end 0))
+                               (block-end (save-excursion
+                                            (when (re-search-forward "^[ \t]*#\\+end_src" nil t)
+                                              (match-beginning 0)))))
+                          (when block-end
+                            (forward-line)
+                            (setq beg (point))
+                            (push (cons lang-symbol (cons beg block-end)) src-blocks)))))
+                    src-blocks)))
 
-      (message "Configured %d parsers for %d src blocks"
-               (length parsers) (length src-blocks))
-      parsers)))
+              (defun pb-org-babel_get-lang-ranges ()
+                (mapcar (pb_fn ((cons lang ranges))
+                               (cons (or (alist-get lang pb-org-babel_lang->treesit-lang)
+                                         lang)
+                                     (mapcar #'cdr ranges)))
+                        (sq/group-by #'car
+                                     (pb-org-babel_get-src-blocks))))
 
-(require 'pb-org)
+              (defun pb-org-babel_init-buffer ()
+                (let (parsers)
+                  (dolist (x (pb-org-babel_get-lang-ranges) parsers)
+                    (pb_let [(cons lang ranges) x
+                             parser (treesit-parser-create lang)]
+                      (treesit-parser-set-included-ranges parser ranges)
+                      (push parser parsers))))))
 
-(defvar pb-org-babel/last-created-parser
-  nil)
-
-(defun pb-org-babel_add-treesit-range-for-block ()
-  "Add a treesit range for the current src block."
-  (interactive)
-  (when-let ((bounds (pb-org_code-block-content-bounds)))
-    (let* ((lang (pb-org_code-block-language))
-           (treesit-lang (or (alist-get (intern lang) pb-org-babel_lang->treesit-lang)
-                             (intern lang)))
-           (parser (condition-case nil
-                       (treesit-parser-create treesit-lang)
-                     (error (message "Failed to create parser for %s" lang)
-                            nil))))
-      (when parser
-        (setq pb-org-babel/last-created-parser parser)
-        (treesit-parser-set-included-ranges parser (list bounds))
-        (message "bounds: %s" bounds)
-        (message "Added treesit range for %s block" lang)
-        parser))))
+       (defun pb-org-babel_add-treesit-range-for-block ()
+         "Add a treesit range for the current src block."
+         (interactive)
+         (when-let ((bounds (pb-org_code-block-content-bounds)))
+           (let* ((lang (pb-org_code-block-language))
+                  (treesit-lang (or (alist-get (intern lang) pb-org-babel_lang->treesit-lang)
+                                    (intern lang)))
+                  (parser (condition-case nil
+                              (treesit-parser-create treesit-lang)
+                            (error (message "Failed to create parser for %s" lang)
+                                   nil))))
+             (when parser
+               (treesit-parser-set-included-ranges parser (list bounds))
+               (message "bounds: %s" bounds)
+               (message "Added treesit range for %s block" lang)
+               parser)))))
 
 (provide 'pb-org-babel)
 ;;; pb-org-babel.el ends here.
