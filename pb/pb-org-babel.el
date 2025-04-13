@@ -147,24 +147,30 @@ SPEC:"
                     (pb_let [(cons lang ranges) x
                              parser (treesit-parser-create lang)]
                       (treesit-parser-set-included-ranges parser ranges)
-                      (push parser parsers))))))
+                      (push parser parsers)))))
 
-       (defun pb-org-babel_add-treesit-range-for-block ()
-         "Add a treesit range for the current src block."
-         (interactive)
-         (when-let ((bounds (pb-org_code-block-content-bounds)))
-           (let* ((lang (pb-org_code-block-language))
-                  (treesit-lang (or (alist-get (intern lang) pb-org-babel_lang->treesit-lang)
-                                    (intern lang)))
-                  (parser (condition-case nil
-                              (treesit-parser-create treesit-lang)
-                            (error (message "Failed to create parser for %s" lang)
-                                   nil))))
-             (when parser
-               (treesit-parser-set-included-ranges parser (list bounds))
-               (message "bounds: %s" bounds)
-               (message "Added treesit range for %s block" lang)
-               parser)))))
+              (defun pb-org-babel_focus-code-block ()
+                (interactive)
+                (treesit-parser-create 'org)
+                (pb-org-babel_setup-language-at-point-function)
+                (pb-org_code-block-goto-beg)
+                (print "focus")
+                (print (pb-org_code-block-content-bounds))
+                (let* ((bounds (pb-org_code-block-content-bounds))
+                       (lang (pb-org_code-block-language))
+                       (treesit-lang (or (alist-get (intern lang) pb-org-babel_lang->treesit-lang)
+                                         (intern lang)))
+                       (parser (condition-case nil
+                                   (treesit-parser-create treesit-lang)
+                                 (error (message "Failed to create parser for %s" lang)
+                                        nil))))
+                  (when (and bounds parser)
+                    (treesit-parser-set-included-ranges parser (list bounds))
+                    (message "bounds: %s" bounds)
+                    (message "Added treesit range for %s block" lang)
+                    parser)
+                  ;; (treesit-parser-set-included-ranges parser (list bounds))
+                  ))))
 
 (provide 'pb-org-babel)
 ;;; pb-org-babel.el ends here.
