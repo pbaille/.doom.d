@@ -42,15 +42,18 @@
 
        (defun pb-lisp/parser-setup ()
          "Setup tree-sitter parser for current elisp buffer."
-         (when-let ((lang (or (treesit-language-at (point))
-                              (alist-get major-mode pb-lisp/major-mode->treesit-lang))))
-           (print (cons "parser setup " lang))
-           (when (treesit-language-available-p lang)
-             (treesit-parser-create lang))))
+         (if (eq major-mode 'org-mode)
+             (pb-org-babel_init-buffer)
+             (when-let ((lang (or (treesit-language-at (point))
+                                  (alist-get major-mode pb-lisp/major-mode->treesit-lang))))
+               (print (cons "parser setup " lang))
+               (when (treesit-language-available-p lang)
+                 (treesit-parser-create lang)))))
 
        (defun pb-lisp/enter-mode ()
          "Run when on entering sorg mode."
          (when (member major-mode pb-lisp/modes)
+           (setq-local pb-lisp/current-node nil)
            (pb-lisp/parser-setup)
            (hl-line-mode -1)
            (setq-local pb-lisp/selection-size 1)
@@ -269,7 +272,7 @@
        (defun pb-lisp/log-node (&optional node)
          (interactive)
          (pb-elisp_display-expression
-          (pb-lisp/node-infos)
+          (pb-lisp/node-infos node)
           #'km_pp))
 
        (defun pb-lisp/log-nodes (&optional node)
