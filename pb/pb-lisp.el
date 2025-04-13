@@ -26,9 +26,7 @@
          :entry-hook (pb-lisp/enter-mode)
          :exit-hook (pb-lisp/exit-mode))
 
-       (setq evil-pb-lisp-state-cursor
-             `(box "magenta"))
-
+       (setq evil-pb-lisp-state-cursor `(box "magenta"))
        (defvar pb-lisp/overlay-background-color "#3b3042")
 
        (defvar pb-lisp/modes
@@ -69,7 +67,8 @@
 (progn :selection
 
        (defvar-local pb-lisp/selection-size 1)
-       (setq-local pb-lisp/selection-size 1)
+       (quote
+        (setq-local pb-lisp/selection-size 1))
 
        (defun pb-lisp/extend-selection ()
          (setq-local pb-lisp/selection-size (1+ pb-lisp/selection-size))
@@ -83,11 +82,16 @@
          (setq-local pb-lisp/selection-size 1)
          (pb-lisp/update-overlay))
 
+       (defun pb-lisp/selection-bounds ()
+         (let ((nodes (pb-lisp/get-selected-nodes)))
+           (cons (treesit-node-start (car nodes))
+                 (treesit-node-end (sq_last nodes)))))
+
        (defun pb-lisp/selection-start ()
-         (treesit-node-start (car (pb-lisp/get-selected-nodes))))
+         (car (pb-lisp/selection-bounds)))
 
        (defun pb-lisp/selection-end ()
-         (treesit-node-end (sq_last (pb-lisp/get-selected-nodes))))
+         (cdr (pb-lisp/selection-bounds)))
 
        (defun pb-lisp/set-selection (bounds)
          "Set selection to all named nodes within BOUNDS.
@@ -118,9 +122,9 @@
        (progn :overlay
 
               (defface pb-lisp/overlay-face
-                '((t
+                `((t
                    :inherit symex--current-node-face
-                   :extend nil :background pb-lisp/overlay-background-color))
+                   :extend nil :background ,pb-lisp/overlay-background-color))
                 "Face used to highlight the current tree node."
                 :group 'pb-lisp/faces)
 
@@ -132,40 +136,12 @@
                 (mapc #'delete-overlay pb-lisp/overlays)
                 (setq pb-lisp/overlays nil))
 
-              (defun pb-lisp/update-overlay_old ()
-                "Update the highlight overlay to match the start/end position of NODE."
-                (interactive)
-                (pb-lisp/delete-overlay)
-                (let ((overlay (make-overlay (pb-lisp/selection-start)
-                                             (pb-lisp/selection-end))))
-                  (overlay-put overlay 'face 'pb-lisp/overlay-face)
-                  (push overlay pb-lisp/overlays)))
-
-              (defun pb-lisp/get-selected-nodes ()
-                "Get a list of selected nodes from the current selection.
-                 Returns a list with the first node and subsequent siblings based on selection size."
-                (let* ((first-node (pb-lisp/get-current-node))
-                       (result (list first-node)))
-                  (when (> pb-lisp/selection-size 1)
-                    (let ((sibling first-node)
-                          (n (1- pb-lisp/selection-size)))
-                      (dotimes (_ n)
-                        (setq sibling (treesit-node-next-sibling sibling t))
-                        (when sibling
-                          (push sibling result)))))
-                  (nreverse result)))
-
               (defun pb-lisp/update-overlay ()
                 "Update the highlight overlay to match the start/end position of NODE."
                 (interactive)
                 (pb-lisp/delete-overlay)
-                (let* ((nodes (pb-lisp/get-selected-nodes))
-                       (first-node (car nodes))
-                       (last-node (car (last nodes)))
-                       (start-point (treesit-node-start first-node))
-                       (end-point (treesit-node-end last-node))
-                       (overlay (make-overlay start-point end-point)))
-                  (setq pb-lisp/selection (cons start-point end-point))
+                (let* ((bounds (pb-lisp/selection-bounds))
+                       (overlay (make-overlay (car bounds) (cdr bounds))))
                   (overlay-put overlay 'face 'pb-lisp/overlay-face)
                   (push overlay pb-lisp/overlays)))))
 
@@ -184,6 +160,17 @@
 
 (progn :current-node
 
+       (defvar-local pb-lisp/current-node nil)
+
+       (defun pb-lisp/node-depth (node)
+         "Return the depth of NODE in its tree."
+         (let ((depth 0)
+               (current node))
+           (while (treesit-node-parent current)
+             (setq current (treesit-node-parent current))
+             (cl-incf depth))
+           depth))
+
        (defun pb-lisp/get-topmost-node (node)
          "Return the highest node in the tree starting from NODE.
 
@@ -192,23 +179,56 @@
          (let ((node-start-pos (treesit-node-start node))
                (parent (treesit-node-parent node)))
            (if parent
+           (let ((parent-pos (treesit-node-start parent))
+                     (parent-type (treesit-node-type parent)))
+                 (if (and (eq node-start-pos parent-pos)
+                          (not (member parent-type '("source" "source_file"))))
+           (pb-lisp/get-topmost-node parent)
+         node))
+             node)))
+
+       (defun pb-lisp/stacked-nodes (node)
+         (let ((node-start-pos (treesit-node-start node))
+               (parent (treesit-node-parent node)))
+           (if parent
                (let ((parent-pos (treesit-node-start parent))
                      (parent-type (treesit-node-type parent)))
                  (if (and (eq node-start-pos parent-pos)
                           (not (member parent-type '("source" "source_file"))))
-                     (pb-lisp/get-topmost-node parent)
-                   node))
-             node)))
+                     (cons node (pb-lisp/stacked-nodes parent))
+                   (list node)))
+             (list node))))
 
        (defun pb-lisp/get-current-node ()
          "Get the tree-sitter node at point."
          (if (treesit-parser-list)
-             (let* ((node (treesit-node-at (point)
-                                           (alist-get major-mode pb-lisp/major-mode->treesit-lang)))
-                    (node (if (member (treesit-node-type node) '(")" "]" "}"))
-                              (treesit-node-parent node)
-                            node)))
-               (pb-lisp/get-topmost-node node))
+             (if (or (not pb-lisp/current-node)
+                     (treesit-node-check pb-lisp/current-node 'outdated))
+                 (pb-lisp/get-topmost-node
+                  (treesit-node-at (point)
+                                   (alist-get major-mode pb-lisp/major-mode->treesit-lang)))
+               pb-lisp/current-node)
+           (message "tree-sit not enabled")))
+
+       (defun pb-lisp/get-selected-nodes ()
+         "Get a list of selected nodes from the current selection.
+          Returns a list with the first node and subsequent siblings based on selection size."
+         (let* ((first-node (pb-lisp/get-current-node))
+                (result (list first-node)))
+           (when (> pb-lisp/selection-size 1)
+             (let ((sibling first-node)
+                   (n (1- pb-lisp/selection-size)))
+               (dotimes (_ n)
+                 (setq sibling (treesit-node-next-sibling sibling t))
+                 (when sibling
+                   (push sibling result)))))
+           (nreverse result)))
+
+       (defun pb-lisp/get-current-nodes ()
+         "Get the tree-sitter nodes at point."
+         (if (treesit-parser-list)
+             (pb-lisp/stacked-nodes (treesit-node-at (point)
+                                                     (alist-get major-mode pb-lisp/major-mode->treesit-lang)))
            (message "tree-sit not enabled")))
 
        (defun pb-lisp/get-current-node-bounds ()
@@ -228,23 +248,34 @@
            (when (and start end)
              (buffer-substring-no-properties start end))))
 
-       (defun pb-lisp/log-node (&optional node)
+       (defun pb-lisp/node-infos (&optional node)
          (interactive)
          (let* ((node (or node (pb-lisp/get-current-node)))
                 (parent (treesit-node-parent node)))
-           (pb-elisp_display-expression
-            (km :node-type (treesit-node-type node)
-                :idx (treesit-node-index node)
-                :field-name (treesit-node-field-name node)
-                :parent-node (treesit-node-parent node)
-                :siblings-count (when parent (treesit-node-child-count parent))
-                :children (mapcar (lambda (child)
-                                    (km :children-count (treesit-node-child-count child)
-                                        :field-name (treesit-node-field-name child)
-                                        :node-type (treesit-node-type child)
-                                        :idx (treesit-node-index child)))
-                                  (treesit-node-children node)))
-            #'km_pp)))
+           (km :node-type (treesit-node-type node)
+               :idx (treesit-node-index node)
+               :field-name (treesit-node-field-name node)
+               :parent-node (treesit-node-parent node)
+               :siblings-count (when parent (treesit-node-child-count parent))
+               :children (mapcar (lambda (child)
+                                   (km :children-count (treesit-node-child-count child)
+                                       :field-name (treesit-node-field-name child)
+                                       :node-type (treesit-node-type child)
+                                       :idx (treesit-node-index child)))
+                                 (treesit-node-children node)))))
+
+       (defun pb-lisp/log-node (&optional node)
+         (interactive)
+         (pb-elisp_display-expression
+          (pb-lisp/node-infos)
+          #'km_pp))
+
+       (defun pb-lisp/log-nodes (&optional node)
+         (interactive)
+         (pb-elisp_display-expression
+          (mapcar #'pb-lisp/node-infos
+                  (pb-lisp/get-current-nodes))
+          #'km_pp))
 
        (defun pb-lisp/current-selection-as-string ()
          "Get the string content of the current selection overlay.
@@ -298,6 +329,15 @@
                       for i from 0
                       when (eq node c)
                       return i))))
+
+       (defun pb-lisp/goto-first-child ()
+         "Move to the first child of current node."
+         (interactive)
+         (if (> pb-lisp/selection-size 1)
+             (pb-lisp/reset-selection)
+           (let* ((node (pb-lisp/get-current-node))
+                  (child (and node (treesit-node-child node 0 t))))
+             (pb-lisp/goto-node (or child node) "No child node found"))))
 
        (defun pb-lisp/goto-nth-child (idx)
          (let* ((node (pb-lisp/get-current-node))
@@ -368,15 +408,6 @@
                 (last-sibling (and child-count (> child-count 0)
                                    (treesit-node-child parent (1- child-count) t))))
            (pb-lisp/goto-node last-sibling "No last sibling found")))
-
-       (defun pb-lisp/goto-first-child ()
-         "Move to the first child of current node."
-         (interactive)
-         (if (> pb-lisp/selection-size 1)
-             (pb-lisp/reset-selection)
-           (let* ((node (pb-lisp/get-current-node))
-                  (child (and node (treesit-node-child node 0 t))))
-             (pb-lisp/goto-node (or child node) "No child node found"))))
 
        (defun pb-lisp/goto-last-child ()
          "Move to the last child of current node."
@@ -564,8 +595,7 @@
              (pb-lisp/indent-current-node)
              ;; Return to original child
              (when current-index
-               (pb-lisp/goto-nth-child current-index)
-               (goto-char (treesit-node-start node)))))))
+               (pb-lisp/goto-nth-child current-index))))))
 
 (progn :edition
 
@@ -577,9 +607,8 @@
        (defun pb-lisp/copy-selection ()
          "Copy current selection and add it to the kill ring."
          (interactive)
-         (let* ((start (pb-lisp/selection-start))
-                (end (pb-lisp/selection-end))
-                (text (buffer-substring-no-properties start end)))
+         (let* ((bounds (pb-lisp/selection-bounds))
+                (text (buffer-substring-no-properties (car bounds) (cdr bounds))))
            (when (and start end)
              (kill-new text)
              (message "Copied selection to kill ring"))))
@@ -773,9 +802,8 @@
          "Move the current node or selection down one line."
          (interactive)
          (let* ((start (pb-lisp/selection-start)))
-           (save-excursion
-             (goto-char start)
-             (insert "\n"))
+           (goto-char start)
+           (insert "\n")
            (pb-lisp/indent-parent-node)))
 
        (defun pb-lisp/move-node-up-one-line ()
