@@ -87,44 +87,45 @@ it enters edition mode."
   (print "sorg ret")
   (cond ((evil-normal-state-p)
          (cond ((and (org-in-src-block-p)
-                     (not (pb-org_code-block-content-bounds)))
-                (save-excursion (let ((element (org-element-at-point)))
-                                  (goto-char (org-element-property :begin element)))
-                                (pb-org-babel_add-treesit-range-for-block))
-                ;; (evil-pb-lisp-state 1)
-                (pb-symex_enter))
+                     (not (org-at-block-p)))
+                (evil-pb-lisp-state 1)
+                '(pb-symex_enter))
+
                (t (evil-sorg-state))
 
                (nil (pb-org_maybe-edit-block))))
-        ((evil-insert-state-p) (newline-and-indent) '(sorg--maybe-enter-code-block))
+
+        ((evil-insert-state-p)
+         (newline-and-indent)
+         '(sorg--maybe-enter-code-block))
+
         (t (evil-sorg-state)
            (print (list :block? (pb-org_at-lisp-block-p)))
            (cond ((pb-org_at-lisp-block-p)
-                  '(progn :pb-lisp
-                          (pb-org-babel_add-treesit-range-for-block)
-                          (evil-sorg-state -1)
-                          (evil-next-line)
-                          (evil-pb-lisp-state 1))
-                  (progn :symex
+                  (progn :pb-lisp
                          (evil-sorg-state -1)
                          (evil-next-line)
-                         (pb-symex_enter)))
+                         (evil-pb-lisp-state 1))
+                  '(progn :symex
+                          (evil-sorg-state -1)
+                          (evil-next-line)
+                          (pb-symex_enter)))
 
                  (nil (pb-org_maybe-edit-block))))))
 
-(progn :pb-lisp-refresh-tree
-       (defun sorg--refresh-current-code-block-tree ()
-         (when (org-in-src-block-p)
-           (save-excursion (let ((element (org-element-at-point)))
-                             (goto-char (org-element-property :begin element)))
-                           (pb-org-babel_add-treesit-range-for-block))))
+(pb_comment :pb-lisp-refresh-tree
+            (defun sorg--refresh-current-code-block-tree ()
+              (when nil (org-in-src-block-p)
+                    (save-excursion (let ((element (org-element-at-point)))
+                                      (goto-char (org-element-property :begin element)))
+                                    (pb-org-babel_add-treesit-range-for-block))))
 
-       (defun sorg--refresh-before-pb-lisp-overlay (&rest _)
-         "Refresh the current code block tree before updating overlay in pb-lisp."
-         (when (eq major-mode 'org-mode)
-           (sorg--refresh-current-code-block-tree)))
+            (defun sorg--refresh-before-pb-lisp-overlay (&rest _)
+              "Refresh the current code block tree before updating overlay in pb-lisp."
+              (when (eq major-mode 'org-mode)
+                (sorg--refresh-current-code-block-tree)))
 
-       (advice-add 'pb-lisp/update-overlay :before #'sorg--refresh-before-pb-lisp-overlay))
+            (advice-add 'pb-lisp/update-overlay :before #'sorg--refresh-before-pb-lisp-overlay))
 
 (defun sorg--click ()
   "Click mouse 1 action."
