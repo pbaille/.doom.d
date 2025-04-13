@@ -143,6 +143,9 @@ Each src block will get a parser corresponding to its language."
 
 (require 'pb-org)
 
+(defvar pb-org-babel/last-created-parser
+  nil)
+
 (defun pb-org-babel_add-treesit-range-for-block ()
   "Add a treesit range for the current src block."
   (interactive)
@@ -155,7 +158,9 @@ Each src block will get a parser corresponding to its language."
                      (error (message "Failed to create parser for %s" lang)
                             nil))))
       (when parser
+        (setq pb-org-babel/last-created-parser parser)
         (treesit-parser-set-included-ranges parser (list bounds))
+        (message "bounds: %s" bounds)
         (message "Added treesit range for %s block" lang)
         parser))))
 
