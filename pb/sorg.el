@@ -61,7 +61,7 @@
                 (make-overlay (car bounds) (1- (cdr bounds)))))
   (overlay-put sorg--current-overlay 'face 'sorg--current-node-face))
 
-(defun sorg--flash-overlay ()
+(defun sorg--flash-overlay (&rest _)
   "Update the highlight overlay to match the start/end position of NODE."
   (interactive)
   (sorg--update-overlay)
@@ -146,6 +146,7 @@
         "c" #'pb-org_create-code-block
         ">" #'pb-org_shift-one-line-down
         "<" #'pb-org_shift-one-line-up
+        "s-l" #'evil-pb-lisp-state
         "<return>" #'pb-org_shift-one-line-down
         "S-<return>" #'pb-org_shift-one-line-up
         "<mouse-1>" #'sorg--click

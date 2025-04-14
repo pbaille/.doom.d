@@ -975,7 +975,9 @@
        (defun pb-lisp/exit ()
          (interactive)
          (evil-pb-lisp-state -1)
-         (evil-normal-state 1))
+         (evil-normal-state 1)
+          (when (eq major-mode 'org-mode)
+            (evil-sorg-state 1)))
 
        (defvar pb-lisp/bindings
          (list (kbd "<escape>") #'pb-lisp/exit
