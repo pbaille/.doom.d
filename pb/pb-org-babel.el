@@ -95,7 +95,10 @@ SPEC:"
        (require 'pb-org)
 
        (defvar pb-org-babel_lang->treesit-lang
-         '((emacs-lisp . elisp)))
+         '((emacs-lisp . elisp)
+           (clojure . clojure)
+           (clojurescript . clojure)
+           (clojurec . clojure)))
 
        (progn :prepare-all-sub-ranges
 
