@@ -84,32 +84,14 @@
                            (evil-sorg-state 1))))
   (evil-pb-lisp-state 1))
 
-(defun sorg--return ()
-  "Hit return."
+(defun sorg--enter-from-normal-mode ()
   (interactive)
-  (print "sorg ret")
-  (cond ((evil-normal-state-p)
-         (cond ((and (org-in-src-block-p)
-                     (not (org-at-block-p)))
-                (evil-pb-lisp-state 1)
-                '(pb-symex_enter))
+  (cond ((and (org-in-src-block-p)
+              (not (org-at-block-p)))
+         (evil-pb-lisp-state 1)
+         '(pb-symex_enter))
 
-               (t (evil-sorg-state))
-
-               (nil (pb-org_maybe-edit-block))))
-
-        ((evil-insert-state-p)
-         (newline-and-indent)
-         '(sorg--maybe-enter-code-block))
-
-        (t (evil-sorg-state)
-           (print (list :block? (pb-org_at-lisp-block-p)))
-           (cond ((pb-org_at-lisp-block-p)
-                  (sorg--enter-lisp-block)
-                  '(progn :symex
-                          (evil-sorg-state -1)
-                          (evil-next-line)
-                          (pb-symex_enter)))))))
+        (t (evil-sorg-state))))
 
 (pb_comment :pb-lisp-refresh-tree
             (defun sorg--refresh-current-code-block-tree ()
@@ -164,7 +146,8 @@
         "c" #'pb-org_create-code-block
         ">" #'pb-org_shift-one-line-down
         "<" #'pb-org_shift-one-line-up
-        "<return>" #'sorg--return
+        "<return>" #'pb-org_shift-one-line-down
+        "S-<return>" #'pb-org_shift-one-line-up
         "<mouse-1>" #'sorg--click
         ;; misc
         "?" #'pb-org_print-context))

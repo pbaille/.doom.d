@@ -333,7 +333,7 @@
        :i "C-j" #'evil-next-line
        :i "C-k" #'evil-previous-line
        ;; trigger sorg mode
-       :ni "<return>" #'sorg--return
+       :n "<return>" #'sorg--enter-from-normal-mode
        :ni "s-l" #'symex-mode-interface)
 
       (:map gptel-mode-map
