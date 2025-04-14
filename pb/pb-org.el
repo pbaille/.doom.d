@@ -234,10 +234,14 @@ If buffer is narrowed, widen it and narrow the next node"
     (symex-enter-mode)
     (point)))
 
+(defvar-local pb-org/enter-src-block-function nil)
+
 (defun pb-org_down-element ()
   "Enter inside current element."
   (cond ((pb-org_at-lisp-block-p)
-         (forward-line) (symex-enter-mode))
+         (if pb-org/enter-src-block-function
+             (funcall pb-org/enter-src-block-function)
+           (pb-org_enter-lisp-block)))
         ((org-at-block-p)
          (org-edit-src-code))
         (t (pb-org_down-element-safe))))
