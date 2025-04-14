@@ -29,6 +29,8 @@
 (defun sorg-enter-mode ()
   "Run when on entering sorg mode."
   (when (eq major-mode 'org-mode)
+    (setq-local pb-org/enter-src-block-function
+                #'sorg--enter-lisp-block)
     (goto-char (car (pb-org_node-bounds)))
     (sorg--flash-overlay)))
 
@@ -63,23 +65,24 @@
   "Update the highlight overlay to match the start/end position of NODE."
   (interactive)
   (sorg--update-overlay)
-  (run-at-time .2 nil #'sorg--delete-overlay))
+  (run-at-time .2 nil #'sorg--delete-overlay)
+  (run-at-time .2 nil #'evil-refresh-cursor))
 
 ;; more
-
-(defun sorg--maybe-enter-code-block ()
-  "Eventually enter org src mode.
-When return is pressed on the top line of a code block during insert mode,
-it enters edition mode."
-  (interactive)
-  (if (save-excursion (beginning-of-line) (org-at-block-p))
-      (progn (org-edit-src-code)
-             (evil-insert-state))
-    (newline-and-indent)))
 
 (defun sorg--initialize-tree-sitter-for-src-block ()
   "Initialize tree-sitter for the current src block's content."
   (when (pb-org_at-lisp-block-p)))
+
+(defun sorg--enter-lisp-block ()
+  (evil-sorg-state -1)
+  (evil-next-line)
+  (setq-local pb-lisp/escape-top-level-function
+              (lambda () (let ((element (org-element-at-point)))
+                           (goto-char (org-element-property :begin element))
+                           (evil-pb-lisp-state -1)
+                           (evil-sorg-state 1))))
+  (evil-pb-lisp-state 1))
 
 (defun sorg--return ()
   "Hit return."
@@ -102,21 +105,11 @@ it enters edition mode."
         (t (evil-sorg-state)
            (print (list :block? (pb-org_at-lisp-block-p)))
            (cond ((pb-org_at-lisp-block-p)
-                  (progn :pb-lisp
-                         (evil-sorg-state -1)
-                         (evil-next-line)
-                         (setq-local pb-lisp/escape-top-level-function
-                                     (lambda () (let ((element (org-element-at-point)))
-                                                  (goto-char (org-element-property :begin element))
-                                                  (evil-pb-lisp-state -1)
-                                                  (evil-sorg-state 1))))
-                         (evil-pb-lisp-state 1))
+                  (sorg--enter-lisp-block)
                   '(progn :symex
                           (evil-sorg-state -1)
                           (evil-next-line)
-                          (pb-symex_enter)))
-
-                 (nil (pb-org_maybe-edit-block))))))
+                          (pb-symex_enter)))))))
 
 (pb_comment :pb-lisp-refresh-tree
             (defun sorg--refresh-current-code-block-tree ()
