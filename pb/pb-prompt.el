@@ -827,7 +827,6 @@
               (defun pb-prompt/goto-next-item ()
                 "Move to the next item in the buffer."
                 (interactive)
-                (print "next item")
                 (let ((orig-point (point))
                       (found nil))
                   (forward-line 1)
