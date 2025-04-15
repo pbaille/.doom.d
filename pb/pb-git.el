@@ -17,14 +17,14 @@
   "Commit current file change."
   (interactive)
   (save-buffer)
-  (magit-stage-file (buffer-file-name))
+  (magit-file-stage)
   (magit-commit-create))
 
 (defun pb-git/stage-file ()
   "Commit current file change."
   (interactive)
   (save-buffer)
-  (magit-stage-file (buffer-file-name)))
+  (magit-file-stage))
 
 (defun pb-git/diff-as-string (&optional root-dir)
   "Get the current project's git diff as a string using git command directly."
@@ -52,6 +52,29 @@
                 (and (buffer-file-name buf)
                      (string-match-p "COMMIT_EDITMSG$" (buffer-file-name buf))))
               (buffer-list)))
+
+(defun pb-git/get-diff-string ()
+  (let* ((diff-buffers (seq-filter (lambda (buf)
+                                     (string-match-p "^magit-diff" (buffer-name buf)))
+                                   (buffer-list)))
+         (diff-buffer (cond
+                       ;; No diff buffers found
+                       ((null diff-buffers)
+                        (user-error "No magit-diff buffers found. Please open a diff view first"))
+
+                       ;; Exactly one diff buffer - use it automatically
+                       ((= 1 (length diff-buffers))
+                        (car diff-buffers))
+
+                       ;; Multiple diff buffers - let user choose with completion
+                       (t
+                        (let* ((buffer-names (mapcar #'buffer-name diff-buffers))
+                               (selected-name (completing-read "Choose diff buffer: " buffer-names nil t)))
+                          (get-buffer selected-name))))))
+
+    ;; Get content from the selected buffer
+    (with-current-buffer diff-buffer
+      (buffer-substring-no-properties (point-min) (point-max)))))
 
 (provide 'pb-git)
 
