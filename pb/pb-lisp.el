@@ -368,7 +368,7 @@
          (if (> pb-lisp/selection-size 1)
              (pb-lisp/reset-selection)
            (if pb-lisp/enter-node-function
-               (funcall #'pb-lisp/enter-node-function)
+               (funcall pb-lisp/enter-node-function)
              (pb-lisp/goto-first-child))))
 
        (defun pb-lisp/goto-nth-child (idx)

@@ -74,14 +74,16 @@
   "Initialize tree-sitter for the current src block's content."
   (when (pb-org_at-lisp-block-p)))
 
+(defun sorg--exit-lisp-block ()
+  (let ((element (org-element-at-point)))
+    (goto-char (org-element-property :begin element))
+    (evil-pb-lisp-state -1)
+    (evil-sorg-state 1)))
+
 (defun sorg--enter-lisp-block ()
   (evil-sorg-state -1)
   (evil-next-line)
-  (setq-local pb-lisp/escape-top-level-function
-              (lambda () (let ((element (org-element-at-point)))
-                           (goto-char (org-element-property :begin element))
-                           (evil-pb-lisp-state -1)
-                           (evil-sorg-state 1))))
+  (setq-local pb-lisp/escape-top-level-function #'sorg--exit-lisp-block)
   (evil-pb-lisp-state 1))
 
 (defun sorg--enter-from-normal-mode ()
@@ -93,19 +95,24 @@
 
         (t (evil-sorg-state))))
 
-(pb_comment :pb-lisp-refresh-tree
-            (defun sorg--refresh-current-code-block-tree ()
-              (when nil (org-in-src-block-p)
-                    (save-excursion (let ((element (org-element-at-point)))
-                                      (goto-char (org-element-property :begin element)))
-                                    (pb-org-babel_add-treesit-range-for-block))))
+(progn :pb-lisp-outside-of-blocks
+ (defun sorg--pb-lisp-entry-hook-function ()
+   (setq-local pb-lisp/enter-node-function
+               (lambda ()
+                 (if (pb-org_at-lisp-block-p)
+                     (progn (evil-pb-lisp-state -1)
+                            (evil-next-line)
+                            (evil-pb-lisp-state 1))
+                   (pb-lisp/goto-first-child)))
 
-            (defun sorg--refresh-before-pb-lisp-overlay (&rest _)
-              "Refresh the current code block tree before updating overlay in pb-lisp."
-              (when (eq major-mode 'org-mode)
-                (sorg--refresh-current-code-block-tree)))
+               pb-lisp/escape-top-level-function
+               (lambda ()
+                 (progn (evil-pb-lisp-state -1)
+                        (pb-org_code-block-goto-beg)
+                        (evil-pb-lisp-state 1)))))
 
-            (advice-add 'pb-lisp/update-overlay :before #'sorg--refresh-before-pb-lisp-overlay))
+ (add-hook 'evil-pb-lisp-state-entry-hook
+           #'sorg--pb-lisp-entry-hook-function))
 
 (defun sorg--click ()
   "Click mouse 1 action."
