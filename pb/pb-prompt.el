@@ -442,6 +442,7 @@
                    (when (save-excursion (re-search-forward "^#" nil t))
                      (delete-region (point-min) (1- (match-beginning 0))))
                    (insert response)
+                   (insert "\n")
                    ;; Notify the user
                    (message "Generated commit message inserted in magit commit buffer")))))))
 
