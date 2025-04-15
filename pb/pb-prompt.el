@@ -170,21 +170,31 @@
           (km :context
               (mapcar
                (lambda (ctx-item)
-                 (let ((type (km_get ctx-item :type)))
-                   (cond
-                    ((string= type "buffer")
-                     (km_put ctx-item
-                             :content (with-current-buffer (km_get ctx-item :buffer-name)
-                                        (buffer-substring-no-properties (point-min) (point-max)))))
-                    ((member type (list "file" "dir"))
-                     (pb-prompt/describe-path (km_get ctx-item :path)))
+                 (cl-case (intern (km_get ctx-item :type))
+                   (buffer
+                    (km_put ctx-item
+                            :content (with-current-buffer (km_get ctx-item :buffer-name)
+                                       (buffer-substring-no-properties (point-min) (point-max)))))
 
-                    ((string= type "function")
-                     (call-interactively (km_get ctx-item :function)))
+                   ((file dir)
+                    (pb-prompt/describe-path (km_get ctx-item :path)))
 
-                    (t ctx-item))))
+                   (function
+                    (call-interactively (km_get ctx-item :function)))
+
+                   (otherwise ctx-item)))
                (or context
-                   pb-prompt/context))))))
+                   pb-prompt/context)))))
+
+       (defun pb-prompt/display-context ()
+         (interactive)
+         (let ((buffer (get-buffer-create "*pb-prompt/context*")))
+           (with-current-buffer buffer
+             (xml-mode)
+             (flycheck-mode -1)
+             (erase-buffer)
+             (insert (pb-prompt/context-prompt)))
+           (pop-to-buffer buffer))))
 
 (progn :context-add
 
@@ -411,7 +421,6 @@
 
        (require 'pb-git)
        (require 'magit)
-
 
        (defun pb-prompt/generate-commit-message ()
          "Generate a commit message using GPT from the current magit diff.
