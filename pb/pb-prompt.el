@@ -412,6 +412,7 @@
        (require 'pb-git)
        (require 'magit)
 
+
        (defun pb-prompt/generate-commit-message ()
          "Generate a commit message using GPT from the current magit diff.
           Uses the magit diff buffer to create a prompt with guidelines for commit message
@@ -424,10 +425,7 @@
                                 :guidelines ["Include a brief summary in the first line (preferably under 50 characters)"
                                              "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
                                              "You can add a more detailed description after a blank line if needed"]
-                                :diff (let* ((buffer-name (concat "magit-diff: " (file-name-nondirectory (directory-file-name (magit-toplevel)))))
-                                             (diff-buffer (get-buffer buffer-name)))
-                                        (with-current-buffer diff-buffer
-                                          (buffer-substring-no-properties (point-min) (point-max)))))))))
+                                :diff (pb-git/get-diff-string))))))
 
            ;; Send the request to generate a commit message
            (gptel-request
