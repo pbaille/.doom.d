@@ -100,6 +100,13 @@ SPEC:"
            (clojurescript . clojure)
            (clojurec . clojure)))
 
+       (defun pb-org-babel_lang-string->treesit-lang (lang)
+           (or (alist-get (intern lang) pb-org-babel_lang->treesit-lang)
+               (intern lang)))
+
+       (alist-get (intern "emacs-lisp")
+                  pb-org-babel_lang->treesit-lang)
+
        (progn :prepare-all-sub-ranges
 
               (defun pb-org-babel_get-src-blocks ()
@@ -137,7 +144,7 @@ SPEC:"
                                   (if-let ((lang-str
                                             (and (not (pb-org_at-code-block-p))
                                                  (pb-org_code-block-language))))
-                                      (intern lang-str)
+                                      (pb-org-babel_lang-string->treesit-lang lang-str)
                                     'org)
                                 (treesit-parser-language (car (treesit-parser-list)))))))
 
@@ -162,8 +169,7 @@ SPEC:"
                 (if-let ((bounds (save-excursion (pb-org_code-block-goto-beg)
                                                  (pb-org_code-block-content-bounds))))
                     (let* ((lang (pb-org_code-block-language))
-                           (treesit-lang (or (alist-get (intern lang) pb-org-babel_lang->treesit-lang)
-                                             (intern lang)))
+                           (treesit-lang (pb-org-babel_lang-string->treesit-lang lang))
                            (parser (condition-case nil
                                        (treesit-parser-create treesit-lang)
                                      (error (message "Failed to create parser for %s" lang)
