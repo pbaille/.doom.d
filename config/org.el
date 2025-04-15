@@ -20,6 +20,9 @@
   (add-hook 'org-mode-hook
             (lambda () (interactive) (hl-line-mode -1)))
 
+  (add-hook 'org-mode-hook
+            (lambda () (treesit-parser-create 'org)))
+
   ;; those syntax entries are messing with symex editing in src block
   (add-hook 'org-mode-hook (lambda ()
                              (modify-syntax-entry ?< ".")
