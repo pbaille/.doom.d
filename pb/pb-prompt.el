@@ -775,6 +775,8 @@
                   (copy-tree pb-prompt/context)
                   pb-prompt/saved-contexts)
 
+         (pb-prompt/save-contexts-to-file)
+
          (message "Context saved as '%s'" name))
 
        (defun pb-prompt/load-context (name)
@@ -825,6 +827,7 @@
               (defun pb-prompt/goto-next-item ()
                 "Move to the next item in the buffer."
                 (interactive)
+                (print "next item")
                 (let ((orig-point (point))
                       (found nil))
                   (forward-line 1)
@@ -897,7 +900,32 @@
                   (goto-char (point-min))
                   (pb-prompt/goto-next-item)))
 
-              (defun pb-prompt/list-saved-contexts ()
+              (defun pb-prompt/focus-saved-context-by-name (name)
+                "Focus item NAME in saved context special buffer.
+                 Find the context with NAME in the saved contexts buffer and move point to it.
+                 This function is useful for navigating to a specific context in the
+                 browser view after operations that might change the buffer content."
+                (when (and name
+                           (eq major-mode 'pb-prompt/saved-contexts-mode))
+                  (let ((orig-point (point))
+                        (found nil))
+                    (save-excursion
+                      (goto-char (point-min))
+                      (while (and (not found)
+                                  (re-search-forward (concat "• " (regexp-quote name)) nil t))
+                        (beginning-of-line)
+                        (when (looking-at (concat "• " (regexp-quote name)))
+                          (setq found (point)))))
+                    (if found
+                        (progn
+                          (goto-char found)
+                          (recenter)
+                          t)
+                      (goto-char orig-point)
+                      (message "Context '%s' not found in buffer" name)
+                      nil))))
+
+              (defun pb-prompt/list-saved-contexts (&optional focus-name)
                 "Show a list of all saved contexts with item counts.
                  Displays contexts with syntax highlighting for better readability."
                 (interactive)
@@ -942,8 +970,10 @@
                   (setq-local header-line-format
                               (propertize "RET: open, d: delete, l: load, a: append, q: quit"
                                           'face 'header-line))
-                  (pop-to-buffer (current-buffer))
-                  (pb-prompt/goto-next-item)))
+                  (switch-to-buffer (current-buffer))
+                  (if focus-name
+                      (pb-prompt/focus-saved-context-by-name focus-name)
+                    (pb-prompt/goto-next-item))))
 
               ;; Define a specialized mode for saved contexts buffer
               (define-derived-mode pb-prompt/saved-contexts-mode special-mode "PB-Prompt Contexts"
@@ -1132,7 +1162,7 @@
          (cond (pb-prompt/parent-context
                 (pb-prompt/browse-context-items pb-prompt/parent-context))
                (pb-prompt/context-browser-focus
-                (pb-prompt/list-saved-contexts))))
+                (pb-prompt/list-saved-contexts pb-prompt/context-browser-focus))))
 
        (defun pb-prompt/browse-child-context ()
          "If item at point is a context, open a Context Browser for it.
@@ -1224,13 +1254,13 @@
              (goto-char (point-min))
              ;; Set mode and header line
              (pb-prompt/context-browser-mode)
-             (pb-prompt/goto-next-item)
              (setq-local pb-prompt/context-browser-focus name)
              (setq-local header-line-format
                          (propertize "RET: browse, d: delete, v: view details, r: refresh, q: quit"
                                      'face 'header-line)))
 
-           (switch-to-buffer buffer)))
+           (switch-to-buffer buffer)
+           (pb-prompt/goto-next-item)))
 
        (defun pb-prompt/context-item-at-point ()
          "Get the context item at point in the browser buffer."
