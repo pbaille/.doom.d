@@ -358,13 +358,18 @@
        (defun pb-lisp/goto-first-child ()
          "Move to the first child of current node."
          (interactive)
+         (let* ((node (pb-lisp/get-current-node))
+                (child (and node (treesit-node-child node 0 t))))
+           (pb-lisp/goto-node (or child node) "No child node found")))
+
+       (defun pb-lisp/enter-node ()
+         "Move to the first child of current node."
+         (interactive)
          (if (> pb-lisp/selection-size 1)
              (pb-lisp/reset-selection)
            (if pb-lisp/enter-node-function
                (funcall #'pb-lisp/enter-node-function)
-             (let* ((node (pb-lisp/get-current-node))
-                    (child (and node (treesit-node-child node 0 t))))
-               (pb-lisp/goto-node (or child node) "No child node found")))))
+             (pb-lisp/goto-first-child))))
 
        (defun pb-lisp/goto-nth-child (idx)
          (let* ((node (pb-lisp/get-current-node))
@@ -1001,7 +1006,7 @@
                (kbd "S-<return>") #'pb-lisp/move-node-up-one-line
                "h" #'pb-lisp/goto-prev-sibling
                "l" #'pb-lisp/goto-next-sibling
-               "j" #'pb-lisp/goto-first-child
+               "j" #'pb-lisp/enter-node
                "k" #'pb-lisp/goto-parent
                (kbd "C-l") #'pb-lisp/goto-last-sibling
                (kbd "C-h") #'pb-lisp/goto-first-sibling
