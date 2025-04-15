@@ -213,7 +213,7 @@
                    (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
                    (:desc "add file to context" "f" #'pb-prompt/add-path)
                    (:desc "add selection to context" "s" #'pb-prompt/add-selection)
-                   (:desc "append saved context" "c" #'pb-prompt/append-context))
+                   (:desc "add saved context" "c" #'pb-prompt/add-saved-context))
 
           (:desc "delete item" "d" #'pb-prompt/remove-context-item)
 
