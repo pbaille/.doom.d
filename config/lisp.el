@@ -101,6 +101,12 @@
 
   :config
   (setq symex-refocus-p nil)
+  (setq symex-interfaces
+        `((emacs-lisp-mode . ,(km_put (alist-get 'emacs-lisp-mode symex-interfaces)
+                                      :eval-pretty
+                                      #'pb-elisp_eval-pretty))
+          ,@(seq-remove (pb_fn [(cons x _)] (equal x 'emacs-lisp-mode))
+                        symex-interfaces)))
   (setq symex--user-evil-keyspec
 
         ;; revert k and j in symex to be more intuitive
