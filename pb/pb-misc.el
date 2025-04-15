@@ -184,8 +184,9 @@
          (interactive)
          (let* ((scratch-buffer-name (concat "SCRATCH_" (buffer-name)))
                 (current-mode major-mode)
-                (buffer-exists (get-buffer scratch-buffer-name)))
-           (switch-to-buffer (get-buffer-create scratch-buffer-name))
+                (buffer-exists (get-buffer scratch-buffer-name))
+                (buffer (get-buffer-create scratch-buffer-name)))
+           (switch-to-buffer buffer)
            (unless buffer-exists
              (funcall current-mode)
              (when (eq major-mode 'emacs-lisp-mode)
