@@ -70,10 +70,6 @@
 
 ;; more
 
-(defun sorg--initialize-tree-sitter-for-src-block ()
-  "Initialize tree-sitter for the current src block's content."
-  (when (pb-org_at-lisp-block-p)))
-
 (defun sorg--exit-lisp-block ()
   (let ((element (org-element-at-point)))
     (goto-char (org-element-property :begin element))
