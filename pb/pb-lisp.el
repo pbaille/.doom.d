@@ -294,7 +294,20 @@
 
 (progn :motion
 
-       (defvar-local pb-lisp/escape-top-level-function nil)
+       (defvar-local pb-lisp/escape-top-level-function nil
+         "Function to call when attempting to navigate up from a top-level node.
+          When set, this function will be called instead of displaying a message
+          when the user tries to navigate to the parent of a top-level node.
+          This allows for custom behavior when reaching the boundary of the
+          current syntax tree, such as exiting the current mode or moving focus
+          to a different area.")
+
+       (defvar-local pb-lisp/enter-node-function nil
+         "Custom function to call when attempting to enter a node.
+          When set, this function will be called instead of the default behavior
+          when using `pb-lisp/goto-first-child`. This allows for custom handling
+          of node traversal, such as specialized behavior for certain node types
+          or context-dependent navigation logic.")
 
        (defvar pb-lisp/skipped-node-types
          '("\n" ")" "]" "}"))
@@ -347,9 +360,11 @@
          (interactive)
          (if (> pb-lisp/selection-size 1)
              (pb-lisp/reset-selection)
-           (let* ((node (pb-lisp/get-current-node))
-                  (child (and node (treesit-node-child node 0 t))))
-             (pb-lisp/goto-node (or child node) "No child node found"))))
+           (if pb-lisp/enter-node-function
+               (funcall #'pb-lisp/enter-node-function)
+             (let* ((node (pb-lisp/get-current-node))
+                    (child (and node (treesit-node-child node 0 t))))
+               (pb-lisp/goto-node (or child node) "No child node found")))))
 
        (defun pb-lisp/goto-nth-child (idx)
          (let* ((node (pb-lisp/get-current-node))
@@ -976,8 +991,8 @@
          (interactive)
          (evil-pb-lisp-state -1)
          (evil-normal-state 1)
-          (when (eq major-mode 'org-mode)
-            (evil-sorg-state 1)))
+         (when (eq major-mode 'org-mode)
+           (evil-sorg-state 1)))
 
        (defvar pb-lisp/bindings
          (list (kbd "<escape>") #'pb-lisp/exit
