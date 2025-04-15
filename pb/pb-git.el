@@ -55,7 +55,7 @@
 
 (defun pb-git/get-diff-string ()
   (let* ((diff-buffers (seq-filter (lambda (buf)
-                                     (string-match-p "^magit-diff" (buffer-name buf)))
+                                     (string-match-p "^*magit-diff" (buffer-name buf)))
                                    (buffer-list)))
          (diff-buffer (cond
                        ;; No diff buffers found
