@@ -200,22 +200,25 @@
           (:desc "prompt: browse current context"
                  "i" #'pb-prompt/browse-current-context)
 
-          (:prefix ("c" . "prompt: context")
-                   (:prefix ("a" . "add")
-                            (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
-                            (:desc "add file to context" "f" #'pb-prompt/add-path)
-                            (:desc "add selection to context" "s" #'pb-prompt/add-selection)
-                            (:desc "append saved context" "c" #'pb-prompt/append-context))
-
-                   (:desc "delete item" "d" #'pb-prompt/remove-context-item)
-
-                   (:desc "save" "s" #'pb-prompt/save-context)
-                   (:desc "load" "l" #'pb-prompt/load-context))
-
           ;; git
           (:prefix ("g" . "git:")
                    (:desc "generate commit message" "m" #'pb-prompt/generate-commit-message))
           )
+
+ (:prefix ("s-c" . "prompt: context")
+          (:desc "browse" "c" #'pb-prompt/browse-context-items)
+          (:desc "display" "C-e" #'pb-prompt/display-context)
+          (:desc "saved contexts" "s-c" #'pb-prompt/list-saved-contexts)
+          (:prefix ("a" . "add")
+                   (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
+                   (:desc "add file to context" "f" #'pb-prompt/add-path)
+                   (:desc "add selection to context" "s" #'pb-prompt/add-selection)
+                   (:desc "append saved context" "c" #'pb-prompt/append-context))
+
+          (:desc "delete item" "d" #'pb-prompt/remove-context-item)
+
+          (:desc "save" "s" #'pb-prompt/save-context)
+          (:desc "load" "l" #'pb-prompt/load-context))
 
  (:prefix ("s-g" . "git")
           (:desc "git status" "s-g" #'magit-status)
