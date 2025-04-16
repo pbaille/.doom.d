@@ -184,12 +184,12 @@
          (let ((node-start-pos (treesit-node-start node))
                (parent (treesit-node-parent node)))
            (if parent
-           (let ((parent-pos (treesit-node-start parent))
+               (let ((parent-pos (treesit-node-start parent))
                      (parent-type (treesit-node-type parent)))
                  (if (and (eq node-start-pos parent-pos)
                           (not (member parent-type '("source" "source_file"))))
-           (pb-lisp/get-topmost-node parent)
-         node))
+                     (pb-lisp/get-topmost-node parent)
+                   node))
              node)))
 
        (defun pb-lisp/stacked-nodes (node)
@@ -873,12 +873,12 @@
          (km :eval
              (lambda (node-text)
                (interactive)
-               (eval (read node-text)))
+               (eval (read (concat "(progn" node-text ")"))))
 
              :eval-pretty
              (lambda (node-text)
                (interactive)
-               (pb-elisp_display-expression (eval (read node-text))))))
+               (pb-elisp_display-expression (eval (read (concat "(progn" node-text ")")))))))
 
        (defvar pb-lisp/clojure-methods
          (km :eval
@@ -932,9 +932,11 @@
 (quote
  (progn :improved-selection
 
+
   ;; Main state variables
   (defvar-local pb-lisp/current-node nil
     "The current primary node (cursor position)")
+
 
   (defvar-local pb-lisp/selection-count 0
     "Number of additional siblings selected after the current node")
