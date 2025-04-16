@@ -161,6 +161,43 @@
 
 (progn :buffers
 
+       (defun pb-misc/narrow-other-window ()
+         "Pop a new window with a cloned buffer, narrowed on the current expression.
+          This creates a new window with an indirect buffer clone, narrowed to the
+          current expression (sexp, paragraph, or region depending on context).
+          If in symex-mode, narrows to the current symex expression.
+          The indirect buffer ensures narrowing only affects the new window."
+         (interactive)
+         (let* ((original-buffer (current-buffer))
+                (buffer-file-name (buffer-file-name))
+                (buffer-name (buffer-name))
+                (region-active (use-region-p))
+                (bounds (cond
+                         ;; First check for active region
+                         (region-active
+                          (cons (region-beginning) (region-end)))
+                         ;; Check for symex-mode
+                         ((and (bound-and-true-p symex-mode)
+                               (fboundp 'pb-symex_get-expression-bounds))
+                          (pb-symex_get-expression-bounds))
+                         ;; Otherwise try to get current sexp
+                         ((and (looking-at "[({[]")
+                               (thing-at-point 'sexp))
+                          (bounds-of-thing-at-point 'sexp))
+                         ;; Fall back to paragraph
+                         (t (bounds-of-thing-at-point 'paragraph)))))
+           (when bounds
+             ;; Create an indirect buffer with a distinct name
+             (let* ((indirect-buffer-name (format "*narrowed: %s*" buffer-name))
+                    (indirect-buffer (or (get-buffer indirect-buffer-name)
+                                         (make-indirect-buffer original-buffer indirect-buffer-name t)))
+                    (new-window (pb-misc_dwim-split indirect-buffer)))
+               (select-window new-window)
+               ;; Narrow to the region
+               (with-current-buffer indirect-buffer
+                 (narrow-to-region (car bounds) (cdr bounds))
+                 (goto-char (point-min)))))))
+
        (defun pb-misc_kill-all-dired-buffers ()
          "Kill all `dired' and `dired-sidebar' buffers in one operation.
           This function iterates through all existing buffers and kills any
@@ -240,7 +277,9 @@
                            :state (consult--buffer-state))))
            (when selected
              (switch-to-buffer selected))))
+
        (progn :message-buffer
+
               (defun pb-misc_clear-message-buffer ()
                 "Clear the *Messages* buffer."
                 (interactive)
