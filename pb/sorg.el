@@ -64,9 +64,10 @@
 (defun sorg--flash-overlay (&rest _)
   "Update the highlight overlay to match the start/end position of NODE."
   (interactive)
-  (sorg--update-overlay)
-  (run-at-time .2 nil #'sorg--delete-overlay)
-  (run-at-time .2 nil #'evil-refresh-cursor))
+  (when (eq major-mode 'org-mode)
+    (sorg--update-overlay)
+    (run-at-time .2 nil #'sorg--delete-overlay)
+    (run-at-time .2 nil #'evil-refresh-cursor)))
 
 ;; more
 
@@ -92,23 +93,24 @@
         (t (evil-sorg-state))))
 
 (progn :pb-lisp-outside-of-blocks
- (defun sorg--pb-lisp-entry-hook-function ()
-   (setq-local pb-lisp/enter-node-function
-               (lambda ()
-                 (if (pb-org_at-lisp-block-p)
-                     (progn (evil-pb-lisp-state -1)
-                            (evil-next-line)
-                            (evil-pb-lisp-state 1))
-                   (pb-lisp/goto-first-child)))
+       (defun sorg--pb-lisp-entry-hook-function ()
+         (when (eq major-mode 'org-mode)
+           (setq-local pb-lisp/enter-node-function
+                       (lambda ()
+                         (if (pb-org_at-lisp-block-p)
+                             (progn (evil-pb-lisp-state -1)
+                                    (evil-next-line)
+                                    (evil-pb-lisp-state 1))
+                           (pb-lisp/goto-first-child)))
 
-               pb-lisp/escape-top-level-function
-               (lambda ()
-                 (progn (evil-pb-lisp-state -1)
-                        (pb-org_code-block-goto-beg)
-                        (evil-pb-lisp-state 1)))))
+                       pb-lisp/escape-top-level-function
+                       (lambda ()
+                         (progn (evil-pb-lisp-state -1)
+                                (pb-org_code-block-goto-beg)
+                                (evil-pb-lisp-state 1))))))
 
- (add-hook 'evil-pb-lisp-state-entry-hook
-           #'sorg--pb-lisp-entry-hook-function))
+       (add-hook 'evil-pb-lisp-state-entry-hook
+                 #'sorg--pb-lisp-entry-hook-function))
 
 (defun sorg--click ()
   "Click mouse 1 action."
