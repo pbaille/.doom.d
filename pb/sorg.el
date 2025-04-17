@@ -83,6 +83,9 @@
   (setq-local pb-lisp/escape-top-level-function #'sorg--exit-lisp-block)
   (evil-pb-lisp-state 1))
 
+(defun sorg--enter-pb-lisp-state ()
+  (evil-pb-lisp-state 1))
+
 (defun sorg--enter-from-normal-mode ()
   (interactive)
   (cond ((and (org-in-src-block-p)
@@ -151,7 +154,7 @@
         "c" #'pb-org_create-code-block
         ">" #'pb-org_shift-one-line-down
         "<" #'pb-org_shift-one-line-up
-        "s-l" #'evil-pb-lisp-state
+        "s-l" #'sorg--enter-pb-lisp-state
         "<return>" #'pb-org_shift-one-line-down
         "S-<return>" #'pb-org_shift-one-line-up
         "<mouse-1>" #'sorg--click
@@ -162,6 +165,8 @@
   (define-key evil-sorg-state-map
               (kbd (car binding))
               (cadr binding))
+  ;; TODO this should be done better, without advice
+  ;; (it introduced a bug related to flash overlay being called from non org buffer)
   (advice-add (cadr binding) :after #'sorg--flash-overlay))
 
 
