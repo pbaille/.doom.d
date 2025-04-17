@@ -554,581 +554,75 @@
                (evil-insert-state)
                (gptel-send))))))
 
+(progn :item-navigation
 
-(progn :consult-context
-
-       (defun pb-prompt/-format-relative-path (path)
-         "Format PATH as a relative path to project root or home directory.
-          If PATH is in a project, return it relative to the project root.
-          If PATH is in the home directory, return it with ~ prefix.
-          Otherwise, return the expanded path."
-         (let* ((project-root (when (and (fboundp 'project-current)
-                                         (project-current))
-                                (project-root (project-current))))
-                (expanded-path (expand-file-name path))
-                (relative-path (cond
-                                ((and project-root
-                                      (string-prefix-p project-root expanded-path))
-                                 (substring expanded-path (length project-root)))
-                                ((string-prefix-p (expand-file-name "~") expanded-path)
-                                 (concat "~" (substring expanded-path (length (expand-file-name "~")))))
-                                (t expanded-path))))
-           relative-path))
-
-       (defun pb-prompt/-context-item-description (item)
-         "Format a description for a context ITEM based on its type.
-          Returns a human-readable string representation of the item.
-
-          For buffer items, returns the buffer name.
-          For file or directory items, returns the relative path.
-          For selection items, returns the first line (truncated if needed).
-          For other types, returns a generic description with the type name."
-         (let ((type (km_get item :type))
-               (path (km_get item :path)))
-           (cl-case (intern type)
-             (buffer
-              (km_get item :buffer-name))
-             (context
-              (km_get item :name))
-             ((file dir)
-              (pb-prompt/-format-relative-path path))
-             (selection
-              (let* ((content (km_get item :content))
-                     (first-line (car (split-string content "\n")))
-                     (truncated-line (truncate-string-to-width first-line 80 nil nil "...")))
-                truncated-line))
-             (function
-              (let* ((content (km_get item :documentation))
-                     (first-line (car (split-string content "\n")))
-                     (truncated-line (truncate-string-to-width first-line 80 nil nil "...")))
-                (concat (km_get item :name) " :: " truncated-line)))
-             (otherwise
-              (format "Item of type: %s" type)))))
-
-       (defun pb-prompt/select-context-item ()
+       (defun pb-prompt/goto-next-item ()
+         "Move to the next item in the buffer."
          (interactive)
-         (when pb-prompt/context
-           (let* ((items-by-type (seq-group-by
-                                  (lambda (item) (km_get item :type))
-                                  pb-prompt/context))
-                  ;; Create a mapping from display strings to actual items
-                  (item-map (make-hash-table :test 'equal))
-                  ;; Create candidates with proper properties for grouping
-                  (candidates (mapcan
-                               (lambda (type-group)
-                                 (let ((type (car type-group))
-                                       (items (cdr type-group)))
-                                   (mapcar
-                                    (lambda (item)
-                                      (let* ((desc (pb-prompt/-context-item-description item)))
-                                        ;; Store in our map for later retrieval
-                                        (puthash desc item item-map)
-                                        ;; Return the display candidate with item properties
-                                        (propertize desc
-                                                    'consult--group type
-                                                    'context-item item)))
-                                    items)))
-                               items-by-type))
-                  ;; Define group function for consult
-                  (group-function (lambda (cand transform)
-                                    (if transform
-                                        cand
-                                      (get-text-property 0 'consult--group cand))))
-                  ;; Get selections using consult--read
-                  (picked (consult--read candidates
-                                         :prompt "Select context item: "
-                                         :category 'pb-prompt-context-item
-                                         :group group-function
-                                         :require-match t
-                                         :sort nil)))
+         (let ((orig-point (point))
+               (found nil))
+           (forward-line 1)
+           (while (and (not (eobp))
+                       (not found))
+             (beginning-of-line)
+             (if (looking-at "^•")
+           (setq found t)
+         (forward-line 1)))
+           (when (not found)
+             (goto-char orig-point)
+             (message "No next context found"))))
 
-             (gethash picked item-map))))
-
-       (defun pb-prompt/remove-context-item (&optional item)
-         "Let the user interactively remove some items from pb-prompt/context.
-          The items are grouped by type in the completion UI via category property."
+       (defun pb-prompt/goto-previous-item ()
+         "Move to the previous item in the buffer."
          (interactive)
-         (if-let ((to-remove (or item (pb-prompt/select-context-item))))
+         (let ((orig-point (point))
+               (found nil))
+           (forward-line -1)
+           (while (and (not (bobp))
+                       (not found))
+             (beginning-of-line)
+             (if (looking-at "^•")
+           (setq found t)
+         (forward-line -1)))
+           (when (not found)
+             (goto-char orig-point)
+             (message "No previous context found"))))
 
-             (progn (message "Removing context item: %s (ID: %s)"
-                             (or (km_get to-remove :type) "unknown")
-                             (km_get to-remove :id))
-                    (setq pb-prompt/context
-                          (seq-remove (lambda (item)
-                                        (equal (km_get item :id) (km_get to-remove :id)))
-                                      pb-prompt/context)))
-
-           (message "Warning: No item selected for removal (Key: %s)"
-                    picked)))
-
-       (defun pb-prompt/browse-context-item (&optional item)
-         "Open or display the content of the selected context item."
-         (interactive)
-         (let* ((item (or item (pb-prompt/select-context-item)))
-                (type (km_get item :type)))
-           (cl-case (intern type)
-             (buffer
-              (switch-to-buffer (km_get item :buffer-name)))
-             (context
-              (pb-prompt/browse-context-items
-               (km_get item :name)))
-             (file
-              (find-file (km_get item :path)))
-             (dir
-              (dired (km_get item :path)))
-             (selection
-              (with-current-buffer (get-buffer-create "*Context Item Selection*")
-                (erase-buffer)
-                (insert (km_get item :content))
-                (goto-char (point-min))
-                (when-let ((path (km_get item :path))
-                           (mode (km_get item :major-mode)))
-                  (funcall mode)
-                  (when (km_get item :symex)
-                    (symex-mode-interface)
-                    (symex-tidy)))
-                (switch-to-buffer (current-buffer))))
-             (otherwise
-              (message "Don't know how to browse item of type: %s" type)))))
-
-       (defun pb-prompt/describe-context-item (&optional item)
-         "Show detailed information about the context item."
-         (with-current-buffer (get-buffer-create "*Context Item Details*")
-           (erase-buffer)
-           (let* ((item (or item (pb-prompt/select-context-item)))
-                  (id (km_get item :id))
-                  (type (km_get item :type))
-                  (path (km_get item :path)))
-             (insert (format "ID: %s\n" id)
-                     (format "Type: %s\n" type))
-             (when path
-               (insert (format "Path: %s\n" path)))
-
-             (dolist (key (mapcar #'car (km_entries item)))
-               (unless (member key '(:id :type :path :content))
-                 (insert (format "%s: %s\n"
-                                 (substring (symbol-name key) 1)
-                                 (km_get item key)))))
-
-             (when-let ((content (km_get item :content)))
-               (insert "\nContent:\n---------\n")
-               (insert content)))
-           (goto-char (point-min))
-           (pop-to-buffer (current-buffer))))
-
-       (defun pb-prompt/consult-context ()
-         (interactive)
-         (pb-prompt/browse-context-item))
-
-       ;; Define embark actions for context items
-       (with-eval-after-load 'embark
-
-         (defun pb-prompt/embark-browse-context-item (candidate)
-           (if-let ((item (get-text-property 0 'context-item candidate)))
-             (pb-prompt/browse-context-item item)))
-
-         (defun pb-prompt/embark-describe-context-item (candidate)
-           "Display detailed information about the context item from embark."
-           (if-let ((item (get-text-property 0 'context-item candidate)))
-               (pb-prompt/describe-context-item item)
-             (message "No context item found in candidate")))
-
-         (defun pb-prompt/embark-remove-context-item (candidate)
-           "Remove the context item from embark candidate."
-           (if-let ((item (get-text-property 0 'context-item candidate)))
-               (pb-prompt/remove-context-item item)
-             (message "No context item found in candidate")))
-
-         (setq embark-quit-after-action
-               '((pb-prompt/embark-browse-context-item . t)
-                 (pb-prompt/embark-describe-context-item . nil)
-                 (pb-prompt/embark-remove-context-item . nil)
-                 (t . t)))
-
-         (add-to-list 'embark-keymap-alist
-                      '(pb-prompt-context-item . pb-prompt-context-item-map))
-
-         (defvar pb-prompt-context-item-map
-           (make-sparse-keymap))
-
-         (map!
-          (:map pb-prompt-context-item-map
-           :desc "Browse item" "b" #'pb-prompt/embark-browse-context-item
-           :desc "Describe item details" "d" #'pb-prompt/embark-describe-context-item
-           :desc "Remove item" "r" #'pb-prompt/embark-remove-context-item
-           :desc "Kill/delete item" "k" #'pb-prompt/embark-remove-context-item))))
-
-(progn :saved-contexts
-
-       (defun pb-prompt/get-saved-context (name)
-         (gethash name pb-prompt/saved-contexts))
-
-       (defun pb-prompt/save-context (name)
-         "Save the current context with NAME for later retrieval.
-          If a context with NAME already exists, it will be overwritten after confirmation."
-         (interactive "sSave context as: ")
-         (when (and (gethash name pb-prompt/saved-contexts)
-                    (not (yes-or-no-p (format "Context '%s' already exists. Overwrite? " name))))
-           (user-error "Aborted"))
-
-         (puthash name
-                  (copy-tree pb-prompt/context)
-                  pb-prompt/saved-contexts)
-
-         (pb-prompt/save-contexts-to-file)
-
-         (message "Context saved as '%s'" name))
-
-       (defun pb-prompt/load-context (name)
-         "Load a previously saved context with NAME.
-          If the current context is not empty, it will be replaced after confirmation."
-         (interactive
-          (list (completing-read "Load context: "
-                                 (hash-table-keys pb-prompt/saved-contexts) nil t)))
-         (let ((saved-context (gethash name pb-prompt/saved-contexts)))
-           (unless saved-context
-             (user-error "No context found with name '%s'" name))
-
-           (when (and pb-prompt/context
-                      (not (yes-or-no-p "Replace current context? ")))
-             (user-error "Aborted"))
-
-           (setq pb-prompt/context (copy-tree saved-context))
-           (message "Loaded context '%s' with %d items"
-                    name (length pb-prompt/context))))
-
-       (defun pb-prompt/append-context (name)
-         "Append items from a saved context with NAME to the current context."
-         (interactive
-          (list (completing-read "Append context: "
-                                 (hash-table-keys pb-prompt/saved-contexts) nil t)))
-         (let ((saved-context (gethash name pb-prompt/saved-contexts)))
-           (unless saved-context
-             (user-error "No context found with name '%s'" name))
-
-           (setq pb-prompt/context
-                 (append pb-prompt/context (copy-sequence saved-context)))
-           (message "Appended %d items from context '%s'"
-                    (length saved-context) name)))
-
-       (defun pb-prompt/delete-saved-context (name)
-         "Delete a saved context with NAME."
-         (interactive
-          (list (completing-read "Delete context: "
-                                 (hash-table-keys pb-prompt/saved-contexts) nil t)))
-         (if (gethash name pb-prompt/saved-contexts)
-             (progn
-               (remhash name pb-prompt/saved-contexts)
-               (message "Deleted context '%s'" name))
-           (message "No context found with name '%s'" name)))
-
-       (progn :item-navigation
-
-              (defun pb-prompt/goto-next-item ()
-                "Move to the next item in the buffer."
-                (interactive)
-                (let ((orig-point (point))
-                      (found nil))
-                  (forward-line 1)
-                  (while (and (not (eobp))
-                              (not found))
-                    (beginning-of-line)
-                    (if (looking-at "^•")
-                        (setq found t)
-                      (forward-line 1)))
-                  (when (not found)
-                    (goto-char orig-point)
-                    (message "No next context found"))))
-
-              (defun pb-prompt/goto-previous-item ()
-                "Move to the previous item in the buffer."
-                (interactive)
-                (let ((orig-point (point))
-                      (found nil))
-                  (forward-line -1)
-                  (while (and (not (bobp))
-                              (not found))
-                    (beginning-of-line)
-                    (if (looking-at "^•")
-                        (setq found t)
-                      (forward-line -1)))
-                  (when (not found)
-                    (goto-char orig-point)
-                    (message "No previous context found")))))
-
-       (progn :saved-contexts
-
-              (defvar pb-prompt/saved-context-buffer-name
-                "*Saved Contexts*")
-
-              '(defun pb-prompt/list-saved-contexts ()
-                "Show a list of all saved contexts with item counts."
-                (interactive)
-                (with-current-buffer (get-buffer-create pb-prompt/saved-context-buffer-name)
-                  (let ((contexts (hash-table-keys pb-prompt/saved-contexts))
-                        (inhibit-read-only t))
-                    (erase-buffer)
-                    (if (null contexts)
-                        (insert "No saved contexts found.\n")
-                      (insert "Saved Contexts:\n\n")
-                      (dolist (name (sort contexts #'string<))
-                        (let* ((context (gethash name pb-prompt/saved-contexts))
-                               (count (length context))
-                               (types (mapcar (lambda (item) (km_get item :type)) context))
-                               (type-counts (seq-reduce
-                                             (lambda (acc type)
-                                               (let ((count (or (alist-get type acc) 0)))
-                                                 (setf (alist-get type acc) (1+ count))
-                                                 acc))
-                                             types
-                                             nil)))
-                          (insert (format "• %s (%d items)\n" name count))
-                          (insert "  Types: ")
-                          (let ((type-strs (mapcar (lambda (type)
-                                                     (format "%s (%d)"
-                                                             (car type)
-                                                             (cdr type)))
-                                                   type-counts)))
-                            (insert (mapconcat #'identity type-strs ", "))
-                            (insert "\n\n")))))
-                    (goto-char (point-min))
-                    (pb-prompt/saved-contexts-mode)
-                    (setq-local header-line-format
-                                "RET: open, d: delete, l: load, a: append, q: quit"))
-                  (pop-to-buffer (current-buffer))
-                  (goto-char (point-min))
-                  (pb-prompt/goto-next-item)))
-
-              (defun pb-prompt/focus-saved-context-by-name (name)
-                "Focus item NAME in saved context special buffer.
+       (defun pb-prompt/focus-item-by-name (name)
+         "Focus item NAME in saved context special buffer.
                  Find the context with NAME in the saved contexts buffer and move point to it.
                  This function is useful for navigating to a specific context in the
                  browser view after operations that might change the buffer content."
-                (when (and name
-                           (eq major-mode 'pb-prompt/saved-contexts-mode))
-                  (let ((orig-point (point))
-                        (found nil))
-                    (save-excursion
-                      (goto-char (point-min))
-                      (while (and (not found)
-                                  (re-search-forward (concat "• " (regexp-quote name)) nil t))
-                        (beginning-of-line)
-                        (when (looking-at (concat "• " (regexp-quote name)))
-                          (setq found (point)))))
-                    (if found
-                        (progn
-                          (goto-char found)
-                          (recenter)
-                          t)
-                      (goto-char orig-point)
-                      (message "Context '%s' not found in buffer" name)
-                      nil))))
-
-              (defun pb-prompt/list-saved-contexts (&optional focus-name)
-                "Show a list of all saved contexts with item counts.
-                 Displays contexts with syntax highlighting for better readability."
-                (interactive)
-
-                (with-current-buffer (get-buffer-create pb-prompt/saved-context-buffer-name)
-                  (let ((contexts (hash-table-keys pb-prompt/saved-contexts))
-                        (inhibit-read-only t))
-                    (erase-buffer)
-                    (if (null contexts)
-                        (insert (propertize "No saved contexts found.\n" 'face 'font-lock-comment-face))
-                      ;; Header with custom face
-                      (insert (propertize "Saved Contexts:\n\n" 'face 'font-lock-keyword-face))
-                      (dolist (name (sort contexts #'string<))
-                        (let* ((context (gethash name pb-prompt/saved-contexts))
-                               (count (length context))
-                               (types (mapcar (lambda (item) (km_get item :type)) context))
-                               (type-counts (seq-reduce
-                                             (lambda (acc type)
-                                               (let ((count (or (alist-get type acc) 0)))
-                                                 (setf (alist-get type acc) (1+ count))
-                                                 acc))
-                                             types
-                                             nil)))
-                          ;; Context name with bullet and count
-                          (insert (propertize "• " 'face '(:foreground "pink"))
-                                  name
-                                  "\n")
-
-                          ;; Types section with different face
-                          (let ((type-strs
-                                 (mapcar (lambda (type)
-                                           (concat (propertize (car type) 'face 'font-lock-doc-face)
-                                                   (propertize (format " %d" (cdr type))
-                                                               'face 'font-lock-type-face)))
-                                         type-counts)))
-                            (insert "  ")
-                            (insert (mapconcat #'identity type-strs ", "))
-                            (insert "\n\n"))))))
-
-                  (goto-char (point-min))
-                  (pb-prompt/saved-contexts-mode)
-                  (setq-local header-line-format
-                              (propertize "RET: open, d: delete, l: load, a: append, q: quit"
-                                          'face 'header-line))
-                  (switch-to-buffer (current-buffer))
-                  (if focus-name
-                      (pb-prompt/focus-saved-context-by-name focus-name)
-                    (pb-prompt/goto-next-item))))
-
-              ;; Define a specialized mode for saved contexts buffer
-              (define-derived-mode pb-prompt/saved-contexts-mode special-mode "PB-Prompt Contexts"
-                "Major mode for listing saved prompt contexts."
-                (setq buffer-read-only t))
-
-              ;; Create a keymap for the mode that works with evil
-              (defvar pb-prompt/saved-contexts-mode-map
-                (let ((map (make-sparse-keymap)))
-                  (define-key map (kbd "RET") #'pb-prompt/browse-context-from-saved)
-                  (define-key map (kbd "d") #'pb-prompt/delete-context-at-point)
-                  (define-key map (kbd "l") #'pb-prompt/load-context-at-point)
-                  (define-key map (kbd "a") #'pb-prompt/append-context-at-point)
-                  (define-key map (kbd "q") #'quit-window)
-                  map)
-                "Keymap for `pb-prompt/saved-contexts-mode'.")
-
-              ;; Ensure evil respects our keymap in normal state
-              (with-eval-after-load 'evil
-                (evil-set-initial-state 'pb-prompt/saved-contexts-mode 'normal)
-                (evil-define-key 'normal pb-prompt/saved-contexts-mode-map
-                  (kbd "RET") #'pb-prompt/browse-context-from-saved
-                  (kbd "d") #'pb-prompt/delete-context-at-point
-                  (kbd "l") #'pb-prompt/load-context-at-point
-                  (kbd "a") #'pb-prompt/append-context-at-point
-                  (kbd "q") #'pb-prompt/exit-saved-contexts
-                  (kbd "k") #'pb-prompt/exit-saved-contexts
-                  (kbd "l") #'pb-prompt/goto-next-item
-                  (kbd "h") #'pb-prompt/goto-previous-item
-                  (kbd "j") #'pb-prompt/browse-context-from-saved))
-
-              (defun pb-prompt/context-name-at-point ()
-                "Get context name at point in the saved contexts buffer."
-                (save-excursion
-                  (beginning-of-line)
-                  (when (looking-at "• \\(.+\\)")
-                    (match-string-no-properties 1))))
-
-              (defun pb-prompt/open-context-at-point ()
-                "View the context at point in detail."
-                (interactive)
-                (let ((name (pb-prompt/context-name-at-point)))
-                  (when name
-                    (let ((context (gethash (string-trim name) pb-prompt/saved-contexts)))
-                      (with-current-buffer (let ((buf (get-buffer "*Context Details*")))
-                                             (when buf (kill-buffer buf))
-                                             (get-buffer-create "*Context Details*"))
-                        (erase-buffer)
-                        (insert (format "Context: %s (%d items)\n\n"
-                                        (string-trim name) (length context)))
-                        (dolist (item context)
-                          (insert (format "Type: %s\n" (km_get item :type)))
-                          (when-let ((id (km_get item :id)))
-                            (insert (format "ID: %s\n" id)))
-                          (when-let ((path (km_get item :path)))
-                            (insert (format "Path: %s\n" path)))
-                          (let ((content (km_get item :content)))
-                            (when content
-                              (insert "Content preview: ")
-                              (let ((preview (if (> (length content) 100)
-                                                 (concat (substring content 0 100) "...")
-                                               content)))
-                                (insert (replace-regexp-in-string "\n" " " preview) "\n"))))
-                          (insert "\n"))
-                        (goto-char (point-min))
-                        (view-mode)
-                        (pop-to-buffer (current-buffer)))))))
-
-              (defun pb-prompt/delete-context-at-point ()
-                "Delete the context at point."
-                (interactive)
-                (when-let ((name (pb-prompt/context-name-at-point)))
-                  (when (yes-or-no-p (format "Delete context '%s'? " (string-trim name)))
-                    (pb-prompt/delete-saved-context (string-trim name))
-                    (pb-prompt/list-saved-contexts))))
-
-              (defun pb-prompt/load-context-at-point ()
-                "Load the context at point, replacing current context."
-                (interactive)
-                (when-let ((name (pb-prompt/context-name-at-point)))
-                  (pb-prompt/load-context (string-trim name))
-                  (quit-window)))
-
-              (defun pb-prompt/append-context-at-point ()
-                "Append the context at point to current context."
-                (interactive)
-                (when-let ((name (pb-prompt/context-name-at-point)))
-                  (pb-prompt/append-context (string-trim name))
-                  (quit-window)))
-
-              (defun pb-prompt/exit-saved-contexts ()
-                "Exit the saved contexts buffer, kill the buffer, and quit the window."
-                (interactive)
-                (let ((buffer (current-buffer)))
-                  (quit-window t))))
-
-       (progn :persist-contexts
-
-              (quote
-               (find-file
-                (expand-file-name "pb-prompt-contexts.el" user-emacs-directory)))
-
-              (defcustom pb-prompt/contexts-file
-                (expand-file-name "pb-prompt-contexts.el" doom-user-dir)
-                "File where saved contexts are stored between Emacs sessions."
-                :type 'file
-                :group 'pb-prompt)
-
-              (defun pb-prompt/save-contexts-to-file ()
-                "Save all contexts to `pb-prompt/contexts-file'."
-                (interactive)
-                (with-temp-file pb-prompt/contexts-file
-                  (let ((print-length nil)
-                        (print-level nil))
-                    (insert ";; pb-prompt saved contexts - automatically generated\n\n")
-                    (insert "(setq pb-prompt/saved-contexts (make-hash-table :test 'equal))\n\n")
-                    (maphash (lambda (name context)
-                               (insert (format "(puthash %S '(" (substring-no-properties name)))
-                               (dolist (item context)
-                                 (insert (format "\n  %S" item)))
-                               (insert ")\n pb-prompt/saved-contexts)\n\n"))
-                             pb-prompt/saved-contexts))
-                  (message "Saved contexts to %s" pb-prompt/contexts-file)))
-
-              (defun pb-prompt/load-contexts-from-file ()
-                "Load contexts from `pb-prompt/contexts-file'."
-                (interactive)
-                (when (file-exists-p pb-prompt/contexts-file)
-                  (load-file pb-prompt/contexts-file)
-                  (message "Loaded %d saved contexts" (hash-table-count pb-prompt/saved-contexts))))
-
-              ;; Automatically load saved contexts when package is loaded
-              (with-eval-after-load 'pb-prompt
-                (pb-prompt/load-contexts-from-file))
-
-              ;; Add hook to save contexts when Emacs exits
-              (add-hook 'kill-emacs-hook #'pb-prompt/save-contexts-to-file)))
+         (when (and name
+                    (eq major-mode 'pb-prompt/saved-contexts-mode))
+           (let ((orig-point (point))
+                 (found nil))
+             (save-excursion
+               (goto-char (point-min))
+               (while (and (not found)
+                           (re-search-forward (concat "• " (regexp-quote name)) nil t))
+                 (beginning-of-line)
+                 (when (looking-at (concat "• " (regexp-quote name)))
+                   (setq found (point)))))
+             (if found
+                 (progn
+                   (goto-char found)
+                   (recenter)
+                   t)
+               (goto-char orig-point)
+               (message "Context '%s' not found in buffer" name)
+               nil)))))
 
 (progn :context-browser
 
        (defvar-local pb-prompt/parent-context nil)
 
-       (defvar pb-prompt/context-browser-mode-map
-         (let ((map (make-sparse-keymap)))
-           (define-key map (kbd "RET") #'pb-prompt/browse-context-item-at-point)
-           (define-key map (kbd "d") #'pb-prompt/delete-context-item-at-point)
-           (define-key map (kbd "v") #'pb-prompt/view-context-item-at-point)
-           (define-key map (kbd "r") #'pb-prompt/refresh-context-browser)
-           (define-key map (kbd "a f") #'pb-prompt/add-path)
-           (define-key map (kbd "q") #'quit-window)
-           map)
+       (defvar pb-prompt/context-browser-mode-map (make-sparse-keymap)
          "Keymap for `pb-prompt/context-browser-mode'.")
 
        (define-derived-mode pb-prompt/context-browser-mode special-mode "Context Browser"
          "Major mode for browsing context items.
-                 \\{pb-prompt/context-browser-mode-map}"
+          \\{pb-prompt/context-browser-mode-map}"
          (setq buffer-read-only t))
 
        ;; Ensure evil respects our keymap in normal state
@@ -1146,59 +640,7 @@
            (kbd "h") #'pb-prompt/goto-previous-item
            (kbd "j") #'pb-prompt/browse-child-context))
 
-       (defun pb-prompt/browse-parent-context ()
-         "Navigate to the parent of the current context browser.
-
-          If the buffer-local variable `pb-prompt/parent-context' is bound,
-          navigate to that parent context in the browser. Otherwise, if there
-          is no parent context but the current context is a saved context
-          (indicated by `pb-prompt/context-browser-focus' being non-nil),
-          go back to the full list of saved contexts.
-
-          This function provides hierarchical navigation in the context browser,
-          allowing users to move up the context tree during exploration."
-         (interactive)
-         (cond (pb-prompt/parent-context
-                (pb-prompt/browse-context-items pb-prompt/parent-context))
-               (pb-prompt/context-browser-focus
-                (pb-prompt/list-saved-contexts pb-prompt/context-browser-focus))))
-
-       (defun pb-prompt/browse-child-context ()
-         "If item at point is a context, open a Context Browser for it.
-          Navigates to the child context and sets the parent context locally
-          to enable navigation back to the current context."
-         (interactive)
-         (when-let* ((item (pb-prompt/context-item-at-point))
-                     (type (km_get item :type))
-                     (name (km_get item :name)))
-           (if (equal type "context")
-               (let ((parent-name (or pb-prompt/context-browser-focus "current"))
-                     (child-buffer (concat "*Context Browser " name "*")))
-                 (pb-prompt/browse-context-items name)
-                 (with-current-buffer child-buffer
-                   (setq-local pb-prompt/parent-context parent-name)
-                   (message "Navigated to child context: %s (parent: %s)"
-                            name parent-name)))
-             (message "Item at point is not a context (type: %s)" type))))
-
-       (defun pb-prompt/back-to-saved-contexts ()
-         "Return to the saved contexts listing view from the context browser.
-          This function closes the current context browser and opens the saved contexts list."
-         (interactive)
-         (when (eq major-mode 'pb-prompt/context-browser-mode)
-           (let ((buffer (current-buffer))
-                 (current-context-name pb-prompt/context-browser-focus))
-             (quit-window)
-             (pb-prompt/list-saved-contexts)
-             (when current-context-name
-               (with-current-buffer pb-prompt/saved-context-buffer-name
-                 (print current-context-name)
-                 (print (current-buffer))
-                 (goto-char (point-min))
-                 (when (search-forward current-context-name nil t)
-                   (beginning-of-line)))))))
-
-       (defun pb-prompt/browse-context-items (&optional name)
+       (defun pb-prompt/browse-context (&optional name)
          "Browse items in CONTEXT in a dedicated buffer.
           If CONTEXT is nil, use =pb-prompt/context=.
           Optional NAME is used for the buffer title."
@@ -1261,73 +703,575 @@
            (switch-to-buffer buffer)
            (pb-prompt/goto-next-item)))
 
-       (defun pb-prompt/context-item-at-point ()
-         "Get the context item at point in the browser buffer."
-         (get-text-property (point) 'context-item))
-
-       (defun pb-prompt/browse-context-item-at-point ()
-         "Browse the context item at point."
-         (interactive)
-         (when-let ((item (pb-prompt/context-item-at-point)))
-           (pb-prompt/browse-context-item item)))
-
-       (defun pb-prompt/view-context-item-at-point ()
-         "View detailed information about the context item at point."
-         (interactive)
-         (when-let ((item (pb-prompt/context-item-at-point)))
-           (pb-prompt/describe-context-item item)))
-
-       (defun pb-prompt/add-path-to-focused-context ()
-         (interactive)
-         (pb-prompt/add-path)
-         (pb-prompt/refresh-context-browser))
-
-       (defun pb-prompt/delete-context-item-at-point ()
-         "Delete the context item at point from the current context."
-         (interactive)
-         (when-let* ((item (pb-prompt/context-item-at-point))
-                     (id (km_get item :id)))
-           (if (yes-or-no-p (format "Delete item %s? "
-                                    (pb-prompt/-context-item-description item)))
-               (progn
-                                        ; Remove from actual context
-                 (pb-prompt/update-focused-context
-                  (lambda (ctx)
-                    (seq-remove (lambda (i)
-                                  (equal (km_get i :id) id))
-                                ctx)))
-                 ;; Refresh the browser
-                 (pb-prompt/refresh-context-browser)
-                 (message "Item deleted"))
-             (message "Deletion cancelled"))))
-
        (defun pb-prompt/refresh-context-browser ()
          "Refresh the context browser buffer."
          (interactive)
          (when (eq major-mode 'pb-prompt/context-browser-mode)
            (let ((line (line-number-at-pos)))
-             (pb-prompt/browse-context-items pb-prompt/context-browser-focus)
+             (pb-prompt/browse-context pb-prompt/context-browser-focus)
              (goto-char (point-min))
              (forward-line (1- line)))))
 
-       ;; Add browser command to saved contexts mode
+       (progn :browse
+
+              (defun pb-prompt/browse-current-context ()
+                "Browse the current context in a dedicated buffer."
+                (interactive)
+                (pb-prompt/browse-context))
+
+              (defun pb-prompt/browse-parent-context ()
+                "Navigate to the parent of the current context browser.
+
+                 If the buffer-local variable `pb-prompt/parent-context' is bound,
+                 navigate to that parent context in the browser. Otherwise, if there
+                 is no parent context but the current context is a saved context
+                 (indicated by `pb-prompt/context-browser-focus' being non-nil),
+                 go back to the full list of saved contexts.
+
+                 This function provides hierarchical navigation in the context browser,
+                 allowing users to move up the context tree during exploration."
+                (interactive)
+                (cond (pb-prompt/parent-context
+                       (pb-prompt/browse-context pb-prompt/parent-context))
+                      (pb-prompt/context-browser-focus
+                       (pb-prompt/browse-saved-contexts pb-prompt/context-browser-focus))))
+
+              (defun pb-prompt/browse-child-context ()
+                "If item at point is a context, open a Context Browser for it.
+                 Navigates to the child context and sets the parent context locally
+                 to enable navigation back to the current context."
+                (interactive)
+                (when-let* ((item (pb-prompt/context-item-at-point))
+                            (type (km_get item :type))
+                            (name (km_get item :name)))
+                  (if (equal type "context")
+           (let ((parent-name (or pb-prompt/context-browser-focus "current"))
+                            (child-buffer (concat "*Context Browser " name "*")))
+                        (pb-prompt/browse-context name)
+                        (with-current-buffer child-buffer
+                          (setq-local pb-prompt/parent-context parent-name)
+                          (message "Navigated to child context: %s (parent: %s)"
+                                   name parent-name)))
+                    (message "Item at point is not a context (type: %s)" type))))
+
+              (defun pb-prompt/back-to-saved-contexts ()
+                "Return to the saved contexts listing view from the context browser.
+          This function closes the current context browser and opens the saved contexts list."
+                (interactive)
+                (when (eq major-mode 'pb-prompt/context-browser-mode)
+           (let ((buffer (current-buffer))
+                 (current-context-name pb-prompt/context-browser-focus))
+             (quit-window)
+             (pb-prompt/browse-saved-contexts)
+             (when current-context-name
+               (with-current-buffer pb-prompt/saved-context-buffer-name
+                 (print current-context-name)
+                 (print (current-buffer))
+                 (goto-char (point-min))
+                 (when (search-forward current-context-name nil t)
+                   (beginning-of-line))))))))
+
+       (progn :selection
+
+              (defun pb-prompt/-format-relative-path (path)
+                "Format PATH as a relative path to project root or home directory.
+                 If PATH is in a project, return it relative to the project root.
+                 If PATH is in the home directory, return it with ~ prefix.
+                 Otherwise, return the expanded path."
+                (let* ((project-root (when (and (fboundp 'project-current)
+                                                (project-current))
+                                       (project-root (project-current))))
+                       (expanded-path (expand-file-name path))
+                       (relative-path (cond
+                                       ((and project-root
+                                             (string-prefix-p project-root expanded-path))
+                                        (substring expanded-path (length project-root)))
+                                       ((string-prefix-p (expand-file-name "~") expanded-path)
+                                        (concat "~" (substring expanded-path (length (expand-file-name "~")))))
+                                       (t expanded-path))))
+                  relative-path))
+
+              (defun pb-prompt/-context-item-description (item)
+                "Format a description for a context ITEM based on its type.
+                 Returns a human-readable string representation of the item.
+
+                 For buffer items, returns the buffer name.
+                 For file or directory items, returns the relative path.
+                 For selection items, returns the first line (truncated if needed).
+                 For other types, returns a generic description with the type name."
+                (let ((type (km_get item :type))
+                      (path (km_get item :path)))
+                  (cl-case (intern type)
+                    (buffer
+                     (km_get item :buffer-name))
+                    (context
+                     (km_get item :name))
+                    ((file dir)
+                     (pb-prompt/-format-relative-path path))
+                    (selection
+                     (let* ((content (km_get item :content))
+                            (first-line (car (split-string content "\n")))
+                            (truncated-line (truncate-string-to-width first-line 80 nil nil "...")))
+                       truncated-line))
+                    (function
+                     (let* ((content (km_get item :documentation))
+                            (first-line (car (split-string content "\n")))
+                            (truncated-line (truncate-string-to-width first-line 80 nil nil "...")))
+                       (concat (km_get item :name) " :: " truncated-line)))
+                    (otherwise
+                     (format "Item of type: %s" type)))))
+
+              (defun pb-prompt/select-context-item ()
+                (interactive)
+                (when pb-prompt/context
+                  (let* ((items-by-type (seq-group-by
+                                         (lambda (item) (km_get item :type))
+                                         pb-prompt/context))
+                         ;; Create a mapping from display strings to actual items
+                         (item-map (make-hash-table :test 'equal))
+                         ;; Create candidates with proper properties for grouping
+                         (candidates (mapcan
+                                      (lambda (type-group)
+                                        (let ((type (car type-group))
+                                              (items (cdr type-group)))
+                                          (mapcar
+                                           (lambda (item)
+                                             (let* ((desc (pb-prompt/-context-item-description item)))
+                                               ;; Store in our map for later retrieval
+                                               (puthash desc item item-map)
+                                               ;; Return the display candidate with item properties
+                                               (propertize desc
+                                                           'consult--group type
+                                                           'context-item item)))
+                                           items)))
+                                      items-by-type))
+                         ;; Define group function for consult
+                         (group-function (lambda (cand transform)
+                                           (if transform
+                                               cand
+                                             (get-text-property 0 'consult--group cand))))
+                         ;; Get selections using consult--read
+                         (picked (consult--read candidates
+                                                :prompt "Select context item: "
+                                                :category 'pb-prompt-context-item
+                                                :group group-function
+                                                :require-match t
+                                                :sort nil)))
+
+                    (gethash picked item-map))))
+
+              (defun pb-prompt/consult-context ()
+                (interactive)
+                (pb-prompt/browse-context-item))
+
+              ;; Define embark actions for context items
+              (with-eval-after-load 'embark
+
+                (defun pb-prompt/embark-browse-context-item (candidate)
+                  (if-let ((item (get-text-property 0 'context-item candidate)))
+                      (pb-prompt/browse-context-item item)))
+
+                (defun pb-prompt/embark-describe-context-item (candidate)
+                  "Display detailed information about the context item from embark."
+                  (if-let ((item (get-text-property 0 'context-item candidate)))
+                      (pb-prompt/describe-context-item item)
+                    (message "No context item found in candidate")))
+
+                (defun pb-prompt/embark-remove-context-item (candidate)
+                  "Remove the context item from embark candidate."
+                  (if-let ((item (get-text-property 0 'context-item candidate)))
+                      (pb-prompt/remove-context-item item)
+                    (message "No context item found in candidate")))
+
+                (setq embark-quit-after-action
+                      '((pb-prompt/embark-browse-context-item . t)
+                        (pb-prompt/embark-describe-context-item . nil)
+                        (pb-prompt/embark-remove-context-item . nil)
+                        (t . t)))
+
+                (add-to-list 'embark-keymap-alist
+                             '(pb-prompt-context-item . pb-prompt-context-item-map))
+
+                (defvar pb-prompt-context-item-map
+                  (make-sparse-keymap))
+
+                (map!
+                 (:map pb-prompt-context-item-map
+                  :desc "Browse item" "b" #'pb-prompt/embark-browse-context-item
+                  :desc "Describe item details" "d" #'pb-prompt/embark-describe-context-item
+                  :desc "Remove item" "r" #'pb-prompt/embark-remove-context-item
+                  :desc "Kill/delete item" "k" #'pb-prompt/embark-remove-context-item))))
+
+       (progn :actions
+
+              (defun pb-prompt/remove-context-item (&optional item)
+                "Let the user interactively remove some items from pb-prompt/context.
+                 The items are grouped by type in the completion UI via category property."
+                (interactive)
+                (if-let ((to-remove (or item (pb-prompt/select-context-item))))
+
+                    (progn (message "Removing context item: %s (ID: %s)"
+                                    (or (km_get to-remove :type) "unknown")
+                                    (km_get to-remove :id))
+                           (setq pb-prompt/context
+                                 (seq-remove (lambda (item)
+                                               (equal (km_get item :id) (km_get to-remove :id)))
+                                             pb-prompt/context)))
+
+                  (message "Warning: No item selected for removal (Key: %s)"
+                           picked)))
+
+              (defun pb-prompt/browse-context-item (&optional item)
+                "Open or display the content of the selected context item."
+                (interactive)
+                (let* ((item (or item (pb-prompt/select-context-item)))
+                       (type (km_get item :type)))
+                  (cl-case (intern type)
+                    (buffer
+                     (switch-to-buffer (km_get item :buffer-name)))
+                    (context
+                     (pb-prompt/browse-context
+                      (km_get item :name)))
+                    (file
+                     (find-file-other-window (km_get item :path)))
+                    (dir
+                     (dired-other-window (km_get item :path)))
+                    (selection
+                     (with-current-buffer (get-buffer-create "*Context Item Selection*")
+                       (erase-buffer)
+                       (insert (km_get item :content))
+                       (goto-char (point-min))
+                       (when-let ((path (km_get item :path))
+                                  (mode (km_get item :major-mode)))
+                         (funcall mode)
+                         (when (km_get item :symex)
+                           (symex-mode-interface)
+                           (symex-tidy)))
+                       (pop-to-buffer (current-buffer))))
+                    (otherwise
+                     (message "Don't know how to browse item of type: %s" type)))))
+
+              (defun pb-prompt/describe-context-item (&optional item)
+                "Show detailed information about the context item."
+                (with-current-buffer (get-buffer-create "*Context Item Details*")
+                  (erase-buffer)
+                  (let* ((item (or item (pb-prompt/select-context-item)))
+                         (id (km_get item :id))
+                         (type (km_get item :type))
+                         (path (km_get item :path)))
+                    (insert (format "ID: %s\n" id)
+                            (format "Type: %s\n" type))
+                    (when path
+                      (insert (format "Path: %s\n" path)))
+
+                    (dolist (key (mapcar #'car (km_entries item)))
+                      (unless (member key '(:id :type :path :content))
+                        (insert (format "%s: %s\n"
+                                        (substring (symbol-name key) 1)
+                                        (km_get item key)))))
+
+                    (when-let ((content (km_get item :content)))
+                      (insert "\nContent:\n---------\n")
+                      (insert content)))
+                  (goto-char (point-min))
+                  (pop-to-buffer (current-buffer)))))
+
+       (progn :at-point
+
+              (defun pb-prompt/context-item-at-point ()
+                "Get the context item at point in the browser buffer."
+                (get-text-property (point) 'context-item))
+
+              (defun pb-prompt/browse-context-item-at-point ()
+                "Browse the context item at point."
+                (interactive)
+                (when-let ((item (pb-prompt/context-item-at-point)))
+                  (pb-prompt/browse-context-item item)))
+
+              (defun pb-prompt/view-context-item-at-point ()
+                "View detailed information about the context item at point."
+                (interactive)
+                (when-let ((item (pb-prompt/context-item-at-point)))
+                  (pb-prompt/describe-context-item item)))
+
+              (defun pb-prompt/add-path-to-focused-context ()
+                (interactive)
+                (pb-prompt/add-path)
+                (pb-prompt/refresh-context-browser))
+
+              (defun pb-prompt/delete-context-item-at-point ()
+                "Delete the context item at point from the current context."
+                (interactive)
+                (when-let* ((item (pb-prompt/context-item-at-point))
+                            (id (km_get item :id)))
+                  (if (yes-or-no-p (format "Delete item %s? "
+                                           (pb-prompt/-context-item-description item)))
+           (progn
+                                        ; Remove from actual context
+         (pb-prompt/update-focused-context
+                         (lambda (ctx)
+         (seq-remove (lambda (i)
+         (equal (km_get i :id) id))
+                                       ctx)))
+         ;; Refresh the browser
+         (pb-prompt/refresh-context-browser)
+         (message "Item deleted"))
+                    (message "Deletion cancelled"))))))
+
+(progn :saved-contexts
+
+       (defvar pb-prompt/saved-context-buffer-name
+         "*Saved Contexts*")
+
+       (define-derived-mode pb-prompt/saved-contexts-mode special-mode "PB-Prompt Contexts"
+         "Major mode for listing saved prompt contexts."
+         (setq buffer-read-only t))
+
+       (defvar pb-prompt/saved-contexts-mode-map (make-sparse-keymap)
+         "Keymap for =pb-prompt/saved-contexts-mode'.")
+
        (with-eval-after-load 'evil
+         (evil-set-initial-state 'pb-prompt/saved-contexts-mode 'normal)
          (evil-define-key 'normal pb-prompt/saved-contexts-mode-map
-           (kbd "b") #'pb-prompt/browse-context-from-saved))
+         (kbd "RET") #'pb-prompt/browse-saved-context
+         (kbd "d") #'pb-prompt/delete-context-at-point
+         (kbd "l") #'pb-prompt/load-context-at-point
+         (kbd "a") #'pb-prompt/append-context-at-point
+         (kbd "q") #'pb-prompt/exit-saved-contexts
+         (kbd "k") #'pb-prompt/exit-saved-contexts
+         (kbd "l") #'pb-prompt/goto-next-item
+         (kbd "h") #'pb-prompt/goto-previous-item
+         (kbd "j") #'pb-prompt/browse-saved-context))
 
-       (defun pb-prompt/browse-context-from-saved ()
-         "Browse the context at point in saved contexts buffer."
+       (defun pb-prompt/browse-saved-contexts (&optional focus-name)
+         "Show a list of all saved contexts with item counts.
+                 Displays contexts with syntax highlighting for better readability."
          (interactive)
-         (when-let* ((name (pb-prompt/context-name-at-point))
-                     (trimmed-name (string-trim name))
-                     (context (gethash trimmed-name pb-prompt/saved-contexts)))
-           (pb-prompt/browse-context-items trimmed-name)))
 
-       ;; Add context browser to context management commands
-       (defun pb-prompt/browse-current-context ()
-         "Browse the current context in a dedicated buffer."
+         (with-current-buffer (get-buffer-create pb-prompt/saved-context-buffer-name)
+           (let ((contexts (hash-table-keys pb-prompt/saved-contexts))
+                 (inhibit-read-only t))
+             (erase-buffer)
+             (if (null contexts)
+                 (insert (propertize "No saved contexts found.\n" 'face 'font-lock-comment-face))
+               ;; Header with custom face
+               (insert (propertize "Saved Contexts:\n\n" 'face 'font-lock-keyword-face))
+               (dolist (name (sort contexts #'string<))
+                 (let* ((context (gethash name pb-prompt/saved-contexts))
+                        (count (length context))
+                        (types (mapcar (lambda (item) (pb_keyword (km_get item :type))) context))
+                        (type-counts (seq-reduce
+                                      (lambda (acc type)
+                                        (km_upd acc type (pb_fn [c] (1+ (or c 0)))))
+                                      types
+                                      nil)))
+                   (print type-counts)
+                   ;; Context name with bullet and count
+                   (insert (propertize "• " 'face '(:foreground "pink"))
+                           name
+                           "\n")
+
+                   ;; Types section with different face
+                   (let ((type-strs
+                          (mapcar (pb_fn [(cons type count)]
+                                         (concat (propertize (pb_string type) 'face 'font-lock-doc-face)
+                                                 (propertize (format " %d" count)
+                                                             'face 'font-lock-type-face)))
+                                  (km_entries type-counts))))
+                     (insert "  ")
+                     (insert (mapconcat #'identity type-strs ", "))
+                     (insert "\n\n"))))))
+
+           (goto-char (point-min))
+           (pb-prompt/saved-contexts-mode)
+           (setq-local header-line-format
+                       (propertize "RET: open, d: delete, l: load, a: append, q: quit"
+                                   'face 'header-line))
+           (switch-to-buffer (current-buffer))
+           (if focus-name
+               (pb-prompt/focus-item-by-name focus-name)
+             (pb-prompt/goto-next-item))))
+
+       (defun pb-prompt/exit-saved-contexts ()
+         "Exit the saved contexts buffer, kill the buffer, and quit the window."
          (interactive)
-         (pb-prompt/browse-context-items)))
+         (let ((buffer (current-buffer)))
+                  (quit-window t)))
+
+       (progn :context-actions
+
+              (defun pb-prompt/get-saved-context (name)
+                (gethash name pb-prompt/saved-contexts))
+
+              (defun pb-prompt/save-context (name)
+                "Save the current context with NAME for later retrieval.
+                 If a context with NAME already exists, it will be overwritten after confirmation."
+                (interactive "sSave context as: ")
+                (when (and (gethash name pb-prompt/saved-contexts)
+                           (not (yes-or-no-p (format "Context '%s' already exists. Overwrite? " name))))
+                  (user-error "Aborted"))
+
+                (puthash name
+                         (copy-tree pb-prompt/context)
+                         pb-prompt/saved-contexts)
+
+                (pb-prompt/save-contexts-to-file)
+
+                (message "Context saved as '%s'" name))
+
+              (defun pb-prompt/load-context (name)
+                "Load a previously saved context with NAME.
+                 If the current context is not empty, it will be replaced after confirmation."
+                (interactive
+                 (list (completing-read "Load context: "
+                                        (hash-table-keys pb-prompt/saved-contexts) nil t)))
+                (let ((saved-context (gethash name pb-prompt/saved-contexts)))
+                  (unless saved-context
+                    (user-error "No context found with name '%s'" name))
+
+                  (when (and pb-prompt/context
+                             (not (yes-or-no-p "Replace current context? ")))
+                    (user-error "Aborted"))
+
+                  (setq pb-prompt/context (copy-tree saved-context))
+                  (message "Loaded context '%s' with %d items"
+                           name (length pb-prompt/context))))
+
+              (defun pb-prompt/append-context (name)
+                "Append items from a saved context with NAME to the current context."
+                (interactive
+                 (list (completing-read "Append context: "
+                                        (hash-table-keys pb-prompt/saved-contexts) nil t)))
+                (let ((saved-context (gethash name pb-prompt/saved-contexts)))
+                  (unless saved-context
+                    (user-error "No context found with name '%s'" name))
+
+                  (setq pb-prompt/context
+                        (append pb-prompt/context (copy-sequence saved-context)))
+                  (message "Appended %d items from context '%s'"
+                           (length saved-context) name)))
+
+              (defun pb-prompt/delete-saved-context (name)
+                "Delete a saved context with NAME."
+                (interactive
+                 (list (completing-read "Delete context: "
+                                        (hash-table-keys pb-prompt/saved-contexts) nil t)))
+                (if (gethash name pb-prompt/saved-contexts)
+                    (progn
+                      (remhash name pb-prompt/saved-contexts)
+                      (message "Deleted context '%s'" name))
+                  (message "No context found with name '%s'" name)))
+
+              (defun pb-prompt/browse-saved-context ()
+                "Browse the context at point in saved contexts buffer."
+                (interactive)
+                (when-let* ((name (pb-prompt/context-name-at-point))
+                            (trimmed-name (string-trim name))
+                            (context (gethash trimmed-name pb-prompt/saved-contexts)))
+                  (pb-prompt/browse-context trimmed-name))))
+
+       (progn :at-point
+
+              (defun pb-prompt/context-name-at-point ()
+                "Get context name at point in the saved contexts buffer."
+                (save-excursion
+                  (beginning-of-line)
+                  (when (looking-at "• \\(.+\\)")
+                    (match-string-no-properties 1))))
+
+              (defun pb-prompt/open-context-at-point ()
+                "View the context at point in detail."
+                (interactive)
+                (let ((name (pb-prompt/context-name-at-point)))
+                  (when name
+                    (let ((context (gethash (string-trim name) pb-prompt/saved-contexts)))
+                      (with-current-buffer (let ((buf (get-buffer "*Context Details*")))
+                                             (when buf (kill-buffer buf))
+                                             (get-buffer-create "*Context Details*"))
+                        (erase-buffer)
+                        (insert (format "Context: %s (%d items)\n\n"
+                                        (string-trim name) (length context)))
+                        (dolist (item context)
+                          (insert (format "Type: %s\n" (km_get item :type)))
+                          (when-let ((id (km_get item :id)))
+                            (insert (format "ID: %s\n" id)))
+                          (when-let ((path (km_get item :path)))
+                            (insert (format "Path: %s\n" path)))
+                          (let ((content (km_get item :content)))
+                            (when content
+                              (insert "Content preview: ")
+                              (let ((preview (if (> (length content) 100)
+                                                 (concat (substring content 0 100) "...")
+                                               content)))
+                                (insert (replace-regexp-in-string "\n" " " preview) "\n"))))
+                          (insert "\n"))
+                        (goto-char (point-min))
+                        (view-mode)
+                        (pop-to-buffer (current-buffer)))))))
+
+              (defun pb-prompt/delete-context-at-point ()
+                "Delete the context at point."
+                (interactive)
+                (when-let ((name (pb-prompt/context-name-at-point)))
+                  (when (yes-or-no-p (format "Delete context '%s'? " (string-trim name)))
+                    (pb-prompt/delete-saved-context (string-trim name))
+                    (pb-prompt/browse-saved-contexts))))
+
+              (defun pb-prompt/load-context-at-point ()
+                "Load the context at point, replacing current context."
+                (interactive)
+                (when-let ((name (pb-prompt/context-name-at-point)))
+                  (pb-prompt/load-context (string-trim name))
+                  (quit-window)))
+
+              (defun pb-prompt/append-context-at-point ()
+                "Append the context at point to current context."
+                (interactive)
+                (when-let ((name (pb-prompt/context-name-at-point)))
+                  (pb-prompt/append-context (string-trim name))
+                  (quit-window))))
+
+       (progn :persist
+
+              (quote
+               (find-file
+                (expand-file-name "pb-prompt-contexts.el" user-emacs-directory)))
+
+              (defcustom pb-prompt/contexts-file
+                (expand-file-name "pb-prompt-contexts.el" doom-user-dir)
+                "File where saved contexts are stored between Emacs sessions."
+                :type 'file
+                :group 'pb-prompt)
+
+              (defun pb-prompt/save-contexts-to-file ()
+                "Save all contexts to `pb-prompt/contexts-file'."
+                (interactive)
+                (with-temp-file pb-prompt/contexts-file
+                  (let ((print-length nil)
+                        (print-level nil))
+                    (insert ";; pb-prompt saved contexts - automatically generated\n\n")
+                    (insert "(setq pb-prompt/saved-contexts (make-hash-table :test 'equal))\n\n")
+                    (maphash (lambda (name context)
+         (insert (format "(puthash %S '(" (substring-no-properties name)))
+         (dolist (item context)
+                                 (insert (format "\n  %S" item)))
+         (insert ")\n pb-prompt/saved-contexts)\n\n"))
+                             pb-prompt/saved-contexts))
+                  (message "Saved contexts to %s" pb-prompt/contexts-file)))
+
+              (defun pb-prompt/load-contexts-from-file ()
+                "Load contexts from `pb-prompt/contexts-file'."
+                (interactive)
+                (when (file-exists-p pb-prompt/contexts-file)
+                  (load-file pb-prompt/contexts-file)
+                  (message "Loaded %d saved contexts" (hash-table-count pb-prompt/saved-contexts))))
+
+              ;; Automatically load saved contexts when package is loaded
+              (with-eval-after-load 'pb-prompt
+                (pb-prompt/load-contexts-from-file))
+
+              ;; Add hook to save contexts when Emacs exits
+              (add-hook 'kill-emacs-hook #'pb-prompt/save-contexts-to-file)))
 
 
 (provide 'pb-prompt)
