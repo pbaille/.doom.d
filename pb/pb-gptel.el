@@ -37,7 +37,7 @@
 
    When called interactively, this prompts for the necessary inputs."
   (interactive)
-  (let ((gptel-max-tokens 64000))
+  (let ((gptel-max-tokens 32768))
     (apply #'gptel-request
            (encode-coding-string (pb-prompt/mk content)
                                  'utf-8)
@@ -340,7 +340,7 @@ This is a darkened version of the default theme background.")
             (gptel-mode)
             (setq-local gptel--system-message (pb-prompt/mk full-prompt)
                         gptel-use-tools nil
-                        gptel-max-tokens 64000)
+                        gptel-max-tokens 32768)
 
             (evil-normal-state)
             (symex-mode -1)
@@ -391,7 +391,7 @@ This is a darkened version of the default theme background.")
           (gptel-mode)
           (setq-local gptel--system-message (pb-prompt/mk full-prompt)
                       gptel-use-tools nil
-                      gptel-max-tokens 64000)
+                      gptel-max-tokens 32768)
           (evil-normal-state)
           (symex-mode -1)
 
