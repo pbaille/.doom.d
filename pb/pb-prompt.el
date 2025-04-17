@@ -530,7 +530,7 @@
                                                       "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
                                     :task "Analyze this git diff and provide a summary of the changes.")))
                            gptel-use-tools nil
-                           gptel-max-tokens 64000)
+                           gptel-max-tokens 32768)
 
                (evil-normal-state)
                (symex-mode -1)
