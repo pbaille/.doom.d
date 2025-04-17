@@ -4,7 +4,8 @@
 
 (map!
  (:prefix ("s-w" . "windows")
-          (:desc "delete window!" "d" #'evil-window-delete)
+          (:desc "delete window" "d" #'evil-window-delete)
+          (:desc "quit window" "q" #'quit-window)
           (:desc "kill buffer & window" "s-d" #'kill-buffer-and-window)
 
           ;; moving
@@ -194,8 +195,8 @@
           (:desc "prompt: simple request"
                  "r" #'pb-prompt/simple-request)
 
-          (:desc "prompt: consult saved contexts"
-                 "s-i" #'pb-prompt/list-saved-contexts)
+          (:desc "prompt: browse saved contexts"
+                 "s-i" #'pb-prompt/browse-saved-contexts)
 
           (:desc "prompt: browse current context"
                  "i" #'pb-prompt/browse-current-context)
@@ -280,7 +281,8 @@
              :i "C-S-l" #'paredit-forward-delete
              ;; :i "C-w" #'pb-misc_insert-open-paren
              :i "TAB" #'consult-company
-             :i "M-v" #'consult-yank-from-kill-ring)
+             :i "M-v" #'consult-yank-from-kill-ring
+             :i "s-c" #'copy-region-as-kill)
 
        (map! :v "s-x" #'execute-extended-command)
 
