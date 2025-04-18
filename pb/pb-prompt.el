@@ -184,6 +184,9 @@
                   (function
                    (call-interactively (km_get ctx-item :function)))
 
+                  (url
+                   (eww-browse-url (km_get ctx-item :url)))
+
                   (otherwise ctx-item)))
               context)))
 
@@ -333,6 +336,13 @@
               :path (buffer-file-name)
               :buffer-name (buffer-name)
               :major-mode (symbol-name major-mode))))
+
+       (defun pb-prompt/add-url (url &optional description)
+         (interactive)
+         (pb-prompt/add-item!
+          (km :type "url"
+              :url url
+              :description description)))
 
        (defun pb-prompt/add-saved-context ()
          "Add a saved context to the current context.
@@ -617,6 +627,8 @@
 
        (defvar-local pb-prompt/parent-context nil)
 
+       (defvar pb-prompt/context-ring nil)
+
        (defvar pb-prompt/context-browser-mode-map (make-sparse-keymap)
          "Keymap for `pb-prompt/context-browser-mode'.")
 
@@ -625,20 +637,55 @@
           \\{pb-prompt/context-browser-mode-map}"
          (setq buffer-read-only t))
 
-       ;; Ensure evil respects our keymap in normal state
+       (defvar pb-prompt/context-browser-keybindings
+         '((:key "RET" :desc "Browse item at point"
+            :category "navigation"
+            :function pb-prompt/browse-context-item-at-point)
+           (:key "d" :desc "Delete item at point"
+            :category "edition"
+            :function pb-prompt/delete-context-item-at-point)
+           (:key "v" :desc "View item details"
+            :category "display"
+            :function pb-prompt/view-context-item-at-point)
+           (:key "r" :desc "Refresh browser"
+            :category "display"
+            :function pb-prompt/refresh-context-browser)
+           (:key "a f" :desc "Add file/path to context"
+            :category "edition"
+            :function pb-prompt/add-path-to-focused-context)
+           (:key "q" :desc "Quit window"
+            :category "navigation"
+            :function quit-window)
+           (:key "k" :desc "Go to parent context"
+            :category "navigation"
+            :function pb-prompt/browse-parent-context)
+           (:key "l" :desc "Go to next item"
+            :category "navigation"
+            :function pb-prompt/goto-next-item)
+           (:key "h" :desc "Go to previous item"
+            :category "navigation"
+            :function pb-prompt/goto-previous-item)
+           (:key "j" :desc "Browse child context"
+            :category "navigation"
+            :function pb-prompt/browse-child-context)
+           (:key "y" :desc "Copy item at point"
+            :category "clipboard"
+            :function pb-prompt/copy-context-item-at-point)
+           (:key "p" :desc "Yank copied item"
+            :category "clipboard"
+            :function pb-prompt/yank-context-item)
+           (:key "C-p" :desc "Yank item from ring"
+            :category "clipboard"
+            :function pb-prompt/yank-context-item-from-ring)
+           (:key "?" :desc "Show help menu"
+            :category "help"
+            :function pb-prompt/context-browser-help-menu)))
+
        (with-eval-after-load 'evil
          (evil-set-initial-state 'pb-prompt/context-browser-mode 'normal)
-         (evil-define-key 'normal pb-prompt/context-browser-mode-map
-           (kbd "RET") #'pb-prompt/browse-context-item-at-point
-           (kbd "d") #'pb-prompt/delete-context-item-at-point
-           (kbd "v") #'pb-prompt/view-context-item-at-point
-           (kbd "r") #'pb-prompt/refresh-context-browser
-           (kbd "a f") #'pb-prompt/add-path-to-focused-context
-           (kbd "q") #'quit-window
-           (kbd "k") #'pb-prompt/browse-parent-context
-           (kbd "l") #'pb-prompt/goto-next-item
-           (kbd "h") #'pb-prompt/goto-previous-item
-           (kbd "j") #'pb-prompt/browse-child-context))
+         (dolist (binding pb-prompt/context-browser-keybindings)
+           (evil-define-key 'normal pb-prompt/context-browser-mode-map
+             (kbd (km_get binding :key)) (km_get binding :function))))
 
        (defun pb-prompt/browse-context (&optional name)
          "Browse items in CONTEXT in a dedicated buffer.
@@ -711,6 +758,61 @@
              (pb-prompt/browse-context pb-prompt/context-browser-focus)
              (goto-char (point-min))
              (forward-line (1- line)))))
+
+       (defun pb-prompt/context-browser-help-menu ()
+         "Display available keybindings in a help window with proper formatting,
+          grouped by category."
+         (interactive)
+         (let* ((bindings pb-prompt/context-browser-keybindings)
+                (categories (delete-dups (mapcar (lambda (b) (km_get b :category)) bindings)))
+                (sorted-categories (sort categories #'string<))
+                (buf (get-buffer-create "*Context Browser Help*")))
+           (with-current-buffer buf
+             (let ((inhibit-read-only t))
+               (erase-buffer)
+               (insert (propertize "Context Browser Keybindings:\n" 'face 'bold))
+               (insert (propertize "==========================\n\n" 'face 'bold))
+
+               ;; Display bindings grouped by category
+               (dolist (category sorted-categories)
+                 ;; Category header
+                 (insert (propertize (concat (capitalize category) ":\n")
+                                     'face '(:inherit font-lock-type-face :weight bold)))
+                 (insert (propertize (make-string (+ (length category) 1) ?-)
+                                     'face 'font-lock-comment-face)
+                         "\n")
+
+                 ;; Get bindings for this category
+                 (let* ((category-bindings (seq-filter
+                                            (lambda (b) (string= (km_get b :category) category))
+                                            bindings))
+                        (max-key-length (apply #'max
+                                               (mapcar (lambda (b) (length (km_get b :key)))
+                                                       category-bindings)))
+                        (max-desc-length (apply #'max
+                                                (mapcar (lambda (b) (length (km_get b :desc)))
+                                                        category-bindings))))
+
+                   ;; Sort bindings within category by key
+                   (dolist (binding (sort category-bindings
+                                          (lambda (a b)
+                                            (string< (km_get a :key) (km_get b :key)))))
+                     (let* ((key (km_get binding :key))
+                            (desc (km_get binding :desc))
+                            (func (km_get binding :function))
+                            (key-padding (make-string (- max-key-length (length key)) ? ))
+                            (desc-padding (make-string (- max-desc-length (length desc)) ? )))
+                       (insert "  " (propertize key 'face 'font-lock-keyword-face))
+                       (insert key-padding "  ")
+                       (insert (propertize desc 'face 'font-lock-doc-face))
+                       (insert desc-padding "  → ")
+                       (insert (propertize (symbol-name func) 'face 'font-lock-function-name-face))
+                       (insert "\n")))
+                   (insert "\n")))
+
+               (help-mode)
+               (goto-char (point-min))))
+           (pop-to-buffer buf)))
 
        (progn :browse
 
@@ -988,6 +1090,34 @@
                 (when-let ((item (pb-prompt/context-item-at-point)))
                   (pb-prompt/browse-context-item item)))
 
+              (defun pb-prompt/copy-context-item-at-point ()
+                (interactive)
+                (when-let ((item (pb-prompt/context-item-at-point)))
+                  (add-to-list 'pb-prompt/context-ring item)))
+
+              (defun pb-prompt/yank-context-item ()
+                (interactive)
+                (pb-prompt/add-item! (car pb-prompt/context-ring))
+                (pb-prompt/refresh-context-browser))
+
+              (defun pb-prompt/yank-context-item-from-ring ()
+                "Prompt the user to select a context-item from `pb-prompt/context-ring` and yank it to the current context.
+                 This lets you reuse items previously copied from the browser."
+                (interactive)
+                (when pb-prompt/context-ring
+                  (let* ((candidates (mapcar
+                                      (lambda (item)
+                                        (let ((desc (pb-prompt/-context-item-description item)))
+                                          (cons desc item)))
+                                      pb-prompt/context-ring))
+                         (desc-list (mapcar #'car candidates))
+                         (picked-desc (completing-read "Yank context item: " desc-list nil t))
+                         (item (cdr (assoc picked-desc candidates))))
+                    (when item
+                      (pb-prompt/add-item! item)
+                      (pb-prompt/refresh-context-browser)
+                      (message "Yanked context item: %s" picked-desc)))))
+
               (defun pb-prompt/view-context-item-at-point ()
                 "View detailed information about the context item at point."
                 (interactive)
@@ -1033,15 +1163,16 @@
        (with-eval-after-load 'evil
          (evil-set-initial-state 'pb-prompt/saved-contexts-mode 'normal)
          (evil-define-key 'normal pb-prompt/saved-contexts-mode-map
-         (kbd "RET") #'pb-prompt/browse-saved-context
-         (kbd "d") #'pb-prompt/delete-context-at-point
-         (kbd "l") #'pb-prompt/load-context-at-point
-         (kbd "a") #'pb-prompt/append-context-at-point
-         (kbd "q") #'pb-prompt/exit-saved-contexts
-         (kbd "k") #'pb-prompt/exit-saved-contexts
-         (kbd "l") #'pb-prompt/goto-next-item
-         (kbd "h") #'pb-prompt/goto-previous-item
-         (kbd "j") #'pb-prompt/browse-saved-context))
+           (kbd "RET") #'pb-prompt/browse-saved-context
+           (kbd "d") #'pb-prompt/delete-context-at-point
+           (kbd "l") #'pb-prompt/load-context-at-point
+           (kbd "a") #'pb-prompt/append-context-at-point
+           (kbd "q") #'pb-prompt/exit-saved-contexts
+           (kbd "k") #'pb-prompt/exit-saved-contexts
+           (kbd "l") #'pb-prompt/goto-next-item
+           (kbd "h") #'pb-prompt/goto-previous-item
+           (kbd "j") #'pb-prompt/browse-saved-context
+           (kbd "y") #'pb-prompt/copy-context-at-point))
 
        (defun pb-prompt/browse-saved-contexts (&optional focus-name)
          "Show a list of all saved contexts with item counts.
@@ -1223,6 +1354,14 @@
                 (when-let ((name (pb-prompt/context-name-at-point)))
                   (pb-prompt/load-context (string-trim name))
                   (quit-window)))
+
+              (defun pb-prompt/copy-context-at-point ()
+                (interactive)
+                (when-let ((name (pb-prompt/context-name-at-point)))
+                  (add-to-list 'pb-prompt/context-ring
+                               (pb-prompt/with-id
+                                (km :type "context"
+                                    :name name)))))
 
               (defun pb-prompt/append-context-at-point ()
                 "Append the context at point to current context."
