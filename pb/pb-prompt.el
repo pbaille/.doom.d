@@ -623,19 +623,7 @@
                (message "Context '%s' not found in buffer" name)
                nil)))))
 
-(progn :context-browser
-
-       (defvar-local pb-prompt/parent-context nil)
-
-       (defvar pb-prompt/context-ring nil)
-
-       (defvar pb-prompt/context-browser-mode-map (make-sparse-keymap)
-         "Keymap for `pb-prompt/context-browser-mode'.")
-
-       (define-derived-mode pb-prompt/context-browser-mode special-mode "Context Browser"
-         "Major mode for browsing context items.
-          \\{pb-prompt/context-browser-mode-map}"
-         (setq buffer-read-only t))
+(progn :bindings
 
        (defvar pb-prompt/context-browser-keybindings
          '((:key "RET" :desc "Browse item at point"
@@ -681,6 +669,128 @@
             :category "help"
             :function pb-prompt/context-browser-help-menu)))
 
+       (defvar pb-prompt/saved-contexts-keybindings
+         '((:key "RET" :desc "Browse context at point"
+            :category "navigation"
+            :function pb-prompt/browse-saved-context)
+           (:key "d" :desc "Delete context at point"
+            :category "edition"
+            :function pb-prompt/delete-context-at-point)
+           (:key "l" :desc "Load context at point"
+            :category "edition"
+            :function pb-prompt/load-context-at-point)
+           (:key "a" :desc "Append context at point"
+            :category "edition"
+            :function pb-prompt/append-context-at-point)
+           (:key "q" :desc "Quit window"
+            :category "navigation"
+            :function pb-prompt/exit-saved-contexts)
+           (:key "k" :desc "Go to parent/quit"
+            :category "navigation"
+            :function pb-prompt/exit-saved-contexts)
+           (:key "l" :desc "Go to next item"
+            :category "navigation"
+            :function pb-prompt/goto-next-item)
+           (:key "h" :desc "Go to previous item"
+            :category "navigation"
+            :function pb-prompt/goto-previous-item)
+           (:key "j" :desc "Browse context"
+            :category "navigation"
+            :function pb-prompt/browse-saved-context)
+           (:key "v" :desc "View context details"
+            :category "display"
+            :function pb-prompt/open-context-at-point)
+           (:key "y" :desc "Copy context at point"
+            :category "clipboard"
+            :function pb-prompt/copy-context-at-point)
+           (:key "?" :desc "Show help menu"
+            :category "help"
+            :function pb-prompt/saved-contexts-help-menu))))
+
+(progn :help-menu
+
+       (defun pb-prompt/display-help-menu (title bindings-var)
+         "Display available keybindings in a help window with proper formatting,
+          grouped by category.
+
+          TITLE is the header title for the help buffer.
+          BINDINGS-VAR is a variable containing the keybindings to display."
+         (let* ((bindings (symbol-value bindings-var))
+                (categories (delete-dups (mapcar (lambda (b) (km_get b :category)) bindings)))
+                (sorted-categories (sort categories #'string<))
+                (buf-name (format "*%s Help*" title))
+                (buf (get-buffer-create buf-name)))
+           (with-current-buffer buf
+             (let ((inhibit-read-only t))
+               (erase-buffer)
+               (insert (propertize (concat title " Keybindings:\n") 'face 'bold))
+               (insert (propertize "==========================\n\n" 'face 'bold))
+
+               ;; Display bindings grouped by category
+               (dolist (category sorted-categories)
+                 ;; Category header
+                 (insert (propertize (concat (capitalize category) ":\n")
+                                     'face '(:inherit font-lock-type-face :weight bold)))
+                 (insert (propertize (make-string (+ (length category) 1) ?-)
+                                     'face 'font-lock-comment-face)
+                         "\n")
+
+                 ;; Get bindings for this category
+                 (let* ((category-bindings (seq-filter
+                                            (lambda (b) (string= (km_get b :category) category))
+                                            bindings))
+                        (max-key-length (apply #'max
+                                               (mapcar (lambda (b) (length (km_get b :key)))
+                                                       category-bindings)))
+                        (max-desc-length (apply #'max
+                                                (mapcar (lambda (b) (length (km_get b :desc)))
+                                                        category-bindings))))
+
+                   ;; Sort bindings within category by key
+                   (dolist (binding (sort category-bindings
+                                          (lambda (a b)
+                                            (string< (km_get a :key) (km_get b :key)))))
+                     (let* ((key (km_get binding :key))
+                            (desc (km_get binding :desc))
+                            (func (km_get binding :function))
+                            (key-padding (make-string (- max-key-length (length key)) ? ))
+                            (desc-padding (make-string (- max-desc-length (length desc)) ? )))
+                       (insert "  " (propertize key 'face 'font-lock-keyword-face))
+                       (insert key-padding "  ")
+                       (insert (propertize desc 'face 'font-lock-doc-face))
+                       (insert desc-padding "  → ")
+                       (insert (propertize (symbol-name func) 'face 'font-lock-function-name-face))
+                       (insert "\n")))
+                   (insert "\n")))
+
+               (help-mode)
+               (goto-char (point-min))))
+           (pop-to-buffer buf)))
+
+       (defun pb-prompt/context-browser-help-menu ()
+         "Display help for context browser keybindings."
+         (interactive)
+         (pb-prompt/display-help-menu "Context Browser" 'pb-prompt/context-browser-keybindings))
+
+       (defun pb-prompt/saved-contexts-help-menu ()
+         "Display help for saved contexts keybindings."
+         (interactive)
+         (pb-prompt/display-help-menu "Saved Contexts" 'pb-prompt/saved-contexts-keybindings)))
+
+(progn :context-browser
+
+       (defvar-local pb-prompt/parent-context nil)
+
+       (defvar pb-prompt/context-ring nil)
+
+       (defvar pb-prompt/context-browser-mode-map (make-sparse-keymap)
+         "Keymap for `pb-prompt/context-browser-mode'.")
+
+       (define-derived-mode pb-prompt/context-browser-mode special-mode "Context Browser"
+         "Major mode for browsing context items.
+          \\{pb-prompt/context-browser-mode-map}"
+         (setq buffer-read-only t))
+
        (with-eval-after-load 'evil
          (evil-set-initial-state 'pb-prompt/context-browser-mode 'normal)
          (dolist (binding pb-prompt/context-browser-keybindings)
@@ -700,10 +810,10 @@
            (with-current-buffer buffer
              (erase-buffer)
              (if (null context)
-                 (insert (propertize "No context items found.\n" 'face 'font-lock-comment-face))
-               (let* ((title (if name
-                                 (concat "* " name)
-                               "Current Context"))
+           (insert (propertize "No context items found.\n" 'face 'font-lock-comment-face))
+         (let* ((title (if name
+           (concat "* " name)
+         "Current Context"))
                       (items-by-type (seq-group-by
                                       (lambda (item) (km_get item :type))
                                       context)))
@@ -759,61 +869,6 @@
              (goto-char (point-min))
              (forward-line (1- line)))))
 
-       (defun pb-prompt/context-browser-help-menu ()
-         "Display available keybindings in a help window with proper formatting,
-          grouped by category."
-         (interactive)
-         (let* ((bindings pb-prompt/context-browser-keybindings)
-                (categories (delete-dups (mapcar (lambda (b) (km_get b :category)) bindings)))
-                (sorted-categories (sort categories #'string<))
-                (buf (get-buffer-create "*Context Browser Help*")))
-           (with-current-buffer buf
-             (let ((inhibit-read-only t))
-               (erase-buffer)
-               (insert (propertize "Context Browser Keybindings:\n" 'face 'bold))
-               (insert (propertize "==========================\n\n" 'face 'bold))
-
-               ;; Display bindings grouped by category
-               (dolist (category sorted-categories)
-                 ;; Category header
-                 (insert (propertize (concat (capitalize category) ":\n")
-                                     'face '(:inherit font-lock-type-face :weight bold)))
-                 (insert (propertize (make-string (+ (length category) 1) ?-)
-                                     'face 'font-lock-comment-face)
-                         "\n")
-
-                 ;; Get bindings for this category
-                 (let* ((category-bindings (seq-filter
-                                            (lambda (b) (string= (km_get b :category) category))
-                                            bindings))
-                        (max-key-length (apply #'max
-                                               (mapcar (lambda (b) (length (km_get b :key)))
-                                                       category-bindings)))
-                        (max-desc-length (apply #'max
-                                                (mapcar (lambda (b) (length (km_get b :desc)))
-                                                        category-bindings))))
-
-                   ;; Sort bindings within category by key
-                   (dolist (binding (sort category-bindings
-                                          (lambda (a b)
-                                            (string< (km_get a :key) (km_get b :key)))))
-                     (let* ((key (km_get binding :key))
-                            (desc (km_get binding :desc))
-                            (func (km_get binding :function))
-                            (key-padding (make-string (- max-key-length (length key)) ? ))
-                            (desc-padding (make-string (- max-desc-length (length desc)) ? )))
-                       (insert "  " (propertize key 'face 'font-lock-keyword-face))
-                       (insert key-padding "  ")
-                       (insert (propertize desc 'face 'font-lock-doc-face))
-                       (insert desc-padding "  → ")
-                       (insert (propertize (symbol-name func) 'face 'font-lock-function-name-face))
-                       (insert "\n")))
-                   (insert "\n")))
-
-               (help-mode)
-               (goto-char (point-min))))
-           (pop-to-buffer buf)))
-
        (progn :browse
 
               (defun pb-prompt/browse-current-context ()
@@ -861,17 +916,17 @@
           This function closes the current context browser and opens the saved contexts list."
                 (interactive)
                 (when (eq major-mode 'pb-prompt/context-browser-mode)
-           (let ((buffer (current-buffer))
-                 (current-context-name pb-prompt/context-browser-focus))
-             (quit-window)
-             (pb-prompt/browse-saved-contexts)
-             (when current-context-name
-               (with-current-buffer pb-prompt/saved-context-buffer-name
-                 (print current-context-name)
-                 (print (current-buffer))
-                 (goto-char (point-min))
-                 (when (search-forward current-context-name nil t)
-                   (beginning-of-line))))))))
+                  (let ((buffer (current-buffer))
+                        (current-context-name pb-prompt/context-browser-focus))
+                    (quit-window)
+                    (pb-prompt/browse-saved-contexts)
+                    (when current-context-name
+                      (with-current-buffer pb-prompt/saved-context-buffer-name
+                        (print current-context-name)
+                        (print (current-buffer))
+                        (goto-char (point-min))
+                        (when (search-forward current-context-name nil t)
+                          (beginning-of-line))))))))
 
        (progn :selection
 
@@ -1136,16 +1191,16 @@
                             (id (km_get item :id)))
                   (if (yes-or-no-p (format "Delete item %s? "
                                            (pb-prompt/-context-item-description item)))
-           (progn
+                      (progn
                                         ; Remove from actual context
-         (pb-prompt/update-focused-context
+                        (pb-prompt/update-focused-context
                          (lambda (ctx)
-         (seq-remove (lambda (i)
-         (equal (km_get i :id) id))
+                           (seq-remove (lambda (i)
+                                         (equal (km_get i :id) id))
                                        ctx)))
-         ;; Refresh the browser
-         (pb-prompt/refresh-context-browser)
-         (message "Item deleted"))
+                        ;; Refresh the browser
+                        (pb-prompt/refresh-context-browser)
+                        (message "Item deleted"))
                     (message "Deletion cancelled"))))))
 
 (progn :saved-contexts
@@ -1158,25 +1213,17 @@
          (setq buffer-read-only t))
 
        (defvar pb-prompt/saved-contexts-mode-map (make-sparse-keymap)
-         "Keymap for =pb-prompt/saved-contexts-mode'.")
+         "Keymap for `pb-prompt/saved-contexts-mode'.")
 
        (with-eval-after-load 'evil
          (evil-set-initial-state 'pb-prompt/saved-contexts-mode 'normal)
-         (evil-define-key 'normal pb-prompt/saved-contexts-mode-map
-           (kbd "RET") #'pb-prompt/browse-saved-context
-           (kbd "d") #'pb-prompt/delete-context-at-point
-           (kbd "l") #'pb-prompt/load-context-at-point
-           (kbd "a") #'pb-prompt/append-context-at-point
-           (kbd "q") #'pb-prompt/exit-saved-contexts
-           (kbd "k") #'pb-prompt/exit-saved-contexts
-           (kbd "l") #'pb-prompt/goto-next-item
-           (kbd "h") #'pb-prompt/goto-previous-item
-           (kbd "j") #'pb-prompt/browse-saved-context
-           (kbd "y") #'pb-prompt/copy-context-at-point))
+         (dolist (binding pb-prompt/saved-contexts-keybindings)
+           (evil-define-key 'normal pb-prompt/saved-contexts-mode-map
+             (kbd (km_get binding :key)) (km_get binding :function))))
 
        (defun pb-prompt/browse-saved-contexts (&optional focus-name)
          "Show a list of all saved contexts with item counts.
-                 Displays contexts with syntax highlighting for better readability."
+          Displays contexts with syntax highlighting for better readability."
          (interactive)
 
          (with-current-buffer (get-buffer-create pb-prompt/saved-context-buffer-name)
@@ -1184,16 +1231,16 @@
                  (inhibit-read-only t))
              (erase-buffer)
              (if (null contexts)
-                 (insert (propertize "No saved contexts found.\n" 'face 'font-lock-comment-face))
-               ;; Header with custom face
-               (insert (propertize "Saved Contexts:\n\n" 'face 'font-lock-keyword-face))
-               (dolist (name (sort contexts #'string<))
+           (insert (propertize "No saved contexts found.\n" 'face 'font-lock-comment-face))
+         ;; Header with custom face
+         (insert (propertize "Saved Contexts:\n\n" 'face 'font-lock-keyword-face))
+         (dolist (name (sort contexts #'string<))
                  (let* ((context (gethash name pb-prompt/saved-contexts))
                         (count (length context))
                         (types (mapcar (lambda (item) (pb_keyword (km_get item :type))) context))
                         (type-counts (seq-reduce
                                       (lambda (acc type)
-                                        (km_upd acc type (pb_fn [c] (1+ (or c 0)))))
+         (km_upd acc type (pb_fn [c] (1+ (or c 0)))))
                                       types
                                       nil)))
                    (print type-counts)
@@ -1216,18 +1263,18 @@
            (goto-char (point-min))
            (pb-prompt/saved-contexts-mode)
            (setq-local header-line-format
-                       (propertize "RET: open, d: delete, l: load, a: append, q: quit"
+                       (propertize "RET: open, d: delete, l: load, a: append, ?: help, q: quit"
                                    'face 'header-line))
            (switch-to-buffer (current-buffer))
            (if focus-name
-               (pb-prompt/focus-item-by-name focus-name)
-             (pb-prompt/goto-next-item))))
+           (pb-prompt/focus-item-by-name focus-name)
+         (pb-prompt/goto-next-item))))
 
        (defun pb-prompt/exit-saved-contexts ()
          "Exit the saved contexts buffer, kill the buffer, and quit the window."
          (interactive)
          (let ((buffer (current-buffer)))
-                  (quit-window t)))
+           (quit-window t)))
 
        (progn :context-actions
 
@@ -1391,10 +1438,10 @@
                     (insert ";; pb-prompt saved contexts - automatically generated\n\n")
                     (insert "(setq pb-prompt/saved-contexts (make-hash-table :test 'equal))\n\n")
                     (maphash (lambda (name context)
-         (insert (format "(puthash %S '(" (substring-no-properties name)))
-         (dolist (item context)
+                               (insert (format "(puthash %S '(" (substring-no-properties name)))
+                               (dolist (item context)
                                  (insert (format "\n  %S" item)))
-         (insert ")\n pb-prompt/saved-contexts)\n\n"))
+                               (insert ")\n pb-prompt/saved-contexts)\n\n"))
                              pb-prompt/saved-contexts))
                   (message "Saved contexts to %s" pb-prompt/contexts-file)))
 
