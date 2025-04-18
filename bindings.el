@@ -207,12 +207,13 @@
           )
 
  (:prefix ("s-c" . "prompt: context")
-          (:desc "browse" "c" #'pb-prompt/browse-context-items)
+          (:desc "browse" "c" #'pb-prompt/browse-context)
           (:desc "display" "C-e" #'pb-prompt/display-context)
-          (:desc "saved contexts" "s-c" #'pb-prompt/list-saved-contexts)
+          (:desc "saved contexts" "s-c" #'pb-prompt/browse-saved-contexts)
           (:prefix ("a" . "add")
                    (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
                    (:desc "add file to context" "f" #'pb-prompt/add-path)
+                   (:desc "add function to context" "l" #'pb-prompt/add-function)
                    (:desc "add selection to context" "s" #'pb-prompt/add-selection)
                    (:desc "add saved context" "c" #'pb-prompt/add-saved-context))
 
