@@ -457,118 +457,6 @@
            :system (pb-prompt/context-prompt)
            :callback #'pb-gptel/current-symex-request-handler)))
 
-(progn :commit
-
-       (require 'pb-git)
-       (require 'magit)
-
-       (defun pb-prompt/generate-commit-message ()
-         "Generate a commit message using GPT from the current magit diff.
-          Uses the magit diff buffer to create a prompt with guidelines for commit message
-          format, then inserts the response into the commit message buffer."
-         (interactive)
-         (let ((prompt (pb-prompt/mk
-                        (km :instructions
-                            (km :base "You are writing clear and concise git commit messages."
-                                :task "Generate a git commit message for the changes shown in the diff."
-                                :guidelines ["Include a brief summary in the first line (preferably under 50 characters)"
-                                             "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
-                                             "You can add a more detailed description after a blank line if needed"]
-                                :diff (pb-git/get-diff-string))))))
-
-           ;; Send the request to generate a commit message
-           (gptel-request
-               prompt
-             :callback
-             (lambda (response _info)
-               ;; Find the magit commit message buffer
-               (when-let ((commit-buffer (pb-git/magit-commit-buffer)))
-                 (with-current-buffer commit-buffer
-                   ;; Insert the generated message at the beginning of the buffer
-                   (goto-char (point-min))
-                   (when (save-excursion (re-search-forward "^#" nil t))
-                     (delete-region (point-min) (1- (match-beginning 0))))
-                   (insert response)
-                   (insert "\n")
-                   ;; Notify the user
-                   (message "Generated commit message inserted in magit commit buffer")))))))
-
-       (defun pb-prompt/commit ()
-         "Create a new commit with an AI-generated commit message.
-          Starts the commit process and uses a timer to generate the message after
-          the commit buffer is created."
-         (interactive)
-         (magit-commit-create)
-         (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
-
-       (defun pb-prompt/commit-amend ()
-         "Amend the current commit with an AI-generated commit message.
-          Opens the amend commit buffer and uses a timer to generate a new
-          commit message based on the updated diff."
-         (interactive)
-         (magit-commit-amend)
-         (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
-
-       (defun pb-prompt/diff-branch ()
-         "Compare current branch with another and discuss changes with GPT.
-          Prompts for a branch to compare against, creates a diff, and opens a chat
-          buffer with the diff content to analyze changes using GPT."
-         (interactive)
-         (with-temp-buffer
-           (let* ((current-branch (magit-get-current-branch))
-                  (branches (magit-list-branch-names))
-                  (selected-branch (completing-read
-                                    (format "Compare %s with branch: " current-branch)
-                                    (seq-remove (lambda (branch) (string= branch current-branch))
-                                                branches)
-                                    nil t))
-                  (chat-buffer-name (format "CHAT_DIFF_%s_%s" current-branch selected-branch))
-                  (diff-buffer (magit-diff-range selected-branch))
-                  (diff-output (with-current-buffer diff-buffer
-                                 (buffer-string))))
-             ;; Now create a chat buffer with the diff content
-             (with-current-buffer (get-buffer-create chat-buffer-name)
-               (org-mode)
-               (erase-buffer)
-               (gptel-mode)
-               (setq-local gptel--system-message
-                           (pb-prompt/mk
-                            (km :context
-                                (km :diff-content
-                                    (km :current-branch current-branch
-                                        :compared-branch selected-branch
-                                        :diff diff-output))
-                                :instructions
-                                (km :base "You are a helpful code assistant analyzing git diffs."
-                                    :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
-                                                      "All org headings are level 3, 4, 5 ..."
-                                                      "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
-                                    :task "Analyze this git diff and provide a summary of the changes.")))
-                           gptel-use-tools nil
-                           gptel-max-tokens 32768)
-
-               (evil-normal-state)
-               (symex-mode -1)
-
-               ;; Add key bindings similar to other chat buffers
-               (evil-define-key nil 'local (kbd "s-q <return>")
-                 (lambda () (interactive)
-                   (call-interactively #'gptel-send)
-                   (evil-insert-newline-below)
-                   (goto-char (point-max))))
-
-               ;; Insert the header content
-               (insert (format "* Diff: %s..%s\n\n" current-branch selected-branch))
-               (insert "** Analyze this diff between branches\n\n")
-
-               ;; Position for GPT response
-               (goto-char (point-max))
-
-               ;; Switch to the buffer and start in insert mode
-               (switch-to-buffer (current-buffer))
-               (evil-insert-state)
-               (gptel-send))))))
-
 (progn :item-navigation
 
        (defun pb-prompt/goto-next-item ()
@@ -1464,6 +1352,118 @@
               ;; Add hook to save contexts when Emacs exits
               (add-hook 'kill-emacs-hook #'pb-prompt/save-contexts-to-file)))
 
+
+(progn :git-utils
+
+       (require 'pb-git)
+       (require 'magit)
+
+       (defun pb-prompt/generate-commit-message ()
+         "Generate a commit message using GPT from the current magit diff.
+          Uses the magit diff buffer to create a prompt with guidelines for commit message
+          format, then inserts the response into the commit message buffer."
+         (interactive)
+         (let ((prompt (pb-prompt/mk
+                        (km :instructions
+                            (km :base "You are writing clear and concise git commit messages."
+                                :task "Generate a git commit message for the changes shown in the diff."
+                                :guidelines ["Include a brief summary in the first line (preferably under 50 characters)"
+                                             "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
+                                             "You can add a more detailed description after a blank line if needed"]
+                                :diff (pb-git/get-diff-string))))))
+
+           ;; Send the request to generate a commit message
+           (gptel-request
+               prompt
+             :callback
+             (lambda (response _info)
+               ;; Find the magit commit message buffer
+               (when-let ((commit-buffer (pb-git/magit-commit-buffer)))
+                 (with-current-buffer commit-buffer
+                   ;; Insert the generated message at the beginning of the buffer
+                   (goto-char (point-min))
+                   (when (save-excursion (re-search-forward "^#" nil t))
+                     (delete-region (point-min) (1- (match-beginning 0))))
+                   (insert response)
+                   (insert "\n")
+                   ;; Notify the user
+                   (message "Generated commit message inserted in magit commit buffer")))))))
+
+       (defun pb-prompt/commit ()
+         "Create a new commit with an AI-generated commit message.
+          Starts the commit process and uses a timer to generate the message after
+          the commit buffer is created."
+         (interactive)
+         (magit-commit-create)
+         (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
+
+       (defun pb-prompt/commit-amend ()
+         "Amend the current commit with an AI-generated commit message.
+          Opens the amend commit buffer and uses a timer to generate a new
+          commit message based on the updated diff."
+         (interactive)
+         (magit-commit-amend)
+         (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
+
+       (defun pb-prompt/diff-branch ()
+         "Compare current branch with another and discuss changes with GPT.
+          Prompts for a branch to compare against, creates a diff, and opens a chat
+          buffer with the diff content to analyze changes using GPT."
+         (interactive)
+         (with-temp-buffer
+           (let* ((current-branch (magit-get-current-branch))
+                  (branches (magit-list-branch-names))
+                  (selected-branch (completing-read
+                                    (format "Compare %s with branch: " current-branch)
+                                    (seq-remove (lambda (branch) (string= branch current-branch))
+                                                branches)
+                                    nil t))
+                  (chat-buffer-name (format "CHAT_DIFF_%s_%s" current-branch selected-branch))
+                  (diff-buffer (magit-diff-range selected-branch))
+                  (diff-output (with-current-buffer diff-buffer
+                                 (buffer-string))))
+             ;; Now create a chat buffer with the diff content
+             (with-current-buffer (get-buffer-create chat-buffer-name)
+               (org-mode)
+               (erase-buffer)
+               (gptel-mode)
+               (setq-local gptel--system-message
+                           (pb-prompt/mk
+                            (km :context
+                                (km :diff-content
+                                    (km :current-branch current-branch
+                                        :compared-branch selected-branch
+                                        :diff diff-output))
+                                :instructions
+                                (km :base "You are a helpful code assistant analyzing git diffs."
+                                    :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
+                                                      "All org headings are level 3, 4, 5 ..."
+                                                      "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
+                                    :task "Analyze this git diff and provide a summary of the changes.")))
+                           gptel-use-tools nil
+                           gptel-max-tokens 32768)
+
+               (evil-normal-state)
+               (symex-mode -1)
+
+               ;; Add key bindings similar to other chat buffers
+               (evil-define-key nil 'local (kbd "s-q <return>")
+                 (lambda () (interactive)
+                   (call-interactively #'gptel-send)
+                   (evil-insert-newline-below)
+                   (goto-char (point-max))))
+
+               ;; Insert the header content
+               (insert (format "* Diff: %s..%s\n\n" current-branch selected-branch))
+               (insert "** Analyze this diff between branches\n\n")
+
+               ;; Position for GPT response
+               (goto-char (point-max))
+
+               ;; Switch to the buffer and start in insert mode
+               (switch-to-buffer (current-buffer))
+               (evil-insert-state)
+               (gptel-send))))))
 
 (provide 'pb-prompt)
 
