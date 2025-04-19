@@ -58,6 +58,34 @@
   (pb_let [values (pb-tree_get-path-values pb-prompt/tree path)]
     (mapconcat #'pb-prompt/mk values "\n\n")))
 
+(defvar pb-gptel/models
+  (append gptel--anthropic-models
+          gptel--openai-models
+          gptel--gemini-models))
+
+(defun pb-gptel/change-model (&optional globally)
+  "Change the GPT model used for conversations.
+
+   This function prompts the user to select a model from the available options,
+   and whether to apply the change globally or just to the current buffer."
+  (interactive)
+  (let* ((scope (completing-read "Apply change: " '("Current buffer only" "Globally (all buffers)") nil t))
+         (globally (string= scope "Globally (all buffers)"))
+         (models (mapcar #'car pb-gptel/models))
+         (current-model (if globally
+                            (default-value 'gptel-model)
+                          gptel-model))
+         (selected-model (completing-read
+                          (format "Select model (current: %s): " current-model)
+                          models nil t)))
+    (when selected-model
+      (if globally
+          (progn
+            (setq-default gptel-model selected-model)
+            (message "Model changed globally to: %s" selected-model))
+        (setq-local gptel-model selected-model)
+        (message "Model changed in current buffer to: %s" selected-model)))))
+
 
 (progn :context
 
