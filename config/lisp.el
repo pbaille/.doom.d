@@ -218,7 +218,7 @@
 
   (general-define-key
    :states 'insert
-   :keymaps (cons 'evil-org-mode-map pb-config_lisp-modes)
+   :keymaps pb-config_lisp-modes
    [escape] #'pb-symex_escape-insert-mode
    [mouse-1] #'pb-symex_click
    ";" (lambda () (interactive) (insert "-"))
