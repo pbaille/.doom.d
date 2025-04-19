@@ -199,7 +199,7 @@
           (pb-prompt/context-km (or context
                                     pb-prompt/context))))
 
-       (defun pb-prompt/display-context ()
+       (defun pb-prompt/display-context-prompt ()
          (interactive)
          (let ((buffer (get-buffer-create "*pb-prompt/context*")))
            (with-current-buffer buffer
@@ -207,7 +207,12 @@
              (flycheck-mode -1)
              (erase-buffer)
              (insert (pb-prompt/context-prompt)))
-           (pop-to-buffer buffer))))
+           (pop-to-buffer buffer)))
+
+       (defun pb-prompt/display-context ()
+         (interactive)
+         (pb-elisp_display-expression pb-prompt/context
+                                      #'km_pp)))
 
 (progn :context-add
 
