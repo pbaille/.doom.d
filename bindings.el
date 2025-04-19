@@ -163,6 +163,9 @@
           (:desc "gptel: menu"
                  "m" #'gptel-menu)
 
+          (:desc "gptel: change model"
+                 "s-m" #'pb-gptel/change-model)
+
           (:desc "gptel: add file to context"
                  "f" #'gptel-context-add-file)
 
