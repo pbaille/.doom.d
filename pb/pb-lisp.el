@@ -873,12 +873,13 @@
          (km :eval
              (lambda (node-text)
                (interactive)
-               (eval (read (concat "(progn" node-text ")"))))
+               (message (format "result: %s"
+                                (eval (read (concat "(progn " node-text ")"))))))
 
              :eval-pretty
              (lambda (node-text)
                (interactive)
-               (pb-elisp_display-expression (eval (read (concat "(progn" node-text ")")))))))
+               (pb-elisp_display-expression (eval (read (concat "(progn " node-text ")")))))))
 
        (defvar pb-lisp/clojure-methods
          (km :eval
@@ -895,11 +896,43 @@
                  (goto-char (pb-lisp/selection-end))
                  (cider-pprint-eval-last-sexp)))))
 
+       (defvar pb-lisp/org-methods
+         (km :eval
+             (lambda (node-text)
+               (interactive)
+               (save-excursion
+                 (goto-char (pb-lisp/selection-end))
+                 (let* ((lang (pb-org_code-block-language))
+                        (treesit-lang (pb-org-babel_lang-string->treesit-lang lang))
+                        (methods (alist-get (intern (format "%s-mode" lang)) pb-lisp/major-mode->methods)))
+                   (if methods
+                       ;; Use language-specific eval method if available
+                       (funcall (km_get methods :eval) node-text)
+                     ;; Otherwise use standard Org Babel execution
+                     (org-babel-execute-src-block)))))
+
+             :eval-pretty
+             (lambda (node-text)
+               (interactive)
+               (save-excursion
+                 (goto-char (pb-lisp/selection-end))
+                 (let* ((lang (pb-org_code-block-language))
+                        (treesit-lang (pb-org-babel_lang-string->treesit-lang lang))
+                        (methods (alist-get (intern (format "%s-mode" lang)) pb-lisp/major-mode->methods)))
+                   (if methods
+                       ;; Use language-specific pretty eval method if available
+                       (funcall (km_get methods :eval-pretty) node-text)
+                     ;; Otherwise use standard Org Babel execution with result display
+                     (progn
+                       (org-babel-execute-src-block)
+                       (org-babel-open-src-block-result))))))))
+
        (defvar pb-lisp/major-mode->methods
          `((emacs-lisp-mode ,@pb-lisp/elisp-methods)
            (clojure-mode ,@pb-lisp/clojure-methods)
            (clojurescript-mode ,@pb-lisp/clojure-methods)
-           (clojurec-mode ,@pb-lisp/clojure-methods))
+           (clojurec-mode ,@pb-lisp/clojure-methods)
+           (org-mode ,@pb-lisp/org-methods))
          "Maps tree-sitter language symbols to a plist of methods/configs.
          Each language entry contains:
          - :parser-lang - the language symbol for the tree-sitter parser
@@ -910,7 +943,8 @@
              `((emacs-lisp-mode ,@pb-lisp/elisp-methods)
                (clojure-mode ,@pb-lisp/clojure-methods)
                (clojurescript-mode ,@pb-lisp/clojure-methods)
-               (clojurec-mode ,@pb-lisp/clojure-methods)))
+               (clojurec-mode ,@pb-lisp/clojure-methods)
+               (org-mode ,@pb-lisp/org-methods)))
 
        (defun pb-lisp/get-method (k)
          (km_get (alist-get major-mode pb-lisp/major-mode->methods)
