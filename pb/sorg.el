@@ -170,6 +170,12 @@
   (advice-add (cadr binding) :after #'sorg--flash-overlay))
 
 
+(general-define-key
+ :states 'insert
+ :keymaps (list 'evil-org-mode-map)
+ [escape] #'sorg--enter-from-normal-mode
+ "C-w" #'pb-misc_insert-open-paren)
+
 (progn :theming
 
        (setq evil-sorg-state-cursor `(box "orange"))
