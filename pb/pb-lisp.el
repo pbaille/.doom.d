@@ -644,11 +644,6 @@
 
 (progn :edition
 
-       '(a (erter
-            dfg)
-         (ert
-          dfg))
-
        (defun pb-lisp/delete-selection ()
          "Delete current-overlay, adding its content to the kill ring, after deletion goto next node if exists, previous node if exists or parent."
          (interactive)
@@ -1026,8 +1021,6 @@
 
 (progn :bindings
 
-       (+ 3 2)
-
        (defun pb-lisp/exit ()
          (interactive)
          (evil-pb-lisp-state -1)
@@ -1082,11 +1075,6 @@
            evil-pb-lisp-state-map
            (car binding)
            (cadr binding))))
-
-'(a b (d
-       (i (et) (et))
-       c)
-  d e)
 
 (message "pb-lisp (treesit) loaded")
 
