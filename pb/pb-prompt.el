@@ -493,9 +493,9 @@
 
        (defun pb-prompt/focus-item-by-name (name)
          "Focus item NAME in saved context special buffer.
-                 Find the context with NAME in the saved contexts buffer and move point to it.
-                 This function is useful for navigating to a specific context in the
-                 browser view after operations that might change the buffer content."
+          Find the context with NAME in the saved contexts buffer and move point to it.
+          This function is useful for navigating to a specific context in the
+          browser view after operations that might change the buffer content."
          (when (and name
                     (eq major-mode 'pb-prompt/saved-contexts-mode))
            (let ((orig-point (point))
@@ -672,14 +672,17 @@
 
 (progn :context-browser
 
-       (defvar-local pb-prompt/parent-context nil)
+       (defvar-local pb-prompt/parent-context ())
 
-       (defvar pb-prompt/context-ring nil)
+       (defvar pb-prompt/context-ring ())
 
-       (defvar pb-prompt/context-browser-mode-map (make-sparse-keymap)
+       (defvar pb-prompt/context-browser-mode-map
+         (make-sparse-keymap)
          "Keymap for `pb-prompt/context-browser-mode'.")
 
-       (define-derived-mode pb-prompt/context-browser-mode special-mode "Context Browser"
+       (define-derived-mode pb-prompt/context-browser-mode
+         special-mode
+         "Context Browser"
          "Major mode for browsing context items.
           \\{pb-prompt/context-browser-mode-map}"
          (setq buffer-read-only t))
@@ -703,10 +706,10 @@
            (with-current-buffer buffer
              (erase-buffer)
              (if (null context)
-           (insert (propertize "No context items found.\n" 'face 'font-lock-comment-face))
-         (let* ((title (if name
-           (concat "* " name)
-         "Current Context"))
+                 (insert (propertize "No context items found.\n" 'face 'font-lock-comment-face))
+               (let* ((title (if name
+                                 (concat "* " name)
+                               "Current Context"))
                       (items-by-type (seq-group-by
                                       (lambda (item) (km_get item :type))
                                       context)))
@@ -1101,11 +1104,14 @@
        (defvar pb-prompt/saved-context-buffer-name
          "*Saved Contexts*")
 
-       (define-derived-mode pb-prompt/saved-contexts-mode special-mode "PB-Prompt Contexts"
+       (define-derived-mode pb-prompt/saved-contexts-mode
+         special-mode
+         "PB-Prompt Contexts"
          "Major mode for listing saved prompt contexts."
          (setq buffer-read-only t))
 
-       (defvar pb-prompt/saved-contexts-mode-map (make-sparse-keymap)
+       (defvar pb-prompt/saved-contexts-mode-map
+         (make-sparse-keymap)
          "Keymap for `pb-prompt/saved-contexts-mode'.")
 
        (with-eval-after-load 'evil
