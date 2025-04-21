@@ -45,7 +45,7 @@
 (defun pb-elisp/display-expression (expression &optional pp-fn)
   "Display EXPRESSION in a dedicated buffer with proper formatting.
 This function creates or switches to a buffer named by
-`pb-elisp_result-buffer-name`, clears its content, inserts the
+`pb-elisp/result-buffer-name`, clears its content, inserts the
 pretty-printed EXPRESSION, sets it to `emacs-lisp-mode', and disables
 flycheck-mode."
   (with-current-buffer (get-buffer-create pb-elisp/result-buffer-name)
