@@ -62,7 +62,7 @@ The ns declaration is assumed to be the first clojure block of the file."
 Threads CODE and BUF-NAME arguments directly to `org-edit-src-code' FUN.
 Refresh fontification of the edit src buffer according to the corresponding
 org file clojure namespace."
-  (let ((clojure-ns (km_get (pb-org-clojure/get-clojure-namespace)
+  (let ((clojure-ns (km/get (pb-org-clojure/get-clojure-namespace)
                             :ns-name)))
     (funcall fun code buf-name)
     (when clojure-ns

@@ -22,7 +22,7 @@
 
 (pb/defun pb-flow/compile-case
   [(and case
-        (km_keys test bindings return next))]
+        (km/keys test bindings return next))]
   "Compile a single case from a case map.
 A compiled case is an if-expression, choosing between return value
 or falling through to the next case."
@@ -31,7 +31,7 @@ or falling through to the next case."
      (test `(if ,test ,return ,cont))
      (bindings (pb/let [(cons (list b1 b2) bs) bindings]
                        `(if-let ((,b1 ,b2))
-                            ,(pb-flow/compile-case (km_put case :bindings bs))
+                            ,(pb-flow/compile-case (km/put case :bindings bs))
                           ,cont)))
      (t return))))
 
@@ -40,7 +40,7 @@ or falling through to the next case."
 Converts each case into a list of three elements:
 symbol, empty list, and a compiled case."
   (mapcar (lambda (case)
-            (list (km_get case :symbol) () (pb-flow/compile-case case)))
+            (list (km/get case :symbol) () (pb-flow/compile-case case)))
         cases))
 
 (defun pb-flow/normalize-body (body)
@@ -108,11 +108,11 @@ Followed by a flat serie of cases of the form args-pattern return-expr."
    (and (not (pb-flow (equal 3 1) :ok))
         (equal :ok (pb-flow (equal 1 1) :ok))
         (equal 6
-               (pb-flow [a (km_get (km :a 3) :a)]
+               (pb-flow [a (km/get (km :a 3) :a)]
                         (+ a a)
                         :fail))
         (equal :fail
-               (pb-flow [a (km_get (km :a 3) :a)
+               (pb-flow [a (km/get (km :a 3) :a)
                            b (if (> 0 a) (- a))]
                         (+ a a)
                         :fail))

@@ -3,14 +3,14 @@
 '(progn (switch-to-buffer "scratch.org")
         (goto-char (org-find-olp (list "~/org/scratch.org" "top" "three" "3.2"))))
 
-(km_defun pb-org/find-or-create-olp-aux
+(km/defun pb-org/find-or-create-olp-aux
           (:as opts
                file current-path remaining-path)
           (let* ((next-path (append current-path (list (car remaining-path))))
                  (next-marker (ignore-errors (org-find-olp (cons file next-path)))))
             (if next-marker
                 (let* ((remaining-next (cdr remaining-path))
-                       (next-opts (km_put opts
+                       (next-opts (km/put opts
                                           :marker next-marker
                                           :current-path next-path
                                           :remaining-path remaining-next)))
@@ -21,7 +21,7 @@
 
 (defun pb-org/find-or-create-olp (file path)
   "Find or create outline path PATH in FILE."
-  (km_let ((remaining-path marker)
+  (km/let ((remaining-path marker)
            (pb-org/find-or-create-olp-aux
             (km :file file
                 :marker 0
@@ -38,8 +38,8 @@
   (pb-org/find-or-create-olp file path)
   (cond ((stringp content) (evil-open-below 1) (insert content))
         ((km? content)
-         (org-set-tags (km_get content :tags))
-         (evil-open-below 1) (insert (km_get content :text)))))
+         (org-set-tags (km/get content :tags))
+         (evil-open-below 1) (insert (km/get content :text)))))
 
 (defvar pb-org/file-infos "~/org/file-infos.org"
   "The main org file to hold file infos.")

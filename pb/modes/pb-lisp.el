@@ -274,14 +274,14 @@
          (interactive)
          (pb-elisp/display-expression
           (pb-lisp/node-infos node)
-          #'km_pp))
+          #'km/pp))
 
        (defun pb-lisp/log-nodes (&optional node)
          (interactive)
          (pb-elisp/display-expression
           (mapcar #'pb-lisp/node-infos
                   (pb-lisp/get-current-nodes))
-          #'km_pp))
+          #'km/pp))
 
        (defun pb-lisp/current-selection-as-string ()
          "Get the string content of the current selection overlay.
@@ -902,7 +902,7 @@
                         (methods (alist-get (intern (format "%s-mode" lang)) pb-lisp/major-mode->methods)))
                    (if methods
                        ;; Use language-specific eval method if available
-                       (funcall (km_get methods :eval) node-text)
+                       (funcall (km/get methods :eval) node-text)
                      ;; Otherwise use standard Org Babel execution
                      (org-babel-execute-src-block)))))
 
@@ -916,7 +916,7 @@
                         (methods (alist-get (intern (format "%s-mode" lang)) pb-lisp/major-mode->methods)))
                    (if methods
                        ;; Use language-specific pretty eval method if available
-                       (funcall (km_get methods :eval-pretty) node-text)
+                       (funcall (km/get methods :eval-pretty) node-text)
                      ;; Otherwise use standard Org Babel execution with result display
                      (progn
                        (org-babel-execute-src-block)
@@ -942,7 +942,7 @@
                (org-mode ,@pb-lisp/org-methods)))
 
        (defun pb-lisp/get-method (k)
-         (km_get (alist-get major-mode pb-lisp/major-mode->methods)
+         (km/get (alist-get major-mode pb-lisp/major-mode->methods)
                  k))
 
        (defun pb-lisp/eval-current-node ()
@@ -1084,7 +1084,7 @@
 
        (defun pb-lisp/gptel-request-replace (&optional options)
          (interactive)
-         (pb/let [(km_keys prompt callback) options]
+         (pb/let [(km/keys prompt callback) options]
            (pb-gptel/request
 
             (km :context

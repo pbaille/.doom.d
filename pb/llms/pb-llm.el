@@ -16,7 +16,7 @@
 
   (defun pb-llm/create-chat (id system-prompt)
     (pb/setq pb-llm/chats
-             (km_put _
+             (km/put _
                      id
                      (km :options
                          (km :url "https://api.anthropic.com/v1/messages"
@@ -39,9 +39,9 @@
     "Add a new element to the :messages entry of the ID chat,")
 
   (defun pb-llm/chat (chat-id prompt)
-    (pb/if [chat (km_get pb-llm/chats chat-id)]
-           (pb/let [(km_keys options system messages) chat
-                    (km_keys url api-key max-tokens model) options
+    (pb/if [chat (km/get pb-llm/chats chat-id)]
+           (pb/let [(km/keys options system messages) chat
+                    (km/keys url api-key max-tokens model) options
                     data (json-encode
                           (km :model model
                               :max_tokens max-tokens
@@ -64,16 +64,16 @@
                :parser #'json-read
                :success (lambda (&rest args)
                           (pb/setq pb-llm/last-responses
-                                   (cons (km_get args :data) _))
+                                   (cons (km/get args :data) _))
                           (pb/let [response
-                                   (pb-> (km_get args :data)
-                                         (km_from-alist)
-                                         (km_select-paths :role :content)
-                                         (km_upd :content
+                                   (pb-> (km/get args :data)
+                                         (km/from-alist)
+                                         (km/select-paths :role :content)
+                                         (km/upd :content
                                                  (pb/fn [content]
-                                                        (vec (mapcar #'km_from-alist content)))))]
+                                                        (vec (mapcar #'km/from-alist content)))))]
                             (pb/setq pb-llm/chats
-                                     (km_upd _
+                                     (km/upd _
                                              (list chat-id :messages)
                                              (pb/fn [messages]
                                                     (vec_conj messages
@@ -89,8 +89,8 @@
              (pb-llm/chat chat-id prompt)))))
 
 (pb/comment
- (km_get pb-llm/chats :simple)
- (km_get pb-llm/chats :pb-llm)
+ (km/get pb-llm/chats :simple)
+ (km/get pb-llm/chats :pb-llm)
  pb-llm/last-responses
 
  (pb-llm/create-chat :pb-llm
@@ -105,7 +105,7 @@
  (pb-llm/chat :simple
               "maybe how it compares to clojure")
 
- (json-encode (km_get pb-llm/chats :first)))
+ (json-encode (km/get pb-llm/chats :first)))
 
 
 
@@ -124,22 +124,22 @@ Empty lists are considered alists."
            (symbolp (caar obj))
            (pb/alistp (cdr obj)))))
 
-(defun km_from-alist (alist)
+(defun km/from-alist (alist)
   "Convert ALIST to a keyword map recursively.
 Each key in the alist is converted to a keyword if it's a symbol.
 If a value is an alist, it's recursively converted to a km."
 
-  (km_into ()
+  (km/into ()
            (mapcar (pb/fn [(cons k v)]
                           (cons (pb/keyword k)
                                 (if (pb/alistp v)
-                                    (km_from-alist v)
+                                    (km/from-alist v)
                                   v)))
                    alist)))
 
 (cl-assert
  (and
-  (equal (km_from-alist '((a . 1)
+  (equal (km/from-alist '((a . 1)
                           (b . 5)
                           (c . ((d . 6)))))
          '(:a 1 :b 5 :c (:d 6)))

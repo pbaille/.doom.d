@@ -102,7 +102,7 @@
 
           This creates a structured representation of all files currently
           added to the gptel context, making it easy to include them in prompts."
-         (km_into ()
+         (km/into ()
                   (mapcar (lambda (x)
                             (let ((filepath (car x)))
                               (cons (file-name-nondirectory filepath)
@@ -131,13 +131,13 @@
                  (cond
                   ;; For directories, recurse to create nested km
                   ((file-directory-p item)
-                   (setq result (km_put result
+                   (setq result (km/put result
                                         (intern (concat ":" basename))
                                         (pb-gptel/directory-to-km item max-depth (1+ current-depth)))))
 
                   ;; For regular files, add content as value
                   ((file-regular-p item)
-                   (setq result (km_put result
+                   (setq result (km/put result
                                         (intern (concat ":" basename))
                                         (with-temp-buffer
                                           (insert-file-contents item)
@@ -209,8 +209,8 @@ This is a darkened version of the default theme background.")
   (symex-change 1)
   
   (if res (insert res)
-    (message (km_pp (km :status (km_get info :http-status)
-                        :error (km_get info :error)))))
+    (message (km/pp (km :status (km/get info :http-status)
+                        :error (km/get info :error)))))
   (symex-mode-interface)
   (symex-tidy))
 
@@ -230,7 +230,7 @@ This is a darkened version of the default theme background.")
 
    When called interactively, prompts for instructions to guide the modification."
   (interactive)
-  (pb/let [(km_keys prompt callback) options
+  (pb/let [(km/keys prompt callback) options
            prompt (or prompt
                       (read-string "Edit current expression: "))]
     (progn :style
@@ -276,7 +276,7 @@ This is a darkened version of the default theme background.")
 
    When called interactively, prompts for instructions to guide the modification."
   (interactive)
-  (pb/let [(km_keys prompt callback) options]
+  (pb/let [(km/keys prompt callback) options]
     (pb-gptel/request
      ;; Create a structured prompt with context information
      (km :context
@@ -333,7 +333,7 @@ This is a darkened version of the default theme background.")
    After the GPT response is inserted, a new level-2 header is added
    to continue the conversation."
   (interactive)
-  (pb/let [(km_keys prompt selection) options]
+  (pb/let [(km/keys prompt selection) options]
     (let* ((source-buffer (current-buffer))
            (file-path (buffer-file-name))
            (file-name (if file-path

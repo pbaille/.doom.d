@@ -63,7 +63,7 @@
                             :alt2 alt2
                             :accent (pb-color/complementary-hue x)))))
 
-         (colors (km_into ()
+         (colors (km/into ()
                           (seq-mapn #'cons
                                     (list :yellow :green :cyan :blue :magenta :red )
                                     (pb-color fg
@@ -84,15 +84,15 @@
 
     (list :bg (funcall decline bg)
           :fg (funcall decline fg)
-          :colors (km_map
+          :colors (km/map
                    colors
                    (pb/fn [(cons name c)]
                           (cons name (funcall decline-color c)))))))
 
-(defun km_flat (m sep)
+(defun km/flat (m sep)
   (seq-mapcat (pb/fn [(cons k v)]
                      (if (km? v)
-                         (km_map (km_flat v sep)
+                         (km/map (km/flat v sep)
                                  (pb/fn [(cons k1 v1)]
                                         (cons (intern
                                                (concat ":"
@@ -101,7 +101,7 @@
                                                        (pb/keyword-name k1)))
                                               v1)))
                        (list k v)))
-              (km_entries m)))
+              (km/entries m)))
 
 
 (defun pb-theme_transform-color-key (k separator)
@@ -121,12 +121,12 @@
   (pb-> (pb-color/from-hsl
          (list (pb-color/random-value) .2 .8))
         (pb-theme_palette)
-        (km_flat "-")
-        (km_map-keys
+        (km/flat "-")
+        (km/map-keys
          (lambda (x) (pb/keyword-to-symbol
                  (or (pb-theme_transform-color-key x "-") x))))
-        (km_map-vals #'list)
-        (km_entries))
+        (km/map-vals #'list)
+        (km/entries))
 
   )
 

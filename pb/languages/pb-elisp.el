@@ -66,7 +66,7 @@ Displays the result in a buffer named 'ELisp_eval'."
   ;; (pb-symex/select-current)
   (pb-elisp/display-expression
    (eval (read (pb-symex/current-as-string)))
-   #'km_pp))
+   #'km/pp))
 
 (require 'treesit)
 

@@ -107,7 +107,7 @@
                                (concat "<" key-str ">\n"
                                        (pb-prompt/indent-content content 2)
                                        "\n</" key-str ">")))
-                           (km_entries x)
+                           (km/entries x)
                            "\n\n"))          ; Execute functions to get their content
                ((vectorp x) (mapconcat #'identity x "\n"))
                ((listp x) (mapconcat (lambda (item)
@@ -149,10 +149,10 @@
                      :type "dir"
                      :path path
                      :children (seq-reduce (lambda (ret p)
-                                             (pb/let [(as x (km_keys name))
+                                             (pb/let [(as x (km/keys name))
                                                       (pb-prompt/describe-path p)]
                                                (if name
-                                                   (km_put ret (pb/keyword name) x)
+                                                   (km/put ret (pb/keyword name) x)
                                                  ret)))
                                            (directory-files path t "^[^.].*")
                                            ()))
@@ -165,27 +165,27 @@
          (km :context
              (mapcar
               (lambda (ctx-item)
-                (cl-case (intern (km_get ctx-item :type))
+                (cl-case (intern (km/get ctx-item :type))
                   (buffer
-                   (km_put ctx-item
-                           :content (with-current-buffer (km_get ctx-item :buffer-name)
+                   (km/put ctx-item
+                           :content (with-current-buffer (km/get ctx-item :buffer-name)
                                       (buffer-substring-no-properties (point-min) (point-max)))))
 
                   (context
-                   (km_put ctx-item
+                   (km/put ctx-item
                            :content
                            (pb-prompt/context-km
                             (pb-prompt/get-saved-context
-                             (km_get ctx-item :name)))))
+                             (km/get ctx-item :name)))))
 
                   ((file dir)
-                   (pb-prompt/describe-path (km_get ctx-item :path)))
+                   (pb-prompt/describe-path (km/get ctx-item :path)))
 
                   (function
-                   (call-interactively (km_get ctx-item :function)))
+                   (call-interactively (km/get ctx-item :function)))
 
                   (url
-                   (eww-browse-url (km_get ctx-item :url)))
+                   (eww-browse-url (km/get ctx-item :url)))
 
                   (otherwise ctx-item)))
               context)))
@@ -212,7 +212,7 @@
        (defun pb-prompt/display-context ()
          (interactive)
          (pb-elisp/display-expression pb-prompt/context
-                                      #'km_pp)))
+                                      #'km/pp)))
 
 (progn :context-add
 
@@ -229,7 +229,7 @@
           Argument CONTEXT-ITEM is a keyword map to which the ID will be added.
 
           Returns the CONTEXT-ITEM with the unique ID added."
-         (km_put context-item
+         (km/put context-item
                  :id
                  (let ((data-string (format "%s" context-item)))
                    (substring (md5 data-string) 0 8))))
@@ -264,12 +264,12 @@
           pb-prompt/with-id before being added.
 
           Returns the updated context with the item added (if it wasn't a duplicate)."
-         (let* ((item-with-id (if (km_get item :id)
+         (let* ((item-with-id (if (km/get item :id)
                                   item
                                 (pb-prompt/with-id item)))
-                (item-id (km_get item-with-id :id)))
+                (item-id (km/get item-with-id :id)))
            (if (seq-find (lambda (ctx-item)
-                           (equal (km_get ctx-item :id) item-id))
+                           (equal (km/get ctx-item :id) item-id))
                          context)
                ;; If item with same ID exists, return unchanged context
                context
@@ -609,7 +609,7 @@
           TITLE is the header title for the help buffer.
           BINDINGS-VAR is a variable containing the keybindings to display."
          (let* ((bindings (symbol-value bindings-var))
-                (categories (delete-dups (mapcar (lambda (b) (km_get b :category)) bindings)))
+                (categories (delete-dups (mapcar (lambda (b) (km/get b :category)) bindings)))
                 (sorted-categories (sort categories #'string<))
                 (buf-name (format "*%s Help*" title))
                 (buf (get-buffer-create buf-name)))
@@ -630,22 +630,22 @@
 
                  ;; Get bindings for this category
                  (let* ((category-bindings (seq-filter
-                                            (lambda (b) (string= (km_get b :category) category))
+                                            (lambda (b) (string= (km/get b :category) category))
                                             bindings))
                         (max-key-length (apply #'max
-                                               (mapcar (lambda (b) (length (km_get b :key)))
+                                               (mapcar (lambda (b) (length (km/get b :key)))
                                                        category-bindings)))
                         (max-desc-length (apply #'max
-                                                (mapcar (lambda (b) (length (km_get b :desc)))
+                                                (mapcar (lambda (b) (length (km/get b :desc)))
                                                         category-bindings))))
 
                    ;; Sort bindings within category by key
                    (dolist (binding (sort category-bindings
                                           (lambda (a b)
-                                            (string< (km_get a :key) (km_get b :key)))))
-                     (let* ((key (km_get binding :key))
-                            (desc (km_get binding :desc))
-                            (func (km_get binding :function))
+                                            (string< (km/get a :key) (km/get b :key)))))
+                     (let* ((key (km/get binding :key))
+                            (desc (km/get binding :desc))
+                            (func (km/get binding :function))
                             (key-padding (make-string (- max-key-length (length key)) ? ))
                             (desc-padding (make-string (- max-desc-length (length desc)) ? )))
                        (insert "  " (propertize key 'face 'font-lock-keyword-face))
@@ -691,7 +691,7 @@
          (evil-set-initial-state 'pb-prompt/context-browser-mode 'normal)
          (dolist (binding pb-prompt/context-browser-keybindings)
            (evil-define-key 'normal pb-prompt/context-browser-mode-map
-             (kbd (km_get binding :key)) (km_get binding :function))))
+             (kbd (km/get binding :key)) (km/get binding :function))))
 
        (defun pb-prompt/browse-context (&optional name)
          "Browse items in CONTEXT in a dedicated buffer.
@@ -711,7 +711,7 @@
                                  (concat "* " name)
                                "Current Context"))
                       (items-by-type (seq-group-by
-                                      (lambda (item) (km_get item :type))
+                                      (lambda (item) (km/get item :type))
                                       context)))
 
                  ;; Insert title with face
@@ -731,7 +731,7 @@
 
                      ;; List items of this type
                      (dolist (item items)
-                       (let* ((id (km_get item :id))
+                       (let* ((id (km/get item :id))
                               (desc (pb-prompt/-context-item-description item))
                               ;; Format line with colored bullet and ID with a different face
                               (bullet (propertize "• " 'face '(:foreground "pink")))
@@ -795,8 +795,8 @@
                  to enable navigation back to the current context."
                 (interactive)
                 (when-let* ((item (pb-prompt/context-item-at-point))
-                            (type (km_get item :type))
-                            (name (km_get item :name)))
+                            (type (km/get item :type))
+                            (name (km/get item :name)))
                   (if (equal type "context")
            (let ((parent-name (or pb-prompt/context-browser-focus "current"))
                             (child-buffer (concat "*Context Browser " name "*")))
@@ -852,25 +852,25 @@
                  For file or directory items, returns the relative path.
                  For selection items, returns the first line (truncated if needed).
                  For other types, returns a generic description with the type name."
-                (let ((type (km_get item :type))
-                      (path (km_get item :path)))
+                (let ((type (km/get item :type))
+                      (path (km/get item :path)))
                   (cl-case (intern type)
                     (buffer
-                     (km_get item :buffer-name))
+                     (km/get item :buffer-name))
                     (context
-                     (km_get item :name))
+                     (km/get item :name))
                     ((file dir)
                      (pb-prompt/-format-relative-path path))
                     (selection
-                     (let* ((content (km_get item :content))
+                     (let* ((content (km/get item :content))
                             (first-line (car (split-string content "\n")))
                             (truncated-line (truncate-string-to-width first-line 80 nil nil "...")))
                        truncated-line))
                     (function
-                     (let* ((content (km_get item :documentation))
+                     (let* ((content (km/get item :documentation))
                             (first-line (car (split-string content "\n")))
                             (truncated-line (truncate-string-to-width first-line 80 nil nil "...")))
-                       (concat (km_get item :name) " :: " truncated-line)))
+                       (concat (km/get item :name) " :: " truncated-line)))
                     (otherwise
                      (format "Item of type: %s" type)))))
 
@@ -878,7 +878,7 @@
                 (interactive)
                 (when pb-prompt/context
                   (let* ((items-by-type (seq-group-by
-                                         (lambda (item) (km_get item :type))
+                                         (lambda (item) (km/get item :type))
                                          pb-prompt/context))
                          ;; Create a mapping from display strings to actual items
                          (item-map (make-hash-table :test 'equal))
@@ -964,11 +964,11 @@
                 (if-let ((to-remove (or item (pb-prompt/select-context-item))))
 
                     (progn (message "Removing context item: %s (ID: %s)"
-                                    (or (km_get to-remove :type) "unknown")
-                                    (km_get to-remove :id))
+                                    (or (km/get to-remove :type) "unknown")
+                                    (km/get to-remove :id))
                            (setq pb-prompt/context
                                  (seq-remove (lambda (item)
-                                               (equal (km_get item :id) (km_get to-remove :id)))
+                                               (equal (km/get item :id) (km/get to-remove :id)))
                                              pb-prompt/context)))
 
                   (message "Warning: No item selected for removal (Key: %s)"
@@ -978,26 +978,26 @@
                 "Open or display the content of the selected context item."
                 (interactive)
                 (let* ((item (or item (pb-prompt/select-context-item)))
-                       (type (km_get item :type)))
+                       (type (km/get item :type)))
                   (cl-case (intern type)
                     (buffer
-                     (switch-to-buffer (km_get item :buffer-name)))
+                     (switch-to-buffer (km/get item :buffer-name)))
                     (context
                      (pb-prompt/browse-context
-                      (km_get item :name)))
+                      (km/get item :name)))
                     (file
-                     (find-file-other-window (km_get item :path)))
+                     (find-file-other-window (km/get item :path)))
                     (dir
-                     (dired-other-window (km_get item :path)))
+                     (dired-other-window (km/get item :path)))
                     (selection
                      (with-current-buffer (get-buffer-create "*Context Item Selection*")
                        (erase-buffer)
-                       (insert (km_get item :content))
+                       (insert (km/get item :content))
                        (goto-char (point-min))
-                       (when-let ((path (km_get item :path))
-                                  (mode (km_get item :major-mode)))
+                       (when-let ((path (km/get item :path))
+                                  (mode (km/get item :major-mode)))
                          (funcall mode)
-                         (when (km_get item :symex)
+                         (when (km/get item :symex)
                            (symex-mode-interface)
                            (symex-tidy)))
                        (pop-to-buffer (current-buffer))))
@@ -1009,21 +1009,21 @@
                 (with-current-buffer (get-buffer-create "*Context Item Details*")
                   (erase-buffer)
                   (let* ((item (or item (pb-prompt/select-context-item)))
-                         (id (km_get item :id))
-                         (type (km_get item :type))
-                         (path (km_get item :path)))
+                         (id (km/get item :id))
+                         (type (km/get item :type))
+                         (path (km/get item :path)))
                     (insert (format "ID: %s\n" id)
                             (format "Type: %s\n" type))
                     (when path
                       (insert (format "Path: %s\n" path)))
 
-                    (dolist (key (mapcar #'car (km_entries item)))
+                    (dolist (key (mapcar #'car (km/entries item)))
                       (unless (member key '(:id :type :path :content))
                         (insert (format "%s: %s\n"
                                         (substring (symbol-name key) 1)
-                                        (km_get item key)))))
+                                        (km/get item key)))))
 
-                    (when-let ((content (km_get item :content)))
+                    (when-let ((content (km/get item :content)))
                       (insert "\nContent:\n---------\n")
                       (insert content)))
                   (goto-char (point-min))
@@ -1084,7 +1084,7 @@
                 "Delete the context item at point from the current context."
                 (interactive)
                 (when-let* ((item (pb-prompt/context-item-at-point))
-                            (id (km_get item :id)))
+                            (id (km/get item :id)))
                   (if (yes-or-no-p (format "Delete item %s? "
                                            (pb-prompt/-context-item-description item)))
                       (progn
@@ -1092,7 +1092,7 @@
                         (pb-prompt/update-focused-context
                          (lambda (ctx)
                            (seq-remove (lambda (i)
-                                         (equal (km_get i :id) id))
+                                         (equal (km/get i :id) id))
                                        ctx)))
                         ;; Refresh the browser
                         (pb-prompt/refresh-context-browser)
@@ -1118,7 +1118,7 @@
          (evil-set-initial-state 'pb-prompt/saved-contexts-mode 'normal)
          (dolist (binding pb-prompt/saved-contexts-keybindings)
            (evil-define-key 'normal pb-prompt/saved-contexts-mode-map
-             (kbd (km_get binding :key)) (km_get binding :function))))
+             (kbd (km/get binding :key)) (km/get binding :function))))
 
        (defun pb-prompt/browse-saved-contexts (&optional focus-name)
          "Show a list of all saved contexts with item counts.
@@ -1136,10 +1136,10 @@
          (dolist (name (sort contexts #'string<))
                  (let* ((context (gethash name pb-prompt/saved-contexts))
                         (count (length context))
-                        (types (mapcar (lambda (item) (pb/keyword (km_get item :type))) context))
+                        (types (mapcar (lambda (item) (pb/keyword (km/get item :type))) context))
                         (type-counts (seq-reduce
                                       (lambda (acc type)
-         (km_upd acc type (pb/fn [c] (1+ (or c 0)))))
+         (km/upd acc type (pb/fn [c] (1+ (or c 0)))))
                                       types
                                       nil)))
                    (print type-counts)
@@ -1154,7 +1154,7 @@
                                          (concat (propertize (pb/string type) 'face 'font-lock-doc-face)
                                                  (propertize (format " %d" count)
                                                              'face 'font-lock-type-face)))
-                                  (km_entries type-counts))))
+                                  (km/entries type-counts))))
                      (insert "  ")
                      (insert (mapconcat #'identity type-strs ", "))
                      (insert "\n\n"))))))
@@ -1269,12 +1269,12 @@
                         (insert (format "Context: %s (%d items)\n\n"
                                         (string-trim name) (length context)))
                         (dolist (item context)
-                          (insert (format "Type: %s\n" (km_get item :type)))
-                          (when-let ((id (km_get item :id)))
+                          (insert (format "Type: %s\n" (km/get item :type)))
+                          (when-let ((id (km/get item :id)))
                             (insert (format "ID: %s\n" id)))
-                          (when-let ((path (km_get item :path)))
+                          (when-let ((path (km/get item :path)))
                             (insert (format "Path: %s\n" path)))
-                          (let ((content (km_get item :content)))
+                          (let ((content (km/get item :content)))
                             (when content
                               (insert "Content preview: ")
                               (let ((preview (if (> (length content) 100)
@@ -1479,9 +1479,9 @@
  (let ((m pb-prompt/context))
    (and (listp m) (cl-every #'km? m)))
 
- (km_pp pb-prompt/context)
+ (km/pp pb-prompt/context)
 
- (km_pp (list (km :a 1)
+ (km/pp (list (km :a 1)
               (list 3 4 5)))
 
  (pb/comment
@@ -1507,7 +1507,7 @@
    (interactive)
    (let* ((path-strs (mapcar (lambda (p)
                                (intern (mapconcat #'pb/keyword-name (car p) ".")))
-                             (km_all-paths m))))
+                             (km/all-paths m))))
      (mapcar (lambda (k)
                (mapcar #'intern
                        (mapcar (lambda (s) (concat ":" s))
@@ -1520,7 +1520,7 @@
    (interactive)
    (let* ((flatten-tree
            (seq-reduce (pb/fn [m (cons path content)]
-                              (km_put m
+                              (km/put m
                                       (pb/keyword (mapconcat #'pb/keyword-name path "."))
                                       (truncate-string-to-width
                                        (pb/if
@@ -1529,7 +1529,7 @@
                                         (listp content) "#<plist>"
                                         (format "%s" content))
                                        100 nil nil "...")))
-                       (km_all-paths m)
+                       (km/all-paths m)
                        ()))
           (completion-extra-properties
            (km :affixation-function
@@ -1537,7 +1537,7 @@
                  (let ((max-len (apply #'max (mapcar #'length candidates))))
                    (mapcar (lambda (cand)
                              ;; (print cand)
-                             (let ((content (km_get flatten-tree (intern cand)))
+                             (let ((content (km/get flatten-tree (intern cand)))
                                    (segments (split-string cand "\\." t)))
                                (list (concat (propertize (mapconcat #'identity
                                                                     (sq_butlast segments)
@@ -1554,12 +1554,12 @@
      (mapcar (lambda (k)
                (mapcar #'pb/keyword
                        (split-string (substring k 1) "\\.")))
-             (completing-read-multiple prompt (km_keys flatten-tree)))))
+             (completing-read-multiple prompt (km/keys flatten-tree)))))
 
  (defun pb-gptel/sub-request-tree ()
    (interactive)
    (let* ((selected-paths (pb-gptel/select-paths "Select request-tree paths: " pb-gptel/request-tree)))
-     (km_select-paths* pb-gptel/request-tree selected-paths)))
+     (km/select-paths* pb-gptel/request-tree selected-paths)))
 
  (defun pb-gptel/interactive-request ()
    (interactive)

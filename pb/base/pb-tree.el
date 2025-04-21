@@ -19,7 +19,7 @@
 BODY should be a node expression, which can contain nested node expressions."
   `(km
     :value ,value
-    :children (km ,@(km_map-vals children
+    :children (km ,@(km/map-vals children
                                  (lambda (v)
                                    (if (and (listp v) (eq (car v) 'node))
                                        `(pb-tree ,@(cdr v))
@@ -29,14 +29,14 @@ BODY should be a node expression, which can contain nested node expressions."
 
 (defun pb-tree? (x)
   (and (km? x)
-       (km_contains? x :value)
-       (km_contains? x :children)))
+       (km/contains? x :value)
+       (km/contains? x :children)))
 
 (defun pb-tree_value (x)
-  (km_get x :value))
+  (km/get x :value))
 
 (defun pb-tree_children (tree)
-  (km_get tree :children))
+  (km/get tree :children))
 
 (defun pb-tree_path (path)
   "Generate a path for traversing a tree structure.
@@ -49,23 +49,23 @@ Interleaves :children with elements of PATH to create the path."
 
 (defun pb-tree_contains? (tree path)
   "Check that TREE has a node at PATH."
-  (km_contains? tree (pb-tree_path path)))
+  (km/contains? tree (pb-tree_path path)))
 
 (defun pb-tree_get (tree path)
   "Get the node at PATH in TREE."
-  (km_get tree (pb-tree_path path)))
+  (km/get tree (pb-tree_path path)))
 
 (defun pb-tree_get-value (tree path)
   "Get the value at PATH in TREE."
-  (km_get (pb-tree_get tree path) :value))
+  (km/get (pb-tree_get tree path) :value))
 
 (defun pb-tree_get-children (tree path)
   "Get the children of the node at PATH in TREE."
-  (km_get (pb-tree_get tree path) :children))
+  (km/get (pb-tree_get tree path) :children))
 
 (defun pb-tree_traverse (tree path)
   "Traverse the TREE with PATH, accumulating intermediate node values."
-  (seq-reduce (pb/fn [(km_keys values node) child-path]
+  (seq-reduce (pb/fn [(km/keys values node) child-path]
                      (pb/if [child-node (pb-tree_get node child-path)]
                             (km :values (cons (pb-tree_value node)
                                               values)
@@ -76,7 +76,7 @@ Interleaves :children with elements of PATH to create the path."
 (defun pb-tree_get-path-values (tree path)
   "Traverse the TREE with PATH, accumulating intermediate values and returning a list of them."
   (if (pb-tree_contains? tree path)
-      (pb/let [(km_keys values node) (pb-tree_traverse tree path)]
+      (pb/let [(km/keys values node) (pb-tree_traverse tree path)]
           (seq-reverse
            (cons (pb-tree_value node)
                  values)))))
@@ -95,7 +95,7 @@ Returns a new tree with the merged structure."
    (km :value
        (pb-tree_value tree2)
        :children
-       (km_merge-with #'pb-tree_merge
+       (km/merge-with #'pb-tree_merge
                       (pb-tree_children tree1)
                       (pb-tree_children tree2)))))
 
@@ -121,15 +121,15 @@ Returns a new tree containing only the selected parts of the original tree."
    (km? x)
    (seq-reduce (pb/fn [ret (cons k v)]
                       (pb-tree_merge ret
-                                     (km_upd (pb-tree_select tree k)
+                                     (km/upd (pb-tree_select tree k)
                                              (list :children k)
                                              (pb/fn [subtree] (pb-tree_select subtree v)))))
-               (km_entries x) ())
+               (km/entries x) ())
 
    (vectorp x)
    (let ((k (aref x 0))
          (x (vconcat (cdr (append x nil)))))
-     (km_upd (pb-tree_select tree k)
+     (km/upd (pb-tree_select tree k)
              (list :children k)
              (pb/fn [subtree] (pb-tree_select subtree x))))))
 
@@ -232,7 +232,7 @@ structure and that the resulting tree structure matches the desired nested forma
                                  :child2 "C"
                                  :child3 "D")))
             ;; Test merging two trees where tree2 has priority at the root level
-            (km_eq
+            (km/eq
              (pb-tree_merge tree1 tree2)
              (pb-tree "Root Two"
                       :child1 "A"
@@ -249,7 +249,7 @@ structure and that the resulting tree structure matches the desired nested forma
                                           :y "y1")
                                  :c "C")))
             ;; Test deeper merging where children are merged
-            (km_eq
+            (km/eq
              (pb-tree_merge tree1 tree2)
              (pb-tree "R2"
                       :a (node "A2"
@@ -271,24 +271,24 @@ structure and that the resulting tree structure matches the desired nested forma
                                                         :nested "nested"))))
 
          (cl-assert
-          (and (km_eq (pb-tree_select pb-tree_ex1
+          (and (km/eq (pb-tree_select pb-tree_ex1
                                       ())
                       pb-tree_ex1)
 
-               (km_eq (pb-tree_select pb-tree_ex1
+               (km/eq (pb-tree_select pb-tree_ex1
                                       :child1)
                       '(:value "root node"
                         :children (:child1 (:value "child1"
                                             :children (:grandchild-1-1 (:value "foo" :children nil)
                                                        :grandchild-1-2 (:value "bar" :children nil))))))
 
-               (km_eq (pb-tree_select pb-tree_ex1
+               (km/eq (pb-tree_select pb-tree_ex1
                                       [:child1 :grandchild-1-1])
                       '(:value "root node"
                         :children (:child1 (:value "child1"
                                             :children (:grandchild-1-1 (:value "foo" :children nil))))))
 
-               (km_eq (pb-tree_select pb-tree_ex1
+               (km/eq (pb-tree_select pb-tree_ex1
                                       [:child2 :grandchild-2-2 :nested])
                       '(:value "root node"
                         :children (:child2 (:value "child2"
@@ -296,7 +296,7 @@ structure and that the resulting tree structure matches the desired nested forma
                                                                         :children (:nested (:value "nested"
                                                                                             :children nil))))))))
 
-               (km_eq (pb-tree_select pb-tree_ex1
+               (km/eq (pb-tree_select pb-tree_ex1
                                       (km :child1 :grandchild-1-1
                                           :child2 [:grandchild-2-2 :nested]))
                       '(:value "root node"

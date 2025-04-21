@@ -29,7 +29,7 @@
   (pb-prompt/mk
    (km :clojure
        (km :expression code
-           :evaluation (km_filter (pb-clojure/eval-string code)
+           :evaluation (km/filter (pb-clojure/eval-string code)
                                   (pb/fn [(cons k v)] v))))))
 
 '(:tries

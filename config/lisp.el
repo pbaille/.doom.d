@@ -15,9 +15,9 @@
     ("fn" "pb/fn" nil 1)
     ("defn" "pb/defun" nil 1)
 
-    ("kget" "km_get" nil 1)
-    ("kput" "km_put" nil 1)
-    ("kupd" "km_upd" nil 1)
+    ("kget" "km/get" nil 1)
+    ("kput" "km/put" nil 1)
+    ("kupd" "km/upd" nil 1)
     ("pbcol" "pb-color" nil 1)))
 
 (add-hook 'emacs-lisp-mode-hook #'abbrev-mode)
@@ -197,7 +197,7 @@
   (symex-initialize)
 
   (setq symex-interfaces
-        `((emacs-lisp-mode . ,(km_put (alist-get 'emacs-lisp-mode symex-interfaces)
+        `((emacs-lisp-mode . ,(km/put (alist-get 'emacs-lisp-mode symex-interfaces)
                                       :eval-pretty
                                       #'pb-elisp/eval-pretty))
           ,@(seq-remove (pb/fn [(cons x _)] (equal x 'emacs-lisp-mode))

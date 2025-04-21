@@ -49,31 +49,31 @@
                                              (+ actual-line-beg (round (* pixel-width (/ (+ position duration) (float beat-length))))))))
                          (km :beg note-beg
                              :end note-end
-                             :face (funcall (km_get faces :note)
+                             :face (funcall (km/get faces :note)
                                             note
                                             pr)))))
             notes)))
 
 (pb/defun pr-timeline [(as pr (km harmony bars))]
   (let* ((enriched-bars (seq-mapn (pb/fn [idx bar position]
-                                         (km_put bar :bar-idx idx :position position))
+                                         (km/put bar :bar-idx idx :position position))
                                   (sq_range 0 (length bars))
                                   bars
                                   (pr-bar-positions pr)))
          (zones (seq-reduce (pb/fn [(as zones (cons (cons pos last-zone) previous-zones))
                                     (as zone (km type position))]
-                                   (let ((nxt-zone (km_merge last-zone zone)))
+                                   (let ((nxt-zone (km/merge last-zone zone)))
                                      (if (equal position pos) (cons (cons pos nxt-zone) previous-zones)
                                        (cons (cons position nxt-zone) zones))))
                             (sort (append harmony enriched-bars)
-                                  (lambda (a b) (< (km_get a :position) (km_get b :position))))
+                                  (lambda (a b) (< (km/get a :position) (km/get b :position))))
                             (list (list 0)))))
     (reverse (cons (cons (pr-beat-length pr) ())
                    zones))))
 
 (defun pr-with-timeline (pr)
   "Assoc the computed timeline to PR."
-  (km_put pr
+  (km/put pr
           :timeline
           (pr-timeline pr)))
 
@@ -83,12 +83,12 @@
                      timeline
                      (sq_partition 2 1)
                      (mapcar (pb/fn [(list (cons start-pos data) (cons end-pos _))]
-                                    (km_put data :start-pos start-pos :end-pos end-pos)))))
+                                    (km/put data :start-pos start-pos :end-pos end-pos)))))
          (lines (mapcar (lambda (pitch)
                           (append (seq-mapn (pb/fn [(as data (km start-pos end-pos))]
                                                    (-> (pb/join-string (sq_repeat (* resolution (- end-pos start-pos)) " "))
-                                                       (propertize 'face (funcall (km_get faces :grid)
-                                                                                  (km_put data :pitch pitch)
+                                                       (propertize 'face (funcall (km/get faces :grid)
+                                                                                  (km/put data :pitch pitch)
                                                                                   pr))))
                                             timezones)
                                   (list "\n")))
@@ -136,13 +136,13 @@
 
 (setq pr-default-faces
       (km :grid (pb/fn [(km pitch bar-idx bar harmonic-ctx) pr]
-                  (pb/let [(km border light dark c-key octave-delimiter) (km_get pr-colors :lines)]
+                  (pb/let [(km border light dark c-key octave-delimiter) (km/get pr-colors :lines)]
                       (pb->/ (km :box (km :line-width (cons 0 1) :color border))
                              ;; line colors
-                             (km_merge _ (if (km_get pr [:options :harmonic-grid])
+                             (km/merge _ (if (km/get pr [:options :harmonic-grid])
                                              (pb/let [(km origin struct scale) harmonic-ctx
-                                                      m (mod (- pitch (km_get origin :c)) 12)]
-                                                 (km :background (km_get pr-colors
+                                                      m (mod (- pitch (km/get origin :c)) 12)]
+                                                 (km :background (km/get pr-colors
                                                                          (list :harmonic-functions
                                                                                (cond ((= 0 m) :tonic)
                                                                                      ((member (sq_index-of scale m) struct) :structural)
@@ -162,21 +162,21 @@
 
           :note (lambda (note pr)
                   (km :background
-                      (pb/if [c (km_get note :color)]
+                      (pb/if [c (km/get note :color)]
                              (pb-color c)
 
-                             (km_get pr [:options :colors :by-kind])
-                             (km_get pr-colors (list :note-kinds (km_get note :kind)))
+                             (km/get pr [:options :colors :by-kind])
+                             (km/get pr-colors (list :note-kinds (km/get note :kind)))
 
-                             [chan (km_get note :channel)]
-                             (nth chan (km_get pr-colors :channels))
+                             [chan (km/get note :channel)]
+                             (nth chan (km/get pr-colors :channels))
 
-                             (km_get pr-colors :note-default))))))
+                             (km/get pr-colors :note-default))))))
 
 (pb/defun pr-coerce [(as pr
                          (km notes bar))]
   (pr-with-timeline
-   (km_upd pr
+   (km/upd pr
            :pitch-range (lambda (x) (or x
                                    (pb/let [(cons bottom top)
                                             (seq-reduce (pb/fn [(as bounds
@@ -195,13 +195,13 @@
            :bars (lambda (x) (or x
                             (let ((bar (or bar (km :beat 1 :length 4))))
                               (sq_repeat (ceiling (/ (pr-last-note-end-position pr)
-                                                     (float (* (km_get bar :beat)
-                                                               (km_get bar :length)))))
+                                                     (float (* (km/get bar :beat)
+                                                               (km/get bar :length)))))
                                          bar)))))))
 
 (defun pr-make (data)
   (pr-coerce
-   (km_merge (km :options (km :harmonic-grid nil)
+   (km/merge (km :options (km :harmonic-grid nil)
                  :resolution 32
                  :text-scale -3
                  :faces pr-default-faces)
@@ -219,7 +219,7 @@
     (let ((w (or (get-buffer-window (get-buffer buf))
                  (split-window-below))))
       (set-window-buffer w (get-buffer buf))
-      (text-scale-set (km_get data :text-scale))
+      (text-scale-set (km/get data :text-scale))
       (window-resize w (- (count-lines (point-min) (point-max))
                           (window-height w))))))
 
@@ -236,7 +236,7 @@
          (progn (setq pr-buffers-data
                       (cons (cons buf-name next-data)
                             (assq-delete-all buf-name pr-buffers-data)))
-                (pr-render-buffer buf-name (km_get next-data :pr-data)))
+                (pr-render-buffer buf-name (km/get next-data :pr-data)))
          (error "Something went wrong with buffer data update")))
 
 (defvar proll-mode-keymap (make-sparse-keymap))
@@ -261,7 +261,7 @@
                                          pr-buffers-data))
                              (pr-render-buffer buf data)))))
     (progn (erase-buffer)
-           (insert (km_get (pr-get-buffer-data (current-buffer))
+           (insert (km/get (pr-get-buffer-data (current-buffer))
                            :content))
            (emacs-lisp-mode)
            (setq pr-local-data ()))))
@@ -274,24 +274,24 @@
        :n "J" (lambda ()
                 (interactive)
                 (pr-upd-buffer-data
-                 nil (lambda (pr) (km_upd pr [:pr-data :text-scale]
+                 nil (lambda (pr) (km/upd pr [:pr-data :text-scale]
                                      (lambda (s) (- (or s 0) 1))))))
        :n "K" (lambda ()
                 (interactive)
                 (pr-upd-buffer-data
-                 nil (lambda (pr) (km_upd pr [:pr-data :text-scale]
+                 nil (lambda (pr) (km/upd pr [:pr-data :text-scale]
                                      (lambda (s) (+ (or s 0) 1))))))
        :n "H" (lambda ()
                 (interactive)
                 (pr-upd-buffer-data
                  nil (lambda (pr)
-                       (km_upd pr [:pr-data :resolution]
+                       (km/upd pr [:pr-data :resolution]
                                (lambda (r) (- (or r 32) 4))))))
        :n "L" (lambda ()
                 (interactive)
                 (pr-upd-buffer-data
                  nil (lambda (pr)
-                       (km_upd pr [:pr-data :resolution]
+                       (km/upd pr [:pr-data :resolution]
                                (lambda (r) (+ (or r 32) 4))))))))
 
 (quote
@@ -314,7 +314,7 @@
 
   (defun pr-update-timerange-face (buf start end f)
     (pb/let [(km pr-data) (pr-get-buffer-data buf)
-             (cons pitch-min pitch-max) (km_get pr-data :pitch-range)
+             (cons pitch-min pitch-max) (km/get pr-data :pitch-range)
              width (pr-pixel-width pr-data)
              beat-length (pr-beat-length pr-data)]
         (mapc (lambda (i)
@@ -331,7 +331,7 @@
   (pr-update-timerange-face (get-buffer "*pr*")
                             2 3
                             (lambda (pitch face pr)
-                                (km_upd face :background
+                                (km/upd face :background
                                       (lambda (c) (pb-color c (saturate .5) (rotate (/ pitch (float 10))))))))
 
   (pr-with-buf
@@ -341,15 +341,15 @@
                     (pr-update-timerange-face pr-buf
                                               position (+ position duration)
                                               (lambda (pitch face pr)
-                                                (let ((m (mod (- pitch (km_get origin :c)) 12)))
-                                                  (km_upd face :background
-                                                          (lambda (c) (pb-color c (blend (km_get pr-colors (list :harmonic-functions
+                                                (let ((m (mod (- pitch (km/get origin :c)) 12)))
+                                                  (km/upd face :background
+                                                          (lambda (c) (pb-color c (blend (km/get pr-colors (list :harmonic-functions
                                                                                                       (cond ((= 0 m) :tonic)
                                                                                                             ((member (-elem-index m scale) struct) :structural)
                                                                                                             ((member m scale) :diatonic)
                                                                                                             (t :chromatic))))
                                                                                     .7))))))))
-             (km_get pr-data :harmony))))
+             (km/get pr-data :harmony))))
 
        ))
 

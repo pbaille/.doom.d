@@ -37,28 +37,28 @@ SPEC:"
                   (keywordp lang)
                   (km? spec)))
   (setq pb-org-babel/custom-params
-        (km_put pb-org-babel/custom-params
+        (km/put pb-org-babel/custom-params
                 (list lang name)
                 spec)))
 
 (defun pb-org-babel/execute-src-block-hook (fun &optional arg info params)
   "Wraps org-babel-execute-src-block function."
   (pb/if [(list lang content args) info
-          custom-params (km_get pb-org-babel/custom-params (pb/keyword lang))
+          custom-params (km/get pb-org-babel/custom-params (pb/keyword lang))
           ;; because of inline comments bug
           content (if (equal "clojure" lang)
                       (pb-org-babel/strip-lisp-comments content)
                     content)
           (cons content args) (seq-reduce (pb/fn [(cons content args) (cons k wrappers)]
                                                  (if (assoc k args)
-                                                     (cons (pb/if [f (km_get wrappers :content)]
+                                                     (cons (pb/if [f (km/get wrappers :content)]
                                                                   (funcall f content)
                                                                   content)
-                                                           (pb/if [f (km_get wrappers :args)]
+                                                           (pb/if [f (km/get wrappers :args)]
                                                                   (funcall f args)
                                                                   args))
                                                    (cons content args)))
-                                          (km_entries custom-params)
+                                          (km/entries custom-params)
                                           (cons content args))
           info (pb-> info (sq_put 1 content) (sq_put 2 args))]
          (funcall fun arg info params)
@@ -71,14 +71,14 @@ SPEC:"
           content (if (equal "clojure" lang)
                       (pb-org-babel/strip-lisp-comments content)
                     content)
-          custom-params (km_get pb-org-babel/custom-params (pb/keyword lang))]
+          custom-params (km/get pb-org-babel/custom-params (pb/keyword lang))]
          (pb/if [result (seq-reduce (pb/fn [result (cons k wrappers)]
                                            (if (assoc k args)
-                                               (pb/if [f (km_get wrappers :result)]
+                                               (pb/if [f (km/get wrappers :result)]
                                                       (funcall f result)
                                                       result)
                                              result))
-                                    (km_entries custom-params)
+                                    (km/entries custom-params)
                                     result)]
                 (apply fun result
                        result-params

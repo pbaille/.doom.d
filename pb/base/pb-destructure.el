@@ -112,18 +112,18 @@ If seed is a symbol, gensym is not used and the symbol is returned."
                    (sq_join (mapcar (lambda (entry)
                                       (pb-destructure (cdr entry)
                                                       (list 'plist-get sym (car entry))))
-                                    (km_parse-free-form args)))))))
+                                    (km/parse-free-form args)))))))
 
   (pb-destructure/extend
-   'km_keys (lambda (args seed)
+   'km/keys (lambda (args seed)
               (pb-destructure (cons 'km (sq_interleave (mapcar #'pb/symbol-to-keyword args)
                                                        args))
                               seed)))
 
   (pb-destructure/extend
-   'km_at (lambda (args seed)
+   'km/at (lambda (args seed)
             (pb-destructure (cadr args)
-                            (list 'km_get seed (car args))))))
+                            (list 'km/get seed (car args))))))
 
 (pb-destructure/install-builtin-pattern-constructors)
 
@@ -229,7 +229,7 @@ FN-DECL is the same kind of arguments `pb-destructure/fn' expects."
                  (list a b c d))
                (list 1 2 3 4))
 
-        (equal (pb-destructure/let [(km_keys a b c) (km :a 1 :b 2 :c 3)]
+        (equal (pb-destructure/let [(km/keys a b c) (km :a 1 :b 2 :c 3)]
                  (list a b c))
                (list 1 2 3))
 
@@ -241,7 +241,7 @@ FN-DECL is the same kind of arguments `pb-destructure/fn' expects."
                                            (list a b xs))
                         (list 1 2 3 4))
                (list 1 2 (list 3 4)))
-        (equal (pb-destructure/let [(as m (km_keys a)) (km :a 1 :b 2)]
+        (equal (pb-destructure/let [(as m (km/keys a)) (km :a 1 :b 2)]
                  (list m a))
                '((:a 1 :b 2) 1)))))
 

@@ -32,7 +32,7 @@ The change list returned has the form ((pos . face-prop-value) ...)."
 (defun pb-text-properties_compress-face-value (v)
   "Compress the value V of a face property into a plist."
   (if (and (consp v) (listp (car v)))
-      (seq-reduce #'km_merge (reverse v) ())
+      (seq-reduce #'km/merge (reverse v) ())
     (copy-tree v)))
 
 (defun pb-text-properties_update-face-value (f v)
@@ -63,7 +63,7 @@ therefore F has to be applied meaninfully."
     (erase-buffer)
     (insert "hello you ---------------"))
   (pb-text-properties_get-changes (get-buffer "*delete-me*") 3 13)
-  (pb-text-properties_update-faces (get-buffer "*delete-me*") 3 13 (lambda (pl) (km_upd pl :background (lambda (c) (pb-color (or c :white) (lighten .5))))))
+  (pb-text-properties_update-faces (get-buffer "*delete-me*") 3 13 (lambda (pl) (km/upd pl :background (lambda (c) (pb-color (or c :white) (lighten .5))))))
   (pb-text-properties_update-faces (get-buffer "*delete-me*")
                                    2 10
                                    (lambda (pl) (pb-color/walk pl (lambda (c) (pb-color/blend (pb-color :blue) c .5)))))
@@ -75,10 +75,10 @@ therefore F has to be applied meaninfully."
     (pb-text-properties_update-faces (get-buffer "*delete-me*")
                                      3 6 (lambda (pl)
                                            '(print (km :pl pl
-                                                       :upd (km_upd pl :background (lambda (c) (pb-color c (lighten .5))))))
-                                           (km_upd pl :background (lambda (c) "red"))))
+                                                       :upd (km/upd pl :background (lambda (c) (pb-color c (lighten .5))))))
+                                           (km/upd pl :background (lambda (c) "red"))))
     '(pb-text-properties_update-faces (get-buffer "*delete-me*")
-      3 6 (lambda (pl) (list :background (pb-color (or (km_get pl :background)
+      3 6 (lambda (pl) (list :background (pb-color (or (km/get pl :background)
                                                        "white")
                                                    (darken .3)))))
     '(add-face-text-property 3 6
