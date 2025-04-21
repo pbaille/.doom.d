@@ -16,12 +16,15 @@
 (require 'pb-misc)
 (require 'gptel)
 (require 'gptel-context)
+(require 'gptel-anthropic)
+(require 'gptel-gemini)
 (require 'pb-tree)
 (require 'pb-prompt)
 (require 'km)
 (require 'symex)
 (require 'pb-symex)
 (require 'pb-clojure)
+(require 'projectile)
 
 (defvar pb-gptel/history-dir
   "~/.doom.d/chats/history/")
@@ -176,6 +179,7 @@
                       (length files)
                       (mapconcat #'identity files ", "))))))
 
+(require 'doom-themes)
 (defvar pb-gptel/overlay-color (doom-darken "#232530" 0.2)
   "Color used to highlight the current s-expression when being edited by GPT.
 This is a darkened version of the default theme background.")

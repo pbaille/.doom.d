@@ -23,6 +23,7 @@
 (require 'org)
 (require 'org-element)
 (require 'evil)
+(require 'symex-interface)
 
 ;; predicates
 

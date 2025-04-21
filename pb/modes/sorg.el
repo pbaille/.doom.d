@@ -15,6 +15,7 @@
 (require 'evil)
 (require 'evil-org)
 (require 'pb-org)
+(require 'general)
 
 ;; mode definition
 
