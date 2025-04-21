@@ -1323,7 +1323,7 @@
                 (expand-file-name "pb-prompt-contexts.el" user-emacs-directory)))
 
               (defcustom pb-prompt/contexts-file
-                (expand-file-name "pb-prompt-contexts.el" doom-user-dir)
+                (expand-file-name "pb/llms/pb-prompt-contexts.el" doom-user-dir)
                 "File where saved contexts are stored between Emacs sessions."
                 :type 'file
                 :group 'pb-prompt)
