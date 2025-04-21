@@ -114,7 +114,7 @@ Example:
       "Biot"
       (address "821 Chemin de la chèvre d'or" "Biot")))))
 
-(pb-struct_run-tests)
+'(pb-struct_run-tests)
 
 (defmacro pb-struct_deftag (tag &optional content-pred)
   "Define a cons structure tagged with TAG (which will be the car of the cons cell).
@@ -196,7 +196,7 @@ With validation:
     (equal 1 (pb_let [(numbox x) (numbox 1)] x))
     (null (pb_let [(numbox x) (cons 'numbox 'io)] x)))))
 
-(pb-struct_deftag-tests)
+'(pb-struct_deftag-tests)
 
 (pb_comment
  (pb-struct_deftag km2)
