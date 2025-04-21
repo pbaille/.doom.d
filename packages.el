@@ -10,7 +10,7 @@
 
 (package! pb
   :recipe (:local-repo "/Users/pierrebaille/.doom.d/pb"
-           :files ("*.el" "**/*.el")))
+           :files ("*.el" "modes/*.el" "base/*.el" "languages/*.el" "llms/*.el" "utils/*.el" "reaper/*.el")))
 
 ;; To install SOME-PACKAGE from MELPA, ELPA or emacsmirror:
 

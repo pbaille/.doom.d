@@ -140,7 +140,7 @@ Returns nil if the file doesn't exist or can't be read."
         (equal :foo_bar (pb_join-keyword (list "foo" "bar") "_"))
         (equal 'foo_bar (pb_join-symbol (list "foo" "bar") "_"))
         (not (pb_comment non sense))
-        (stringp (pb_slurp "~/.doom.d/pb/pb.el"))))
+        (stringp (pb_slurp "~/.doom.d/pb/base/pb.el"))))
 
   (progn (defvar pb_swap-testvar 0)
          (setq pb_swap-testvar 0)
