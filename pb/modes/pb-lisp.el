@@ -869,12 +869,14 @@
              (lambda (node-text)
                (interactive)
                (message (format "result: %s"
-                                (eval (read (concat "(progn " node-text ")"))))))
+                                (eval (read (concat "(progn " node-text ")"))
+                                      t))))
 
              :eval-pretty
              (lambda (node-text)
                (interactive)
-               (pb-elisp/display-expression (eval (read (concat "(progn " node-text ")")))))))
+               (pb-elisp/display-expression (eval (read (concat "(progn " node-text ")"))
+                                                  t)))))
 
        (defvar pb-lisp/clojure-methods
          (km :eval
