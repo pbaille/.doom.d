@@ -90,7 +90,7 @@
        (defun pb-lisp/selection-bounds ()
          (let ((nodes (pb-lisp/get-selected-nodes)))
            (cons (treesit-node-start (car nodes))
-                 (treesit-node-end (sq_last nodes)))))
+                 (treesit-node-end (sq/last nodes)))))
 
        (defun pb-lisp/selection-start ()
          (car (pb-lisp/selection-bounds)))
@@ -455,7 +455,7 @@
          "Extend the current selection to include the next sibling node."
          (interactive)
          (let ((nodes (pb-lisp/get-selected-nodes)))
-           (if (treesit-node-next-sibling (sq_last nodes) t)
+           (if (treesit-node-next-sibling (sq/last nodes) t)
                (pb-lisp/extend-selection)
              (message "Cannot extend selection further"))))
 
@@ -547,7 +547,7 @@
          (pb/let [nodes (pb-lisp/get-selected-nodes)
                   first-node (car nodes)
                   parent (treesit-node-parent first-node)
-                  last-node (sq_last nodes)
+                  last-node (sq/last nodes)
                   start-point (treesit-node-start first-node)
                   end-point (treesit-node-end last-node)
                   sibling (cond ((eq direction 'next) (treesit-node-next-sibling last-node t))
@@ -1070,7 +1070,7 @@
                (kbd "q r") #'pb-lisp/gptel-request-replace
                "?" #'pb-lisp/log-node))
 
-       (dolist (binding (sq_partition 2 2 pb-lisp/bindings))
+       (dolist (binding (sq/partition 2 2 pb-lisp/bindings))
          (evil-define-key* nil
            evil-pb-lisp-state-map
            (car binding)

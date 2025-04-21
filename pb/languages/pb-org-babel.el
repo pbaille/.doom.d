@@ -60,7 +60,7 @@ SPEC:"
                                                    (cons content args)))
                                           (km/entries custom-params)
                                           (cons content args))
-          info (pb-> info (sq_put 1 content) (sq_put 2 args))]
+          info (pb-> info (sq/put 1 content) (sq/put 2 args))]
          (funcall fun arg info params)
          (funcall fun arg info params)))
 

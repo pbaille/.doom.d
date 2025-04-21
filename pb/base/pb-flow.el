@@ -18,7 +18,7 @@
   "Generating N symbols to hold case thunks."
   (mapcar (lambda (x)
             (gensym (format "case_%s_" x)))
-          (sq_range 0 n)))
+          (sq/range 0 n)))
 
 (pb/defun pb-flow/compile-case
   [(and case
@@ -47,7 +47,7 @@ symbol, empty list, and a compiled case."
   "Normalize the given BODY ensuring it has an even number of elements.
 If the count of elements is odd, add a bottom case with a nil return."
   (if (cl-oddp (length body))
-      (append (sq_butlast body) (list :pb-flow/bottom (sq_last body)))
+      (append (sq/butlast body) (list :pb-flow/bottom (sq/last body)))
     (append body (list :pb-flow/bottom nil))))
 
 (defun pb-flow/body->cases (body)
@@ -63,11 +63,11 @@ Each case is a map containing keys :return, :symbol, :next, :test, :bindings."
                         :symbol sym
                         :next (unless bottom? nxt)
                         :test (unless (or bindings? bottom?) left)
-                        :bindings (when bindings? (sq_join (mapcar (pb/fn [(list pat seed)]
+                        :bindings (when bindings? (sq/join (mapcar (pb/fn [(list pat seed)]
                                                                           (pb-destructure pat seed))
-                                                                   (sq_partition 2 2 (append left ()))))) )))
-              (sq_partition 2 2 normalized-body)
-              (sq_partition 2 1 (append (pb-flow/thunk-symbols case-count)
+                                                                   (sq/partition 2 2 (append left ()))))) )))
+              (sq/partition 2 2 normalized-body)
+              (sq/partition 2 1 (append (pb-flow/thunk-symbols case-count)
                                         (list nil))))))
 
 (defun pb-flow/emit-form (body)
@@ -92,9 +92,9 @@ Followed by a flat serie of cases of the form args-pattern return-expr."
            (cons doc body) (if (stringp (car xs)) xs (cons nil xs))
            argsym (gensym "args_")
            compiled-body `(,@(if doc (list doc))
-                           (pb-flow ,@(sq_join (mapcar (pb/fn [(list pat ret)]
+                           (pb-flow ,@(sq/join (mapcar (pb/fn [(list pat ret)]
                                                               (list (vector (cons 'list (append pat ())) argsym) ret))
-                                                       (sq_partition 2 2 body)))))]
+                                                       (sq/partition 2 2 body)))))]
           (if name
               `(cl-labels ((,name (&rest ,argsym)
                              ,@compiled-body))

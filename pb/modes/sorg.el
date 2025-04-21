@@ -162,7 +162,7 @@
         ;; misc
         "?" #'pb-org/print-context))
 
-(dolist (binding (sq_partition 2 2 sorg-bindings))
+(dolist (binding (sq/partition 2 2 sorg-bindings))
   (define-key evil-sorg-state-map
               (kbd (car binding))
               (cadr binding))

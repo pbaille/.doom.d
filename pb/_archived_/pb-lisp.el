@@ -601,7 +601,7 @@ DIRECTION should be 'next or 'prev."
                "I" #'pb-lisp/insert-before
                "i" #'pb-lisp/insert-at-begining))
 
-       (dolist (binding (sq_partition 2 2 pb-lisp/bindings))
+       (dolist (binding (sq/partition 2 2 pb-lisp/bindings))
          (evil-define-key* nil
            evil-pb-lisp-state-map
            (car binding)

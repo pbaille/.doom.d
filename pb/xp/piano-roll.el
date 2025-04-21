@@ -57,7 +57,7 @@
 (pb/defun pr-timeline [(as pr (km harmony bars))]
   (let* ((enriched-bars (seq-mapn (pb/fn [idx bar position]
                                          (km/put bar :bar-idx idx :position position))
-                                  (sq_range 0 (length bars))
+                                  (sq/range 0 (length bars))
                                   bars
                                   (pr-bar-positions pr)))
          (zones (seq-reduce (pb/fn [(as zones (cons (cons pos last-zone) previous-zones))
@@ -81,21 +81,21 @@
                               (km timeline pitch-range faces resolution))]
   (let* ((timezones (pb->>
                      timeline
-                     (sq_partition 2 1)
+                     (sq/partition 2 1)
                      (mapcar (pb/fn [(list (cons start-pos data) (cons end-pos _))]
                                     (km/put data :start-pos start-pos :end-pos end-pos)))))
          (lines (mapcar (lambda (pitch)
                           (append (seq-mapn (pb/fn [(as data (km start-pos end-pos))]
-                                                   (-> (pb/join-string (sq_repeat (* resolution (- end-pos start-pos)) " "))
+                                                   (-> (pb/join-string (sq/repeat (* resolution (- end-pos start-pos)) " "))
                                                        (propertize 'face (funcall (km/get faces :grid)
                                                                                   (km/put data :pitch pitch)
                                                                                   pr))))
                                             timezones)
                                   (list "\n")))
-                        (reverse (sq_range (car pitch-range)
+                        (reverse (sq/range (car pitch-range)
                                            (+ 1 (cdr pitch-range)))))))
     '(pp (kmq zones enriched-zones))
-    (apply #'concat (sq_join lines))))
+    (apply #'concat (sq/join lines))))
 
 (pb/defun pr-render [pr]
   (let* ((s (pr-render-grid pr))
@@ -145,7 +145,7 @@
                                                  (km :background (km/get pr-colors
                                                                          (list :harmonic-functions
                                                                                (cond ((= 0 m) :tonic)
-                                                                                     ((member (sq_index-of scale m) struct) :structural)
+                                                                                     ((member (sq/index-of scale m) struct) :structural)
                                                                                      ((member m scale) :diatonic)
                                                                                      (t :chromatic))))))
                                            (let* ((pitch-class (mod pitch 12))
@@ -194,7 +194,7 @@
                                              (+ top (ceiling (/ extra-pad 2.0)))))))
            :bars (lambda (x) (or x
                             (let ((bar (or bar (km :beat 1 :length 4))))
-                              (sq_repeat (ceiling (/ (pr-last-note-end-position pr)
+                              (sq/repeat (ceiling (/ (pr-last-note-end-position pr)
                                                      (float (* (km/get bar :beat)
                                                                (km/get bar :length)))))
                                          bar)))))))
@@ -326,7 +326,7 @@
                    (+ 1 start-pos offset)
                    (+ 1 end-pos offset)
                    (lambda (face) (funcall f (- pitch-max i) face pr-data)))))
-              (sq_range 0 (+ 1 (- pitch-max pitch-min))))))
+              (sq/range 0 (+ 1 (- pitch-max pitch-min))))))
 
   (pr-update-timerange-face (get-buffer "*pr*")
                             2 3

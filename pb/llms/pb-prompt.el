@@ -1540,11 +1540,11 @@
                              (let ((content (km/get flatten-tree (intern cand)))
                                    (segments (split-string cand "\\." t)))
                                (list (concat (propertize (mapconcat #'identity
-                                                                    (sq_butlast segments)
+                                                                    (sq/butlast segments)
                                                                     ".")
                                                          'face 'font-lock-comment-face)
                                              (if (cdr segments) ".")
-                                             (sq_last segments))
+                                             (sq/last segments))
                                      ""
                                      (when content
                                        (concat (make-string (- max-len (length cand) -2) ?\s)

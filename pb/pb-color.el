@@ -350,7 +350,7 @@ RES is the resolution to be used for computations."
 
 
 (defvar pb-color/user-palette
-  (sq_interleave pb-color/12-hue-names
+  (sq/interleave pb-color/12-hue-names
                  (pb-color/hue-wheel (pb-color/hsl 0 .5 .5)
                                      12)))
 

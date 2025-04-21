@@ -163,7 +163,7 @@ If AT is a list, put the value in a nested map."
   "Associates keys with values in keyword map M using XS."
   (cl-reduce (lambda (m entry)
                (km/put1 m (car entry) (cadr entry)))
-             (sq_partition 2 2 xs)
+             (sq/partition 2 2 xs)
              :initial-value (copy-tree m)))
 
 (defun km/upd-in (m path f)
@@ -188,7 +188,7 @@ If AT is a list, update the value in a nested map."
 XS is a list alternating paths and update-fns."
   (cl-reduce (lambda (m entry)
                (km/upd1 m (car entry) (cadr entry)))
-             (sq_partition 2 2 xs)
+             (sq/partition 2 2 xs)
              :initial-value (copy-tree m)))
 
 (defun km/all-paths (m)

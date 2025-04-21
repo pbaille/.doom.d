@@ -67,7 +67,7 @@ If seed is a symbol, gensym is not used and the symbol is returned."
    'list (lambda (args seed)
            (let ((sym (pb-destructure/seed-sym seed "list_")))
              (append (pb-destructure sym seed)
-                     (sq_join (cl-loop for i from 0 to (- (length args) 1)
+                     (sq/join (cl-loop for i from 0 to (- (length args) 1)
                                        collect (pb-destructure (nth i args) (list 'nth i sym))))))))
 
   (pb-destructure/extend
@@ -75,15 +75,15 @@ If seed is a symbol, gensym is not used and the symbol is returned."
             (let ((sym (pb-destructure/seed-sym seed "list_"))
                   (head (gensym "head_")))
               (append (pb-destructure sym seed)
-                      (list (list head (list 'sq_take-strict sym (- (length args) 1))))
-                      (pb-destructure (cons 'list (sq_butlast args)) head)
-                      (list (list (sq_last args) (list 'seq-drop sym (- (length args) 1))))))))
+                      (list (list head (list 'sq/take-strict sym (- (length args) 1))))
+                      (pb-destructure (cons 'list (sq/butlast args)) head)
+                      (list (list (sq/last args) (list 'seq-drop sym (- (length args) 1))))))))
 
   (pb-destructure/extend
    'and (lambda (args seed)
           (let ((sym (pb-destructure/seed-sym seed "and-seed_")))
             (append (pb-destructure sym seed)
-                    (sq_join (mapcar (lambda (pat) (pb-destructure pat sym))
+                    (sq/join (mapcar (lambda (pat) (pb-destructure pat sym))
                                      args))))))
 
   (pb-destructure/extend
@@ -109,14 +109,14 @@ If seed is a symbol, gensym is not used and the symbol is returned."
    'km (lambda (args seed)
          (let ((sym (pb-destructure/seed-sym seed "plist_")))
            (append (pb-destructure sym seed)
-                   (sq_join (mapcar (lambda (entry)
+                   (sq/join (mapcar (lambda (entry)
                                       (pb-destructure (cdr entry)
                                                       (list 'plist-get sym (car entry))))
                                     (km/parse-free-form args)))))))
 
   (pb-destructure/extend
    'km/keys (lambda (args seed)
-              (pb-destructure (cons 'km (sq_interleave (mapcar #'pb/symbol-to-keyword args)
+              (pb-destructure (cons 'km (sq/interleave (mapcar #'pb/symbol-to-keyword args)
                                                        args))
                               seed)))
 
@@ -132,9 +132,9 @@ If seed is a symbol, gensym is not used and the symbol is returned."
 BODY expressions are evaluated in those new bindings, the last value
 is returned."
   (declare (indent 1))
-  `(let* ,(sq_join (mapcar (lambda (binding)
+  `(let* ,(sq/join (mapcar (lambda (binding)
                              (pb-destructure (car binding) (cadr binding)))
-                           (sq_partition 2 2 (append bindings nil))))
+                           (sq/partition 2 2 (append bindings nil))))
      ,@body))
 
 (defmacro pb-destructure/fn (&rest decl)
@@ -147,7 +147,7 @@ Followed by the args pattern and expressions."
                        argsyms (mapcar (lambda (x) (if (symbolp x) x (gensym "arg_")))
                                        arglist)
                        compiled-body `(,@(if doc (list doc))
-                                       (pb-destructure/let ,(sq_interleave arglist argsyms)
+                                       (pb-destructure/let ,(sq/interleave arglist argsyms)
                                            ,@body))]
       (if name
           `(cl-labels ((,name ,argsyms ,@compiled-body))

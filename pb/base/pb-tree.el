@@ -44,7 +44,7 @@ Interleaves :children with elements of PATH to create the path."
   (let ((path (cond ((keywordp path) (list path))
                     ((vectorp path) (append path ()))
                     (t path))))
-    (sq_interleave (sq_repeat (length path) :children)
+    (sq/interleave (sq/repeat (length path) :children)
                    path)))
 
 (defun pb-tree_contains? (tree path)
