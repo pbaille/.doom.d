@@ -45,7 +45,7 @@
                     data (json-encode
                           (km :model model
                               :max_tokens max-tokens
-                              :messages (vec_conj messages
+                              :messages (vec/conj messages
                                                   (km :role "user"
                                                       :content prompt))))]
              (request
@@ -58,7 +58,7 @@
                       (km :model model
                           :max_tokens max-tokens
                           :system system
-                          :messages (vec_conj messages
+                          :messages (vec/conj messages
                                               (km :role "user"
                                                   :content prompt))))
                :parser #'json-read
@@ -76,7 +76,7 @@
                                      (km/upd _
                                              (list chat-id :messages)
                                              (pb/fn [messages]
-                                                    (vec_conj messages
+                                                    (vec/conj messages
                                                               response))))))
                :error (cl-function
                        (lambda (&key data &allow-other-keys)
