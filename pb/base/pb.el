@@ -162,7 +162,7 @@ Returns nil if the file doesn't exist or can't be read."
         (pb/eq 42 42 42) ; multiple equal elements
         (not (pb/eq 42 42 43)))))
 
-(pb_test)
+(pb/test)
 
 (provide 'pb)
 ;;; pb.el ends here.

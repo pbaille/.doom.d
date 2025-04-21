@@ -8,15 +8,15 @@
  :extend-destructure-for-simple-struct
  (eval-when-compile
 
-   (defun pb-destructure_simple-struct-impl (head-sym)
+   (defun pb-destructure/simple-struct-impl (head-sym)
      (lambda (args seed)
        (pb-destructure `(cons _ (list ,@args))
                        seed)))
 
-   (defun pb-destructure_add-simple-struct (sym)
-     (pb-destructure_extend sym
-                            (pb-destructure_simple-struct-impl sym)))
-   (pb-destructure_add-simple-struct 'point))
+   (defun pb-destructure/add-simple-struct (sym)
+     (pb-destructure/extend sym
+                            (pb-destructure/simple-struct-impl sym)))
+   (pb-destructure/add-simple-struct 'point))
 
  (pb/let [(point x y) `(point 1 2)]
      (cl-assert (equal (list 1 2)
@@ -58,7 +58,7 @@ Example:
                   (pb/name name))
          (list ',name ,@members))
 
-       (pb-destructure_extend ',name
+       (pb-destructure/extend ',name
                               (lambda (args seed)
                                 (pb-destructure (list 'cons
                                                       (list 'eq '_ '',name)
@@ -155,7 +155,7 @@ With validation:
                    (cons ',tag x))
               `(cons ',tag x))))
 
-       (pb-destructure_extend ',tag
+       (pb-destructure/extend ',tag
                               (lambda (args seed)
                                 (pb-destructure (car args)
                                                 (list 'cdr (list ',pred-sym seed))))))))

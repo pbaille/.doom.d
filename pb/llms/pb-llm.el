@@ -88,7 +88,7 @@
              (pb-llm/create-chat chat-id "You are a useful assistant, you leave in emacs.")
              (pb-llm/chat chat-id prompt)))))
 
-(pb_comment
+(pb/comment
  (km_get pb-llm/chats :simple)
  (km_get pb-llm/chats :pb-llm)
  pb-llm/last-responses

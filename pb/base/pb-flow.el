@@ -20,7 +20,7 @@
             (gensym (format "case_%s_" x)))
           (sq_range 0 n)))
 
-(pb_defun pb-flow/compile-case
+(pb/defun pb-flow/compile-case
   [(and case
         (km_keys test bindings return next))]
   "Compile a single case from a case map.
@@ -145,7 +145,7 @@ Followed by a flat serie of cases of the form args-pattern return-expr."
                                                 (cons x (rec (- x 1)))))
                         5)))))
 
-(pb-flow_tests)
+(pb-flow/tests)
 
 (defalias 'pb/if 'pb-flow)
 (defalias 'pb/fm 'pb-flow/fn)

@@ -1144,7 +1144,7 @@
 
 
 
-(pb_comment :indented-overlays
+(pb/comment :indented-overlays
 
             (defun pb-lisp/update-overlay2 ()
               "Update the highlight overlay based on the current selection.

@@ -317,17 +317,17 @@
             "c p" #'org-pomodoro
             "S" #'org-insert-structure-template)
       (:map fennel-mode-map
-            "r" #'pb-fennel_repl
-            "q" #'pb-fennel_quit
+            "r" #'pb-fennel/repl
+            "q" #'pb-fennel/quit
             "L" #'fennel-reload
-            "l" #'pb-fennel_eval-buffer
+            "l" #'pb-fennel/eval-buffer
             "m" #'fennel-macroexpand
             "d" #'fennel-show-documentation
             "g" #'fennel-find-definition
             "G" #'fennel-find-module-definition
-            "c" #'pb-fennel_compile-fennel
+            "c" #'pb-fennel/compile-fennel
             "R" #'reapl-mode
-            "I" #'pb-fennel_install-fennel-script)
+            "I" #'pb-fennel/install-fennel-script)
       (:map reapl-mode-map
             "'" #'reapl-mode_connect
             "r" #'pb-reapl/repl
