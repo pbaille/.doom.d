@@ -53,12 +53,12 @@
    For example, [:code :lisp :context] would retrieve all values along that path.
 
    The function retrieves all values along the specified path using
-   `pb-tree_get-path-values`, then formats each value using `pb-prompt/mk`,
+   `pb-tree/get-path-values`, then formats each value using `pb-prompt/mk`,
    and finally concatenates them with double newlines between each part.
 
    This creates a well-structured prompt by combining multiple prompt elements
    from the tree, allowing for modular and reusable prompt components."
-  (pb/let [values (pb-tree_get-path-values pb-prompt/tree path)]
+  (pb/let [values (pb-tree/get-path-values pb-prompt/tree path)]
     (mapconcat #'pb-prompt/mk values "\n\n")))
 
 (defvar pb-gptel/models
