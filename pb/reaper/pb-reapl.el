@@ -13,11 +13,11 @@
 (require 'reapl-mode)
 (require 'pb-misc)
 
-(defun pb-reapl_repl ()
+(defun pb-reapl/repl ()
   (interactive)
   (unless (process-live-p reapl-mode_receive-proc)
     (reapl-mode_connect))
-  (pb-misc_window-split (process-buffer reapl-mode_receive-proc)))
+  (pb-misc/window-split (process-buffer reapl-mode_receive-proc)))
 
 (provide 'pb-reapl)
 ;;; pb-reapl.el ends here.

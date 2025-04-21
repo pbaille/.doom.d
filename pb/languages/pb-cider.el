@@ -14,14 +14,14 @@
 (require 'cider)
 (require 'consult)
 
-(defun pb-cider_eval! (code)
+(defun pb-cider/eval! (code)
   "Eval some CODE using cider.
 The `current-buffer' has to be a buffer recognized by cider for this to work,"
   (cider-interactive-eval code
                           nil nil
                           (cider--nrepl-pr-request-map)))
 
-(defun pb-cider_kill-dead-buffers ()
+(defun pb-cider/kill-dead-buffers ()
   "Kill all dead cider repl buffers."
   (princ "killing dead cider repl buffers")
   (dolist (buffer (buffer-list))
@@ -30,7 +30,7 @@ The `current-buffer' has to be a buffer recognized by cider for this to work,"
                (not (process-live-p (get-buffer-process buffer))))
       (kill-buffer buffer))))
 
-(defun pb-cider_select-repl-buffer ()
+(defun pb-cider/select-repl-buffer ()
   "List and select a CIDER REPL buffer using consult.
 Uses consult--read to create an interactive selection menu of all CIDER REPL
 buffers with live previewing."
@@ -52,10 +52,10 @@ buffers with live previewing."
     (when selected
       selected)))
 
-(defun pb-cider_goto-repl ()
+(defun pb-cider/goto-repl ()
   "Let the user choose a repl buffer and switch the buffer to it."
   (interactive)
-  (let ((repl-buffer (pb-cider_select-repl-buffer)))
+  (let ((repl-buffer (pb-cider/select-repl-buffer)))
     (when repl-buffer
       (switch-to-buffer repl-buffer))))
 

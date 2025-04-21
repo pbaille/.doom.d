@@ -65,8 +65,8 @@ Interleaves :children with elements of PATH to create the path."
 
 (defun pb-tree_traverse (tree path)
   "Traverse the TREE with PATH, accumulating intermediate node values."
-  (seq-reduce (pb_fn [(km_keys values node) child-path]
-                     (pb_if [child-node (pb-tree_get node child-path)]
+  (seq-reduce (pb/fn [(km_keys values node) child-path]
+                     (pb/if [child-node (pb-tree_get node child-path)]
                             (km :values (cons (pb-tree_value node)
                                               values)
                                 :node child-node)))
@@ -76,7 +76,7 @@ Interleaves :children with elements of PATH to create the path."
 (defun pb-tree_get-path-values (tree path)
   "Traverse the TREE with PATH, accumulating intermediate values and returning a list of them."
   (if (pb-tree_contains? tree path)
-      (pb_let [(km_keys values node) (pb-tree_traverse tree path)]
+      (pb/let [(km_keys values node) (pb-tree_traverse tree path)]
           (seq-reverse
            (cons (pb-tree_value node)
                  values)))))
@@ -89,7 +89,7 @@ merges the children of TREE1 and TREE2 recursively.
 TREE1 and TREE2 are expected to be trees created by `pb-tree` or `pb-tree_node`.
 
 Returns a new tree with the merged structure."
-  (pb_if
+  (pb/if
    (not (pb-tree? tree1)) tree2
    (not (pb-tree? tree2)) tree1
    (km :value
@@ -110,7 +110,7 @@ X can be:
 - nil or empty: returns the entire tree
 
 Returns a new tree containing only the selected parts of the original tree."
-  (pb_if
+  (pb/if
    (keywordp x) (pb-tree* (pb-tree_value tree)
                           (km x (pb-tree_get tree x)))
 
@@ -119,11 +119,11 @@ Returns a new tree containing only the selected parts of the original tree."
        (eq t x)) tree
 
    (km? x)
-   (seq-reduce (pb_fn [ret (cons k v)]
+   (seq-reduce (pb/fn [ret (cons k v)]
                       (pb-tree_merge ret
                                      (km_upd (pb-tree_select tree k)
                                              (list :children k)
-                                             (pb_fn [subtree] (pb-tree_select subtree v)))))
+                                             (pb/fn [subtree] (pb-tree_select subtree v)))))
                (km_entries x) ())
 
    (vectorp x)
@@ -131,7 +131,7 @@ Returns a new tree containing only the selected parts of the original tree."
          (x (vconcat (cdr (append x nil)))))
      (km_upd (pb-tree_select tree k)
              (list :children k)
-             (pb_fn [subtree] (pb-tree_select subtree x))))))
+             (pb/fn [subtree] (pb-tree_select subtree x))))))
 
 ;;; Testing
 

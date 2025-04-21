@@ -32,7 +32,7 @@
   (when (eq major-mode 'org-mode)
     (setq-local pb-org/enter-src-block-function
                 #'sorg--enter-lisp-block)
-    (goto-char (car (pb-org_node-bounds)))
+    (goto-char (car (pb-org/node-bounds)))
     (sorg--flash-overlay)))
 
 (defun sorg-exit-mode ()
@@ -58,7 +58,7 @@
   (interactive)
   (sorg--delete-overlay)
   (setq-local sorg--current-overlay
-              (let ((bounds (pb-org_node-bounds)))
+              (let ((bounds (pb-org/node-bounds)))
                 (make-overlay (car bounds) (1- (cdr bounds)))))
   (overlay-put sorg--current-overlay 'face 'sorg--current-node-face))
 
@@ -92,7 +92,7 @@
   (cond ((and (org-in-src-block-p)
               (not (org-at-block-p)))
          (evil-pb-lisp-state 1)
-         '(pb-symex_enter))
+         '(pb-symex/enter))
 
         (t (evil-sorg-state))))
 
@@ -101,7 +101,7 @@
          (when (eq major-mode 'org-mode)
            (setq-local pb-lisp/enter-node-function
                        (lambda ()
-                         (if (pb-org_at-lisp-block-p)
+                         (if (pb-org/at-lisp-block-p)
                              (progn (evil-pb-lisp-state -1)
                                     (evil-next-line)
                                     (evil-pb-lisp-state 1))
@@ -110,7 +110,7 @@
                        pb-lisp/escape-top-level-function
                        (lambda ()
                          (progn (evil-pb-lisp-state -1)
-                                (pb-org_code-block-goto-beg)
+                                (pb-org/code-block-goto-beg)
                                 (evil-pb-lisp-state 1))))))
 
        (add-hook 'evil-pb-lisp-state-entry-hook
@@ -124,43 +124,43 @@
 ;; bindings and init
 
 (defvar sorg-bindings
-  (list "k" #'pb-org_parent
-        "j" #'pb-org_down-element
-        "h" #'pb-org_backward
-        "l" #'pb-org_forward
-        "$" #'pb-org_last-node
-        "^" #'pb-org_first-node
-        "b" #'pb-org_walk-backward
-        "f" #'pb-org_walk-forward
-        "C-k" #'pb-org_move-up
-        "C-j" #'pb-org_move-down
-        "t" #'pb-org_toggle-fold
-        ";" #'pb-org_toggle-fold
-        "n" #'pb-org_toggle-narrow
-        "e" #'pb-org_eval-block
+  (list "k" #'pb-org/parent
+        "j" #'pb-org/down-element
+        "h" #'pb-org/backward
+        "l" #'pb-org/forward
+        "$" #'pb-org/last-node
+        "^" #'pb-org/first-node
+        "b" #'pb-org/walk-backward
+        "f" #'pb-org/walk-forward
+        "C-k" #'pb-org/move-up
+        "C-j" #'pb-org/move-down
+        "t" #'pb-org/toggle-fold
+        ";" #'pb-org/toggle-fold
+        "n" #'pb-org/toggle-narrow
+        "e" #'pb-org/eval-block
         ;; edition
-        "x" #'pb-org_delete
-        "y" #'pb-org_copy
-        "p" #'pb-org_paste-after
-        "P" #'pb-org_paste-before
-        "L" #'pb-org_move-subtree-down
-        "H" #'pb-org_move-subtree-up
+        "x" #'pb-org/delete
+        "y" #'pb-org/copy
+        "p" #'pb-org/paste-after
+        "P" #'pb-org/paste-before
+        "L" #'pb-org/move-subtree-down
+        "H" #'pb-org/move-subtree-up
         "S" #'org-insert-structure-template
         "J" #'org-demote-subtree
         "K" #'org-promote-subtree
-        "o" #'pb-org_insert-after
-        "O" #'pb-org_insert-before
-        "a" #'pb-org_insert-at-end
-        "i" #'pb-org_insert-at-beginning
-        "c" #'pb-org_create-code-block
-        ">" #'pb-org_shift-one-line-down
-        "<" #'pb-org_shift-one-line-up
+        "o" #'pb-org/insert-after
+        "O" #'pb-org/insert-before
+        "a" #'pb-org/insert-at-end
+        "i" #'pb-org/insert-at-beginning
+        "c" #'pb-org/create-code-block
+        ">" #'pb-org/shift-one-line-down
+        "<" #'pb-org/shift-one-line-up
         "s-l" #'sorg--enter-pb-lisp-state
-        "<return>" #'pb-org_shift-one-line-down
-        "S-<return>" #'pb-org_shift-one-line-up
+        "<return>" #'pb-org/shift-one-line-down
+        "S-<return>" #'pb-org/shift-one-line-up
         "<mouse-1>" #'sorg--click
         ;; misc
-        "?" #'pb-org_print-context))
+        "?" #'pb-org/print-context))
 
 (dolist (binding (sq_partition 2 2 sorg-bindings))
   (define-key evil-sorg-state-map
@@ -175,7 +175,7 @@
  :states 'insert
  :keymaps (list 'evil-org-mode-map)
  [escape] #'sorg--enter-from-normal-mode
- "C-w" #'pb-misc_insert-open-paren)
+ "C-w" #'pb-misc/insert-open-paren)
 
 (progn :theming
 

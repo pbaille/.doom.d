@@ -24,7 +24,7 @@
             "only compile from lua-script-path")
     (let ((s (pb/fennel-compile p))
           (subpath (string-remove-prefix pb/lua-script-path p)))
-      (pb-misc_spit s (concat pb/lua-script-path
+      (pb-misc/spit s (concat pb/lua-script-path
                          "compiled/"
                          (pb/replace-filename-extension subpath "lua"))))))
 

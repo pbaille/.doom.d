@@ -36,15 +36,15 @@
                 (cons :cooler (lambda (c) (pb-modus-cooler c 0.05)))))
       (dolist (s (list
                   nil
-                  (cons :intense (lambda (c) (pb-color_saturate c 0.5)))
-                  (cons :faint (lambda (c) (pb-color_desaturate c 0.3)))))
+                  (cons :intense (lambda (c) (pb-color/saturate c 0.5)))
+                  (cons :faint (lambda (c) (pb-color/desaturate c 0.3)))))
         (dolist (l (list
                     nil
-                    (cons :lighter (lambda (c) (pb-color_lighten c 0.1)))
-                    (cons :darker (lambda (c) (pb-color_darken c 0.1)))))
+                    (cons :lighter (lambda (c) (pb-color/lighten c 0.1)))
+                    (cons :darker (lambda (c) (pb-color/darken c 0.1)))))
           (let ((xs (remove nil (list h s l))))
             (if xs
-                (push (cons (pb_join-keyword (mapcar #'car xs) "-")
+                (push (cons (pb/join-keyword (mapcar #'car xs) "-")
                             (seq-reduce (lambda (ret f)
                                             (funcall f ret))
                                         (mapcar #'cdr xs)
@@ -59,11 +59,11 @@
                          pc/12-hue-names
                          (pc/hue-wheel (or base (pc/from-hsl (list 0 .5 .5)))
                                        12)))
-      (push (list (pb_symbol (car c))
+      (push (list (pb/symbol (car c))
                   (cdr c))
             combinations)
       (dolist (variation (pb-modus-color-variations (cdr c)))
-        (push (list (pb_symbol (car c) (car variation))
+        (push (list (pb/symbol (car c) (car variation))
                     (cdr variation))
               combinations)))
     (nreverse combinations)))
@@ -191,7 +191,7 @@ which is tranformed to:
 
     (set-face-attribute 'symex--current-node-face nil
                         :inherit nil
-                        :background (pb-color_blend (pb-modus-get-color 'bg-main)
+                        :background (pb-color/blend (pb-modus-get-color 'bg-main)
                                                     (pb-modus-get-color 'cyan-faint-lighter)
                                                     .9))
 
@@ -201,7 +201,7 @@ which is tranformed to:
 
     (set-face-attribute 'auto-dim-other-buffers-face nil
                         :inherit nil
-                        :background (pb-color_darken (pb-modus-get-color 'bg-main)
+                        :background (pb-color/darken (pb-modus-get-color 'bg-main)
                                                      0.01))
 
     (set-face-attribute 'default nil :foreground (pb-modus-get-color 'fg-main))
@@ -284,7 +284,7 @@ which is tranformed to:
   (modus-themes-select 'modus-operandi))
 
 ;; Local Variables:
-;; read-symbol-shorthands: (("pc/" . "pb-color_"))
+;; read-symbol-shorthands: (("pc/" . "pb-color/"))
 ;; End:
 
 ;;; pb-modus.el ends here

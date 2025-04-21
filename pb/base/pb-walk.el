@@ -17,13 +17,13 @@
        (mapcar inner x))
     (funcall outer x)))
 
-(defun pb-walk_post (x f)
-  (pb-walk x (lambda (y) (pb-walk_post y f)) f))
+(defun pb-walk/post (x f)
+  (pb-walk x (lambda (y) (pb-walk/post y f)) f))
 
-(defun pb-walk_pre (x f)
+(defun pb-walk/pre (x f)
   (pb-walk (funcall f x)
            (lambda (y)
-             (pb-walk_pre y f))
+             (pb-walk/pre y f))
            #'identity))
 
 '(:comment
@@ -58,12 +58,12 @@
       (funcall prewalk x () f))))
 
 '(:comment
-  (pb-walk_post `(a (b c (d e)) b)
+  (pb-walk/post `(a (b c (d e)) b)
                (lambda (x) (print x) x))
   (pb-indexed-prewalk `(a (b c (d e)) b)
                       (lambda (i x) (print (list i x)) x))
   (pb-map-indexed (list 1 2 3) #'cons)
-  (pb-walk_pre `(a (b c (d e)) b)
+  (pb-walk/pre `(a (b c (d e)) b)
               (lambda (x) (print x) x)))
 
 (provide 'pb-walk)

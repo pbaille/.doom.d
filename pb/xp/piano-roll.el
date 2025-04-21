@@ -5,37 +5,37 @@
 (require 'pb-color)
 (require 'pb)
 
-(pb_defun pr-beat-length [(km bars)]
-  (seq-reduce (pb_fn [ret (km beat length)]
+(pb/defun pr-beat-length [(km bars)]
+  (seq-reduce (pb/fn [ret (km beat length)]
                      (+ ret (* beat length)))
               bars
               0))
 
-(pb_defun pr-last-note-end-position [(km notes)]
-  (seq-reduce (pb_fn [ret (km position duration)]
+(pb/defun pr-last-note-end-position [(km notes)]
+  (seq-reduce (pb/fn [ret (km position duration)]
                      (max ret (+ position duration)))
               notes
               0))
 
-(pb_defun pr-pixel-width [(as pr
+(pb/defun pr-pixel-width [(as pr
                               (km resolution))]
   (* resolution (pr-beat-length pr)))
 
-(pb_defun pr-bar-positions [(km :bars bars)]
-  (reverse (seq-reduce (pb_fn [positions (km beat length)]
+(pb/defun pr-bar-positions [(km :bars bars)]
+  (reverse (seq-reduce (pb/fn [positions (km beat length)]
                               (cons (+ (car positions) (* beat length))
                                     positions))
                        bars
                        (list 0))))
 
-(pb_defun pr-displayable-notes [(as pr
+(pb/defun pr-displayable-notes [(as pr
                                     (km :pitch-range (cons pitch-min pitch-max)
                                         :notes notes
                                         :faces faces))]
   (let* ((beat-length (pr-beat-length pr))
          (pixel-width (pr-pixel-width pr))
          (line-length (+ 1 pixel-width)))
-    (mapcar (pb_fn [(as note
+    (mapcar (pb/fn [(as note
                         (km position duration pitch))]
                    (if (and (>= pitch pitch-min)
                             (<= pitch pitch-max))
@@ -54,13 +54,13 @@
                                             pr)))))
             notes)))
 
-(pb_defun pr-timeline [(as pr (km harmony bars))]
-  (let* ((enriched-bars (seq-mapn (pb_fn [idx bar position]
+(pb/defun pr-timeline [(as pr (km harmony bars))]
+  (let* ((enriched-bars (seq-mapn (pb/fn [idx bar position]
                                          (km_put bar :bar-idx idx :position position))
                                   (sq_range 0 (length bars))
                                   bars
                                   (pr-bar-positions pr)))
-         (zones (seq-reduce (pb_fn [(as zones (cons (cons pos last-zone) previous-zones))
+         (zones (seq-reduce (pb/fn [(as zones (cons (cons pos last-zone) previous-zones))
                                     (as zone (km type position))]
                                    (let ((nxt-zone (km_merge last-zone zone)))
                                      (if (equal position pos) (cons (cons pos nxt-zone) previous-zones)
@@ -77,16 +77,16 @@
           :timeline
           (pr-timeline pr)))
 
-(pb_defun pr-render-grid [(as pr
+(pb/defun pr-render-grid [(as pr
                               (km timeline pitch-range faces resolution))]
   (let* ((timezones (pb->>
                      timeline
                      (sq_partition 2 1)
-                     (mapcar (pb_fn [(list (cons start-pos data) (cons end-pos _))]
+                     (mapcar (pb/fn [(list (cons start-pos data) (cons end-pos _))]
                                     (km_put data :start-pos start-pos :end-pos end-pos)))))
          (lines (mapcar (lambda (pitch)
-                          (append (seq-mapn (pb_fn [(as data (km start-pos end-pos))]
-                                                   (-> (pb_join-string (sq_repeat (* resolution (- end-pos start-pos)) " "))
+                          (append (seq-mapn (pb/fn [(as data (km start-pos end-pos))]
+                                                   (-> (pb/join-string (sq_repeat (* resolution (- end-pos start-pos)) " "))
                                                        (propertize 'face (funcall (km_get faces :grid)
                                                                                   (km_put data :pitch pitch)
                                                                                   pr))))
@@ -97,10 +97,10 @@
     '(pp (kmq zones enriched-zones))
     (apply #'concat (sq_join lines))))
 
-(pb_defun pr-render [pr]
+(pb/defun pr-render [pr]
   (let* ((s (pr-render-grid pr))
          (displayable-notes (pr-displayable-notes pr)))
-    (mapc (pb_fn [(km beg end face)]
+    (mapc (pb/fn [(km beg end face)]
                  (add-face-text-property beg end face nil s))
           displayable-notes)
     s))
@@ -121,8 +121,8 @@
        :chromatic (pb-color :gray95))
 
    :channels
-   (pb_let [colors (reverse (pb-color_hue-wheel (pb-color_hsl 0 .6 .6) 8))]
-       (append colors (mapcar (lambda (c) (pb-color_desaturate c .5))
+   (pb/let [colors (reverse (pb-color/hue-wheel (pb-color/hsl 0 .6 .6) 8))]
+       (append colors (mapcar (lambda (c) (pb-color/desaturate c .5))
                               colors)))
 
    :note-kinds
@@ -132,15 +132,15 @@
        :chromatic (pb-color :orange (lighten .2)))
 
    :note-default
-   (pb-color_hsl .95 .6 .6)))
+   (pb-color/hsl .95 .6 .6)))
 
 (setq pr-default-faces
-      (km :grid (pb_fn [(km pitch bar-idx bar harmonic-ctx) pr]
-                  (pb_let [(km border light dark c-key octave-delimiter) (km_get pr-colors :lines)]
-                      (pb->_ (km :box (km :line-width (cons 0 1) :color border))
+      (km :grid (pb/fn [(km pitch bar-idx bar harmonic-ctx) pr]
+                  (pb/let [(km border light dark c-key octave-delimiter) (km_get pr-colors :lines)]
+                      (pb->/ (km :box (km :line-width (cons 0 1) :color border))
                              ;; line colors
                              (km_merge _ (if (km_get pr [:options :harmonic-grid])
-                                             (pb_let [(km origin struct scale) harmonic-ctx
+                                             (pb/let [(km origin struct scale) harmonic-ctx
                                                       m (mod (- pitch (km_get origin :c)) 12)]
                                                  (km :background (km_get pr-colors
                                                                          (list :harmonic-functions
@@ -157,12 +157,12 @@
                                                  ))))
                              ;; darken odd bars
                              (if (cl-oddp bar-idx)
-                                 (pb-color_walk _ (lambda (c) (pb-color_darken c .03)))
+                                 (pb-color/walk _ (lambda (c) (pb-color/darken c .03)))
                                _))))
 
           :note (lambda (note pr)
                   (km :background
-                      (pb_if [c (km_get note :color)]
+                      (pb/if [c (km_get note :color)]
                              (pb-color c)
 
                              (km_get pr [:options :colors :by-kind])
@@ -173,16 +173,16 @@
 
                              (km_get pr-colors :note-default))))))
 
-(pb_defun pr-coerce [(as pr
+(pb/defun pr-coerce [(as pr
                          (km notes bar))]
   (pr-with-timeline
    (km_upd pr
            :pitch-range (lambda (x) (or x
-                                   (pb_let [(cons bottom top)
-                                            (seq-reduce (pb_fn [(as bounds
+                                   (pb/let [(cons bottom top)
+                                            (seq-reduce (pb/fn [(as bounds
                                                                     (cons pitch-min pitch-max))
                                                                 (as note (km pitch))]
-                                                               (pb_if (not bounds) (cons pitch pitch)
+                                                               (pb/if (not bounds) (cons pitch pitch)
                                                                       (> pitch pitch-max) (cons pitch-min pitch)
                                                                       (< pitch pitch-min) (cons pitch pitch-max)
                                                                       bounds))
@@ -230,7 +230,7 @@
              pr-buffers-data))
 
 (defun pr-upd-buffer-data (buf f)
-  (pb_if [buf-name (buffer-name (or buf (current-buffer)))
+  (pb/if [buf-name (buffer-name (or buf (current-buffer)))
           data (pr-get-buffer-data buf)
           next-data (funcall f data)]
          (progn (setq pr-buffers-data
@@ -250,7 +250,7 @@
              (setq proll-mode t)
              (evil-normal-state 1)
              (let ((buf (current-buffer)))
-               (pb_if ;; [(km content pr-data) (pr-get-buffer-data buf)]
+               (pb/if ;; [(km content pr-data) (pr-get-buffer-data buf)]
                       ;; (pr-render-buffer buf pr-data)
                       [content (buffer-substring-no-properties (point-min) (point-max))
                        data (pr-make (eval (read content) t))]
@@ -313,7 +313,7 @@
 
 
   (defun pr-update-timerange-face (buf start end f)
-    (pb_let [(km pr-data) (pr-get-buffer-data buf)
+    (pb/let [(km pr-data) (pr-get-buffer-data buf)
              (cons pitch-min pitch-max) (km_get pr-data :pitch-range)
              width (pr-pixel-width pr-data)
              beat-length (pr-beat-length pr-data)]
@@ -335,8 +335,8 @@
                                       (lambda (c) (pb-color c (saturate .5) (rotate (/ pitch (float 10))))))))
 
   (pr-with-buf
-   (pb_let [(km pr-data) (pr-get-buffer-data)]
-       (mapc (pb_fn [(and (km position duration)
+   (pb/let [(km pr-data) (pr-get-buffer-data)]
+       (mapc (pb/fn [(and (km position duration)
                           (km :harmonic-ctx (km origin struct scale)))]
                     (pr-update-timerange-face pr-buf
                                               position (+ position duration)
@@ -380,4 +380,4 @@
 
   (pb-text-properties_update-faces (get-buffer-create "*pr*")
                                    100 200
-                                   (lambda (pl) (pb-color_walk pl (pb-color_f> (blend "red" .5)))))))
+                                   (lambda (pl) (pb-color/walk pl (pb-color/f> (blend "red" .5)))))))

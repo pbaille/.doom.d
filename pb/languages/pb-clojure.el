@@ -3,7 +3,7 @@
 (require 'cider)
 (require 'pb-cider)
 
-(defun pb-clojure_thing-at-point-tagged-literal ()
+(defun pb-clojure/thing-at-point-tagged-literal ()
   "Return the Clojure tagged literal at point, or nil if none is found."
   (let ((bounds (bounds-of-thing-at-point 'sexp)))
     (when bounds
@@ -13,30 +13,30 @@
           (buffer-substring-no-properties (car bounds) (cdr bounds))
         nil))))
 
-(defun pb-clojure_thing-at-point ()
-  (or (pb-clojure_thing-at-point-tagged-literal)
+(defun pb-clojure/thing-at-point ()
+  (or (pb-clojure/thing-at-point-tagged-literal)
       (thing-at-point 'sexp)
       (thing-at-point 'symbol)))
 
-(defun pb-clojure_eval-string (code)
+(defun pb-clojure/eval-string (code)
   (with-current-buffer (or (cider-current-repl-buffer)
-                           (pb-cider_select-repl-buffer))
+                           (pb-cider/select-repl-buffer))
     (let ((response (cider-nrepl-sync-request:eval (or code "nil"))))
       (km :value (nrepl-dict-get response "value")
           :error (nrepl-dict-get response "err")))))
 
-(defun pb-clojure_gptel-tool-function (code)
+(defun pb-clojure/gptel-tool-function (code)
   (pb-prompt/mk
    (km :clojure
        (km :expression code
-           :evaluation (km_filter (pb-clojure_eval-string code)
-                                  (pb_fn [(cons k v)] v))))))
+           :evaluation (km_filter (pb-clojure/eval-string code)
+                                  (pb/fn [(cons k v)] v))))))
 
 '(:tries
-  (pb-clojure_eval-string "(+ 2 3)")
-  (pb-clojure_gptel-tool-function "(+ 2 3)"))
+  (pb-clojure/eval-string "(+ 2 3)")
+  (pb-clojure/gptel-tool-function "(+ 2 3)"))
 
-(defun pb-clojure_gptel-replace ()
+(defun pb-clojure/gptel-replace ()
   "Evaluate the current Clojure expression and request GPT to analyze it.
 This function:
 1. Captures the current symbolic expression
@@ -49,7 +49,7 @@ see both the code and its runtime behavior at once."
   (interactive)
   (pb-gptel/current-symex-request
    (km :prompt (concat "current expression evaluates to:\n"
-                       (pb-clojure_eval-string (pb-symex_current-as-string))
+                       (pb-clojure/eval-string (pb-symex/current-as-string))
                        "\nFix it if needed."))))
 
 (provide 'pb-clojure)

@@ -15,10 +15,10 @@
           (:desc "move up" "k" #'windmove-up)
 
           ;; resizing
-          (:desc "width +" "M-l" #'pb-misc_increase-window-width)
-          (:desc "width -" "M-h" #'pb-misc_shrink-window-width)
-          (:desc "height +" "M-j" #'pb-misc_increase-window-height)
-          (:desc "height -" "M-k" #'pb-misc_shrink-window-height)
+          (:desc "width +" "M-l" #'pb-misc/increase-window-width)
+          (:desc "width -" "M-h" #'pb-misc/shrink-window-width)
+          (:desc "height +" "M-j" #'pb-misc/increase-window-height)
+          (:desc "height -" "M-k" #'pb-misc/shrink-window-height)
 
           ;; splitting
           (:desc "split down" "C-j" (lambda () (interactive) (evil-window-split) (windmove-down)))
@@ -34,8 +34,8 @@
 
           ;; misc
           (:desc "flash current position" "s-w" #'+nav-flash/blink-cursor)
-          (:desc "new window" "n" #'pb-misc_dwim-split)
-          (:desc "split open buffer" "b" #'pb-misc_window-split-consult-buffer)
+          (:desc "new window" "n" #'pb-misc/dwim-split)
+          (:desc "split open buffer" "b" #'pb-misc/window-split-consult-buffer)
           (:desc "delete other windows" "D" #'delete-other-windows))
 
  (:prefix ("s-p" . "project")
@@ -113,10 +113,10 @@
                  "s-i" #'ibuffer)
 
           (:desc "*messages*"
-                 "m" #'pb-misc_switch-to-message-buffer)
+                 "m" #'pb-misc/switch-to-message-buffer)
 
           (:desc "terminals"
-                 "t" #'pb-misc_select-vterm-buffer)
+                 "t" #'pb-misc/select-vterm-buffer)
 
           (:desc "project ibuffer"
                  "i" #'projectile-ibuffer)
@@ -137,12 +137,12 @@
                  "w" #'consult-flycheck)
 
           (:desc "scratch buffer"
-                 "s-n" #'pb-misc_scratch-buffer)
+                 "s-n" #'pb-misc/scratch-buffer)
 
           (:desc "scratch buffer"
                  "n" (lambda ()
                        (interactive)
-                       (pb-misc_scratch-buffer 'split)))
+                       (pb-misc/scratch-buffer 'split)))
 
           (:desc "new buffer"
                  "N" #'pb-misc/new-buffer)
@@ -259,7 +259,7 @@
           (:desc "dired" "d" #'dired-jump)
           (:desc "dirvish" "s-d" (lambda () (interactive) (dirvish (projectile-project-root))))
           (:desc "sidebar" "s" #'dired-sidebar-toggle-sidebar)
-          (:desc "dired kill all" "s-k" #'pb-misc_kill-all-dired-buffers))
+          (:desc "dired kill all" "s-k" #'pb-misc/kill-all-dired-buffers))
 
  (:prefix ("s-t" . "toggle")
           (:desc "folding" "s-t" #'hs-toggle-hiding)
@@ -283,7 +283,7 @@
              ;; some extras
              :i "C-S-h" #'paredit-backward-delete
              :i "C-S-l" #'paredit-forward-delete
-             ;; :i "C-w" #'pb-misc_insert-open-paren
+             ;; :i "C-w" #'pb-misc/insert-open-paren
              :i "TAB" #'consult-company
              :i "M-v" #'consult-yank-from-kill-ring
              :i "s-c" #'copy-region-as-kill)
@@ -297,7 +297,7 @@
              :i "s-5" #'+workspace/switch-to-4)
 
        (map! :n "g f" #'dired-sidebar-jump-to-sidebar
-             :n "g b" #'pb-ibuffer_sidebar-focus)
+             :n "g b" #'pb-ibuffer/sidebar-focus)
 
        (map! :n "g j" #'evil-scroll-line-to-top
              :n "g k" #'evil-scroll-line-to-bottom
@@ -330,7 +330,7 @@
             "I" #'pb-fennel_install-fennel-script)
       (:map reapl-mode-map
             "'" #'reapl-mode_connect
-            "r" #'pb-reapl_repl
+            "r" #'pb-reapl/repl
             "q" #'reapl-mode_repl-quit
             "e b" #'reapl-mode_send-buffer
             "c" #'reapl-mode_complete-symbol-at-point))
@@ -354,7 +354,7 @@
        :nv "H" #'dired-omit-mode)
 
       (:map messages-buffer-mode-map
-            "s-k" #'pb-misc_clear-message-buffer)
+            "s-k" #'pb-misc/clear-message-buffer)
 
       (:map symex-mode-map
        :n "s-e" (lambda () (interactive) (symex-goto-lowest) (symex-evaluate 1))
@@ -362,7 +362,7 @@
        )
 
       (:map emacs-lisp-mode-map
-       :i "C-p" #'pb-elisp_insert-package-prefix
+       :i "C-p" #'pb-elisp/insert-package-prefix
        :n "s-j e" #'eval-buffer
        :n "s-l" #'evil-pb-lisp-state)
 
@@ -384,7 +384,7 @@
        :n "s-r" (lambda () (interactive) (save-buffer) (cider-ns-refresh))
        :n "C-s-r" (lambda () (interactive) (save-buffer) (call-interactively #'cider-jack-in-clj))
        :n "C-s-R" (lambda () (interactive) (save-buffer) (call-interactively #'cider-jack-in-cljs))
-       :desc "select repl" "s-j r" #'pb-cider_select-repl-buffer
+       :desc "select repl" "s-j r" #'pb-cider/select-repl-buffer
        :desc "eval buffer" "s-j e" #'cider-eval-buffer)
 
       (:map reapl-mode-map
@@ -414,15 +414,15 @@
        :n "l" #'dired-find-file
        :n "K" #'dired-subtree-up
        :n "s-k" #'kill-this-buffer
-       :n "C-o" #'pb-dired_create-or-open-dotorg-file)
+       :n "C-o" #'pb-dired/create-or-open-dotorg-file)
 
       (:map  dired-sidebar-mode-map
        :n "h" #'dired-sidebar-up-directory
-       :n "l" #'pb-dired_sidebar-dwim ;#'dired-sidebar-find-file
+       :n "l" #'pb-dired/sidebar-dwim ;#'dired-sidebar-find-file
        :n "q" #'dired-sidebar-hide-sidebar
-       :n "Q" #'pb-misc_kill-all-dired-buffers
+       :n "Q" #'pb-misc/kill-all-dired-buffers
        :n "K" #'dired-subtree-up
-       :n "<mouse-1>" #'pb-dired_sidebar-mouse-dwim)
+       :n "<mouse-1>" #'pb-dired/sidebar-mouse-dwim)
 
       (:map typescript-mode-map
        :ni "C-S-p" #'prettier-js

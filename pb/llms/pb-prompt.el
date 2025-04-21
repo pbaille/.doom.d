@@ -50,8 +50,8 @@
                              :context
                              (node "Additional context"
                                    :pb (lambda ()
-                                         (km :pb (pb_slurp "~/.doom.d/pb/pb.el")
-                                             :km (pb_slurp "~/.doom.d/pb/km.el")))))
+                                         (km :pb (pb/slurp "~/.doom.d/pb/pb.el")
+                                             :km (pb/slurp "~/.doom.d/pb/km.el")))))
 
                        :context
                        (lambda ()
@@ -59,7 +59,7 @@
                          (km :buffer-name (buffer-file-name)
                              :major-mode (symbol-name major-mode)
                              :file-content (buffer-substring-no-properties (point-min) (point-max))
-                             :current-expression (pb-symex_current-as-string))))
+                             :current-expression (pb-symex/current-as-string))))
 
                  :fill
                  "Complete the holes (denoted by __) in the given expression, do not change anything else!")
@@ -149,17 +149,17 @@
                      :type "dir"
                      :path path
                      :children (seq-reduce (lambda (ret p)
-                                             (pb_let [(as x (km_keys name))
+                                             (pb/let [(as x (km_keys name))
                                                       (pb-prompt/describe-path p)]
                                                (if name
-                                                   (km_put ret (pb_keyword name) x)
+                                                   (km_put ret (pb/keyword name) x)
                                                  ret)))
                                            (directory-files path t "^[^.].*")
                                            ()))
                (km :name (file-name-nondirectory path)
                    :type "file"
                    :path path
-                   :content (pb_slurp path)))))
+                   :content (pb/slurp path)))))
 
        (defun pb-prompt/context-km (context)
          (km :context
@@ -211,7 +211,7 @@
 
        (defun pb-prompt/display-context ()
          (interactive)
-         (pb-elisp_display-expression pb-prompt/context
+         (pb-elisp/display-expression pb-prompt/context
                                       #'km_pp)))
 
 (progn :context-add
@@ -311,7 +311,7 @@
 
                  ;; If we're in symex-mode, use current symex
                  ((and (boundp 'symex-mode) symex-mode)
-                  (pb-symex_current-as-string t))
+                  (pb-symex/current-as-string t))
 
                  ;; Default fallback message
                  (t
@@ -1136,10 +1136,10 @@
          (dolist (name (sort contexts #'string<))
                  (let* ((context (gethash name pb-prompt/saved-contexts))
                         (count (length context))
-                        (types (mapcar (lambda (item) (pb_keyword (km_get item :type))) context))
+                        (types (mapcar (lambda (item) (pb/keyword (km_get item :type))) context))
                         (type-counts (seq-reduce
                                       (lambda (acc type)
-         (km_upd acc type (pb_fn [c] (1+ (or c 0)))))
+         (km_upd acc type (pb/fn [c] (1+ (or c 0)))))
                                       types
                                       nil)))
                    (print type-counts)
@@ -1150,8 +1150,8 @@
 
                    ;; Types section with different face
                    (let ((type-strs
-                          (mapcar (pb_fn [(cons type count)]
-                                         (concat (propertize (pb_string type) 'face 'font-lock-doc-face)
+                          (mapcar (pb/fn [(cons type count)]
+                                         (concat (propertize (pb/string type) 'face 'font-lock-doc-face)
                                                  (propertize (format " %d" count)
                                                              'face 'font-lock-type-face)))
                                   (km_entries type-counts))))
@@ -1484,7 +1484,7 @@
  (km_pp (list (km :a 1)
               (list 3 4 5)))
 
- (pb_comment
+ (pb/comment
   (file-name-directory "~/pouet/qux/ids")
   (file-directory-p "~/.doom.d/pb")
   (file-name-directory "~/.doom.d/pb")
@@ -1493,20 +1493,20 @@
   (pb-gptel/directory-to-km "~/.doom.d/pb")
   (file-exists-p "/Users/pierrebaille/.doom.d/pb/archived/reaper.el"))
 
- (pb_comment
+ (pb/comment
   (pb-tree_get-path-values pb-prompt/tree [:code :lisp :context]))
 
 ]
 
 
 
-(pb_comment
+(pb/comment
  :interactive-request
 
  (defun pb-gptel/simple-select-paths (prompt m)
    (interactive)
    (let* ((path-strs (mapcar (lambda (p)
-                               (intern (mapconcat #'pb_keyword-name (car p) ".")))
+                               (intern (mapconcat #'pb/keyword-name (car p) ".")))
                              (km_all-paths m))))
      (mapcar (lambda (k)
                (mapcar #'intern
@@ -1519,11 +1519,11 @@
        Provides completion with vertically aligned hints showing each path's content."
    (interactive)
    (let* ((flatten-tree
-           (seq-reduce (pb_fn [m (cons path content)]
+           (seq-reduce (pb/fn [m (cons path content)]
                               (km_put m
-                                      (pb_keyword (mapconcat #'pb_keyword-name path "."))
+                                      (pb/keyword (mapconcat #'pb/keyword-name path "."))
                                       (truncate-string-to-width
-                                       (pb_if
+                                       (pb/if
                                         (stringp content) content
                                         (functionp content) (or (documentation content) "#<function>")
                                         (listp content) "#<plist>"
@@ -1552,7 +1552,7 @@
                            candidates)))))
           (crm-separator "[ 	]* [ 	]*"))
      (mapcar (lambda (k)
-               (mapcar #'pb_keyword
+               (mapcar #'pb/keyword
                        (split-string (substring k 1) "\\.")))
              (completing-read-multiple prompt (km_keys flatten-tree)))))
 

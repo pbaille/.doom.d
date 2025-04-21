@@ -18,12 +18,12 @@
 (require 'pb-symex)
 (require 'flycheck)
 
-(defun pb-misc_open-google ()
+(defun pb-misc/open-google ()
   "Open Google in Emacs using xwidget-webkit browser."
   (interactive)
   (xwidget-webkit-browse-url "https://www.google.com/"))
 
-(defun pb-misc_spit (string file)
+(defun pb-misc/spit (string file)
   "Print STRING into FILE, if files exists, delete it, if not create it."
   (with-temp-buffer
     (insert string)
@@ -32,25 +32,25 @@
     (write-region (point-min) (point-max) file t)))
 
 (progn :text
-       (defun pb-misc_insert-open-paren ()
+       (defun pb-misc/insert-open-paren ()
          "Insert parentheses pair and position cursor between them."
          (interactive)
          (insert "()")
          (backward-char))
 
-       (defun pb-misc_goto-next-opening-delimiter ()
+       (defun pb-misc/goto-next-opening-delimiter ()
          "Navigate to the next opening delimiter (parenthesis, bracket, or brace)."
          (interactive)
          (forward-char)
          (re-search-forward "[(\\[\\{]")
          (backward-char))
 
-       (defun pb-misc_goto-prev-opening-delimiter ()
+       (defun pb-misc/goto-prev-opening-delimiter ()
          "Navigate to the previous opening delimiter (parenthesis, bracket, or brace)."
          (interactive)
          (re-search-backward "[(\\[\\{]"))
 
-       (defun pb-misc_remove-leading-spaces (str n)
+       (defun pb-misc/remove-leading-spaces (str n)
          "Remove the first N space characters from the beginning of STR."
          (let ((result str)
                (count n))
@@ -59,7 +59,7 @@
              (setq count (1- count)))
            result))
 
-       (defun pb-misc_count-indentation (line)
+       (defun pb-misc/count-indentation (line)
          "Count leading spaces in a LINE."
          (if (string-match "^\\s-+" line)
              (length (match-string 0 line))
@@ -68,7 +68,7 @@
        (defun pb-misc/query-replace-thing-at-point ()
          (interactive)
          (let* ((current-word (if (bound-and-true-p symex-mode)
-                                  (pb-symex_current-as-string)
+                                  (pb-symex/current-as-string)
                                 (thing-at-point 'symbol t)))
                 (replacement (read-string (concat "Replace '" current-word "' with: " ))))
            (print current-word)
@@ -76,7 +76,7 @@
              (query-replace current-word replacement)))))
 
 (progn :folding
-       (defun pb-misc_toggle-level-hiding (arg)
+       (defun pb-misc/toggle-level-hiding (arg)
          "Toggle hiding at a specific level.
           If ARG > 1 or if block is already hidden, show the block then hide at level ARG.
           Otherwise, hide the block. Moves cursor one character backward after hiding."
@@ -87,7 +87,7 @@
             (hs-hide-block)))
          (backward-char))
 
-       (defun pb-misc_toggle-hiding ()
+       (defun pb-misc/toggle-hiding ()
          "Toggle code block hiding and move cursor back one character."
          (interactive)
          (hs-toggle-hiding)
@@ -95,53 +95,53 @@
 
 (progn :windows
 
-       (defun pb-misc_window-split ()
+       (defun pb-misc/window-split ()
          (if (> (window-pixel-height) (window-pixel-width))
              (split-window-vertically)
            (split-window-horizontally)))
 
-       (defun pb-misc_dwim-split (&optional buffer)
+       (defun pb-misc/dwim-split (&optional buffer)
          "Split the current window and display the previous buffer in the new window.
           This creates a vertical split with the previous buffer displayed in the new window
           while keeping the current buffer in the original window."
          (interactive)
-         (let ((new-window (pb-misc_window-split)))
+         (let ((new-window (pb-misc/window-split)))
            (set-window-buffer new-window (or buffer (other-buffer)))
            new-window))
 
        (progn :window-resizing
-              (defun pb-misc_increase-window-width ()
+              (defun pb-misc/increase-window-width ()
                 "Increase the width of the current window by half its current width.
                  This function enlarges the window horizontally, making it wider
                  by approximately 50% of its original width."
                 (interactive)
                 (enlarge-window (/ (window-width) 2) t))
 
-              (defun pb-misc_shrink-window-width ()
+              (defun pb-misc/shrink-window-width ()
                 "Decrease the width of the current window by half its current width.
                  This function shrinks the window horizontally, making it narrower
                  by approximately 50% of its original width."
                 (interactive)
                 (shrink-window (/ (window-width) 2) t))
 
-              (defun pb-misc_increase-window-height ()
+              (defun pb-misc/increase-window-height ()
                 "Increase the height of the current window by half its current height.
                  This function enlarges the window vertically, making it taller
                  by approximately 50% of its original height."
                 (interactive)
                 (enlarge-window (/ (window-height) 2)))
 
-              (defun pb-misc_shrink-window-height ()
+              (defun pb-misc/shrink-window-height ()
                 "Decrease the height of the current window by half its current height.
                  This function shrinks the window vertically, making it shorter
                  by approximately 50% of its original height."
                 (interactive)
                 (shrink-window (/ (window-height) 2))))
 
-       (defun pb-misc_window-split-consult-buffer ()
+       (defun pb-misc/window-split-consult-buffer ()
          "Split the window and display a selected buffer in the new window.
           This function first splits the window based on its dimensions using
-          `pb-misc_window-split`, then prompts the user to select a buffer using
+          `pb-misc/window-split`, then prompts the user to select a buffer using
           consult's completion interface. The selected buffer will be displayed
           in the newly created window."
          (interactive)
@@ -155,7 +155,7 @@
                            :require-match t
                            :category 'buffer
                            :state (consult--buffer-state)))
-                (new-window (pb-misc_dwim-split selected)))
+                (new-window (pb-misc/dwim-split selected)))
            (switch-to-buffer current-buffer)
            (other-window 1))))
 
@@ -178,8 +178,8 @@
                           (cons (region-beginning) (region-end)))
                          ;; Check for symex-mode
                          ((and (bound-and-true-p symex-mode)
-                               (fboundp 'pb-symex_get-expression-bounds))
-                          (pb-symex_get-expression-bounds))
+                               (fboundp 'pb-symex/get-expression-bounds))
+                          (pb-symex/get-expression-bounds))
                          ;; Otherwise try to get current sexp
                          ((and (looking-at "[({[]")
                                (thing-at-point 'sexp))
@@ -191,14 +191,14 @@
              (let* ((indirect-buffer-name (format "*narrowed: %s*" buffer-name))
                     (indirect-buffer (or (get-buffer indirect-buffer-name)
                                          (make-indirect-buffer original-buffer indirect-buffer-name t)))
-                    (new-window (pb-misc_dwim-split indirect-buffer)))
+                    (new-window (pb-misc/dwim-split indirect-buffer)))
                (select-window new-window)
                ;; Narrow to the region
                (with-current-buffer indirect-buffer
                  (narrow-to-region (car bounds) (cdr bounds))
                  (goto-char (point-min)))))))
 
-       (defun pb-misc_kill-all-dired-buffers ()
+       (defun pb-misc/kill-all-dired-buffers ()
          "Kill all `dired' and `dired-sidebar' buffers in one operation.
           This function iterates through all existing buffers and kills any
           that are in either `dired-mode' or `dired-sidebar-mode'."
@@ -209,7 +209,7 @@
                        (eq major-mode 'dired-sidebar-mode))
                (kill-buffer buffer)))))
 
-       (defun pb-misc_scratch-buffer (&optional split)
+       (defun pb-misc/scratch-buffer (&optional split)
          "Create or switch to a scratch buffer for the current file or buffer.
           The scratch buffer is named SCRATCH_ followed by the buffer name.
           The scratch buffer will use the same major mode as the current buffer.
@@ -232,9 +232,9 @@
                (flycheck-mode -1)
                (symex-mode-interface)))
            (when split
-             (pb-misc_dwim-split))))
+             (pb-misc/dwim-split))))
 
-       (defun pb-misc_new-buffer ()
+       (defun pb-misc/new-buffer ()
          "Creates a new buffer prompting user for name and major mode."
          (interactive)
          (let* ((buffer-name (read-string "Buffer name: "))
@@ -257,7 +257,7 @@
                  (funcall mode-function))
                (message "Created new buffer '%s' with %s" buffer-name selected-mode)))))
 
-       (defun pb-misc_select-vterm-buffer ()
+       (defun pb-misc/select-vterm-buffer ()
          "Display a list of vterm buffers and switch to the selected one.
           Uses consult--read to create an interactive selection menu of all vterm
           buffers with live previewing."
@@ -280,7 +280,7 @@
 
        (progn :message-buffer
 
-              (defun pb-misc_clear-message-buffer ()
+              (defun pb-misc/clear-message-buffer ()
                 "Clear the *Messages* buffer."
                 (interactive)
                 (with-current-buffer "*Messages*"
@@ -288,7 +288,7 @@
                   (erase-buffer)
                   (read-only-mode 1)))
 
-              (defun pb-misc_switch-to-message-buffer ()
+              (defun pb-misc/switch-to-message-buffer ()
                 "Switch to the *Messages* buffer and move cursor to the end.
                  This displays the *Messages* buffer in another window and positions
                  the cursor at the maximum point (end of buffer)."

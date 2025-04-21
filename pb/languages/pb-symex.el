@@ -14,13 +14,13 @@
 (require 'symex)
 
 
-(defun pb-symex_enter ()
+(defun pb-symex/enter ()
   "Enter symex mode and select the nearest expression."
   (interactive)
-  (pb-symex_select-nearest-in-line)
+  (pb-symex/select-nearest-in-line)
   (symex-mode-interface))
 
-(defun pb-symex_escape-insert-mode ()
+(defun pb-symex/escape-insert-mode ()
   "Exit evil insert state and enter symex mode.
    Adjust cursor position for better navigation when exiting near word boundaries."
   (interactive)
@@ -32,20 +32,20 @@
         (evil-normal-state))
     (progn
       (evil-normal-state)
-      (pb-symex_select-nearest-in-line)
+      (pb-symex/select-nearest-in-line)
       (symex-mode-interface))))
 
-(defun pb-symex_click ()
+(defun pb-symex/click ()
   "Set cursor to normal state and move back one character."
   (interactive)
   (evil-normal-state)
   (backward-char)
   (when (eq (point)
-            (save-excursion (pb-symex_select-nearest-in-line)
+            (save-excursion (pb-symex/select-nearest-in-line)
                             (point)))
      (symex-mode-interface)))
 
-(defun pb-symex_mark ()
+(defun pb-symex/mark ()
   "Activate mark at current position, then enter symex mode."
   (interactive)
   (evil-normal-state)
@@ -54,14 +54,14 @@
   (deactivate-mark)
   (symex-mode-interface))
 
-(defun pb-symex_undo (&rest _)
+(defun pb-symex/undo (&rest _)
   "Perform undo operation and return to symex mode."
   (interactive)
   (evil-undo 1)
   (progn (evil-normal-state)
          (symex-mode-interface)))
 
-(defun pb-symex_cider-macroexpand ()
+(defun pb-symex/cider-macroexpand ()
   "Perform CIDER macroexpand-1 on the current symbolic expression."
   (interactive)
   (save-excursion
@@ -70,14 +70,14 @@
     (forward-char)
     (cider-macroexpand-1)))
 
-(defun pb-symex_replace ()
+(defun pb-symex/replace ()
   "Replace current symex with last yanked text."
   (interactive)
   (symex-paste-before 1)
   (symex-go-forward 1)
   (symex-delete 1))
 
-(defun pb-symex_go-up ()
+(defun pb-symex/go-up ()
   "Move up one level in symex tree, unfolding if needed."
   (interactive)
   (let ((p (point)))
@@ -87,7 +87,7 @@
     (if (= p (point))
         (symex-go-forward 1))))
 
-(defun pb-symex_go-down ()
+(defun pb-symex/go-down ()
   "Move down one level in symex tree, handling org mode specially."
   (interactive)
   (let ((p (point)))
@@ -95,17 +95,17 @@
     (if (= (point) p)
         (when (equal major-mode 'org-mode)
           (require 'sorg)
-          (pb-org_code-block-goto-beg)
+          (pb-org/code-block-goto-beg)
           (evil-sorg-state 1)))))
 
-(defun pb-symex_go-down-folding ()
+(defun pb-symex/go-down-folding ()
   "Move down one level in symex tree and fold the block."
   (interactive)
   (symex-go-down 1)
   (hs-hide-block)
   (backward-char))
 
-(defun pb-symex_fw ()
+(defun pb-symex/fw ()
   "Move forward to next symex, unfolding and traversing nested structures."
   (interactive)
   (if (hs-already-hidden-p)
@@ -114,18 +114,18 @@
     (symex-go-forward 1)
     (if (and (= p (point))
              (not (symex--point-at-final-symex-p)))
-        (progn (symex-go-down 1) (pb-symex_fw)))))
+        (progn (symex-go-down 1) (pb-symex/fw)))))
 
-(defun pb-symex_bw ()
+(defun pb-symex/bw ()
   "Move backward to previous symex, traversing nested structures."
   (interactive)
   (let ((p (point)))
     (symex-go-backward 1)
     (if (and (= p (point))
              (not (symex--point-at-initial-symex-p)))
-        (progn (symex-go-down 1) (pb-symex_bw)))))
+        (progn (symex-go-down 1) (pb-symex/bw)))))
 
-(defun pb-symex_select-current ()
+(defun pb-symex/select-current ()
   "Select the current symex if any.
    Return point if selection successful, nil otherwise."
   (if (cond ((thing-at-point 'string)
@@ -142,29 +142,29 @@
 
 (progn :nearest
 
-       (defun pb-symex_select-nearest-bw ()
+       (defun pb-symex/select-nearest-bw ()
          "Select the appropriate symex nearest to point, searching backward.
           Return point if selection successful."
          (unless (bobp)
            (or
-            (pb-symex_select-current)
+            (pb-symex/select-current)
             (progn (backward-char)
-                   (pb-symex_select-nearest-bw)))))
+                   (pb-symex/select-nearest-bw)))))
 
-       (defun pb-symex_select-nearest-fw ()
+       (defun pb-symex/select-nearest-fw ()
          "Select the appropriate symex nearest to point, searching forward.
           Return point if selection successful."
          (unless (eobp)
-           (or (pb-symex_select-current)
+           (or (pb-symex/select-current)
                (progn (forward-char)
-                      (pb-symex_select-nearest-fw)))))
+                      (pb-symex/select-nearest-fw)))))
 
-       (defun pb-symex_select-nearest ()
+       (defun pb-symex/select-nearest ()
          "Select the nearest symex to point in any direction.
           Goes to the selected symex's position."
          (let ((p (point))
-               (fw (save-excursion (pb-symex_select-nearest-fw)))
-               (bw (save-excursion (pb-symex_select-nearest-bw))))
+               (fw (save-excursion (pb-symex/select-nearest-fw)))
+               (bw (save-excursion (pb-symex/select-nearest-bw))))
            (cond ((and bw fw)
                   (if (> (- fw p)
                          (- p bw))
@@ -175,23 +175,23 @@
 
        (progn :nearest-in-line
 
-              (defun pb-symex_select-nearest-in-line-bw ()
+              (defun pb-symex/select-nearest-in-line-bw ()
                 "Select the appropriate symex nearest to point in line, searching backward.
                  Return point if selection successful."
                 (unless (bolp)
-                  (or (pb-symex_select-current)
+                  (or (pb-symex/select-current)
                       (progn (backward-char)
-                             (pb-symex_select-nearest-in-line-bw)))))
+                             (pb-symex/select-nearest-in-line-bw)))))
 
-              (defun pb-symex_select-nearest-in-line-fw ()
+              (defun pb-symex/select-nearest-in-line-fw ()
                 "Select the appropriate symex nearest to point in line, searching forward.
                  Return point if selection successful."
                 (unless (eolp)
-                  (or (pb-symex_select-current)
+                  (or (pb-symex/select-current)
                       (progn (forward-char)
-                             (pb-symex_select-nearest-in-line-fw)))))
+                             (pb-symex/select-nearest-in-line-fw)))))
 
-              (defun pb-symex_multiline-string-p ()
+              (defun pb-symex/multiline-string-p ()
                 "Return t if point is inside a multiline string."
                 (let ((ppss (syntax-ppss)))
                   (when (nth 3 ppss)    ; Inside a string
@@ -201,12 +201,12 @@
                         (goto-char string-start)
                         (re-search-forward "\n" string-end t))))))
 
-              (defun pb-symex_select-nearest-in-line ()
+              (defun pb-symex/select-nearest-in-line ()
                 "Select the nearest symex in current line.
                  Return t if selection successful."
                 (let ((p (point))
-                      (fw (save-excursion (pb-symex_select-nearest-in-line-fw)))
-                      (bw (save-excursion (pb-symex_select-nearest-in-line-bw))))
+                      (fw (save-excursion (pb-symex/select-nearest-in-line-fw)))
+                      (bw (save-excursion (pb-symex/select-nearest-in-line-bw))))
                   (if (cond ((and bw fw)
                              (if (> (- fw p)
                                     (- p bw))
@@ -217,24 +217,24 @@
                              (goto-char (or bw fw))))
                       (symex--update-overlay))))))
 
-(defun pb-symex_next-line (&optional count)
+(defun pb-symex/next-line (&optional count)
   "Go to next line (or nth if COUNT) and focus the nearest symex."
   (interactive)
   (evil-next-line (or count 1))
-  (or (pb-symex_multiline-string-p)
-      (pb-symex_select-nearest-in-line)
+  (or (pb-symex/multiline-string-p)
+      (pb-symex/select-nearest-in-line)
       (unless (eobp)
-        (pb-symex_next-line 1))))
+        (pb-symex/next-line 1))))
 
-(defun pb-symex_previous-line (&optional count)
+(defun pb-symex/previous-line (&optional count)
   "Go to previous line (or nth if COUNT) and focus the nearest symex."
   (interactive)
   (evil-previous-line (or count 1))
-  (or (pb-symex_select-nearest-in-line)
+  (or (pb-symex/select-nearest-in-line)
       (unless (bobp)
-        (pb-symex_previous-line 1))))
+        (pb-symex/previous-line 1))))
 
-(defun pb-symex_eval-pp-clojure ()
+(defun pb-symex/eval-pp-clojure ()
   "Pretty-print evaluate the current Clojure expression."
   (interactive)
   (save-excursion
@@ -243,13 +243,13 @@
     (cider-pprint-eval-last-sexp)
     (evil-jump-item)))
 
-(defun pb-symex_tidy-down ()
+(defun pb-symex/tidy-down ()
   "Tidy the current expression and move down one level."
   (interactive)
   (symex-tidy)
   (symex-go-down 1))
 
-(defun pb-symex_clj-toggle-comment ()
+(defun pb-symex/clj-toggle-comment ()
   "Toggle Clojure #_ reader conditional comment on current expression."
   (interactive)
   ;; this is really badly writen, should find a better way to match #_ under cursor
@@ -260,7 +260,7 @@
     (progn (insert "#_")
            (backward-char 2))))
 
-(defun pb-symex_toggle-comment ()
+(defun pb-symex/toggle-comment ()
   "Toggle comment status of current expression based on mode."
   (interactive)
   ;; this is really badly writen, should find a better way to match #_ under cursor
@@ -275,7 +275,7 @@
                (backward-char 2)))
     (symex-comment 1)))
 
-(defun pb-symex_lookup-definition ()
+(defun pb-symex/lookup-definition ()
   "Find definition of symbol at point, using appropriate backend."
   (interactive)
   (when (looking-at "\\W")
@@ -290,7 +290,7 @@
         (call-interactively #'+lookup/definition))
     (call-interactively #'+lookup/definition)))
 
-(defun pb-symex_lookup-references ()
+(defun pb-symex/lookup-references ()
   "Find references to symbol at point, using appropriate backend."
   (interactive)
   (when (looking-at "\\W")
@@ -305,53 +305,53 @@
         (call-interactively #'+lookup/references))
     (call-interactively #'+lookup/references)))
 
-(defun pb-symex_current-as-string (&optional with-properties)
+(defun pb-symex/current-as-string (&optional with-properties)
   "Return current symex as string.
    If WITH-PROPERTIES is non-nil, preserve text properties."
   (if with-properties
       (buffer-substring (point) (symex--get-end-point 1))
     (buffer-substring-no-properties (point) (symex--get-end-point 1))))
 
-(defun pb-symex_yank-from-ring ()
+(defun pb-symex/yank-from-ring ()
   "Replace current symex using consult-yank-from-kill-ring."
   (interactive)
   (evil-insert-state)
   (call-interactively #'consult-yank-from-kill-ring)
-  (pb-symex_escape-insert-mode)
+  (pb-symex/escape-insert-mode)
   (symex-tidy))
 
-(defun pb-symex_ring-replace ()
+(defun pb-symex/ring-replace ()
   "Replace current symex with text from kill ring via consult interface."
   (interactive)
   (undo-boundary)
   (symex-change 1)
-  (pb-symex_yank-from-ring))
+  (pb-symex/yank-from-ring))
 
-(defun pb-symex_ring-append ()
+(defun pb-symex/ring-append ()
   "Insert text from kill ring after current symex."
   (interactive)
   (symex-append-after)
-  (pb-symex_yank-from-ring))
+  (pb-symex/yank-from-ring))
 
-(defun pb-symex_ring-prepend ()
+(defun pb-symex/ring-prepend ()
   "Insert text from kill ring before current symex."
   (interactive)
   (symex-insert-before)
-  (pb-symex_yank-from-ring))
+  (pb-symex/yank-from-ring))
 
-(defun pb-symex_wrap ()
+(defun pb-symex/wrap ()
   "Wrap current symex in parentheses and return to symex mode."
   (interactive)
   (symex-wrap)
-  (pb-symex_escape-insert-mode))
+  (pb-symex/escape-insert-mode))
 
-(defun pb-symex_raise ()
+(defun pb-symex/raise ()
   "Raise current symex, replacing its parent with it."
   (interactive)
   (paredit-raise-sexp)
   (symex--update-overlay))
 
-(defun pb-symex_delete (&optional count)
+(defun pb-symex/delete (&optional count)
   "Delete current symex intelligently.
    With COUNT, delete that many symexes. When deleting the last symex,
    navigate to the previous symex instead of moving up to parent."

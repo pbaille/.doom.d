@@ -48,11 +48,11 @@
   "Emits color variation bindings for C named NAME."
   `((,name ,c)
     (,(intern (concat (symbol-name name) "-warmer"))
-     ,(pb-color_warm c 0.1))
+     ,(pb-color/warm c 0.1))
     (,(intern (concat (symbol-name name) "-cooler"))
-     ,(pb-color_cool c 0.1))
+     ,(pb-color/cool c 0.1))
     (,(intern (concat (symbol-name name) "-faint"))
-     ,(pb-color_desaturate c 0.4))))
+     ,(pb-color/desaturate c 0.4))))
 
 (defconst pb-ef-dream-palette
   (let ((red "#ff6f6f")

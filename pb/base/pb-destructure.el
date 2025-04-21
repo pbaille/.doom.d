@@ -27,7 +27,7 @@ and the seed it has to destructure against."
               (assq-delete-all op pb-destructure_implementations))))
 
 (defun pb-destructure_guard-symbol? (x)
-  (string-suffix-p "?" (pb_name x)))
+  (string-suffix-p "?" (pb/name x)))
 
 (defun pb-destructure (pat seed)
   "Produce a list of bindings from PAT and SEED."
@@ -116,7 +116,7 @@ If seed is a symbol, gensym is not used and the symbol is returned."
 
   (pb-destructure_extend
    'km_keys (lambda (args seed)
-              (pb-destructure (cons 'km (sq_interleave (mapcar #'pb_symbol-to-keyword args)
+              (pb-destructure (cons 'km (sq_interleave (mapcar #'pb/symbol-to-keyword args)
                                                        args))
                               seed)))
 
@@ -247,9 +247,9 @@ FN-DECL is the same kind of arguments `pb-destructure_fn' expects."
 
 (pb-destructure_test)
 
-(defalias 'pb_let 'pb-destructure_let)
-(defalias 'pb_fn 'pb-destructure_fn)
-(defalias 'pb_defun 'pb-destructure_defun)
+(defalias 'pb/let 'pb-destructure_let)
+(defalias 'pb/fn 'pb-destructure_fn)
+(defalias 'pb/defun 'pb-destructure_defun)
 
 (provide 'pb-destructure)
 ;;; pb-destructure.el ends here.

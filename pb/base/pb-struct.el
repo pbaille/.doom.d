@@ -4,7 +4,7 @@
 (require 'pb-destructure)
 (require 'pb-flow)
 
-(pb_comment
+(pb/comment
  :extend-destructure-for-simple-struct
  (eval-when-compile
 
@@ -18,7 +18,7 @@
                             (pb-destructure_simple-struct-impl sym)))
    (pb-destructure_add-simple-struct 'point))
 
- (pb_let [(point x y) `(point 1 2)]
+ (pb/let [(point x y) `(point 1 2)]
      (cl-assert (equal (list 1 2)
                        (list x y)))))
 
@@ -34,28 +34,28 @@ Example:
   (setq p (person \"John\" 30))
   (person? p)         ; => t
   (person.name p)     ; => \"John\"
-  (pb_let [(person name age) p] name) ; => \"John\""
-  (let* ((pred-sym (pb_join-symbol (list name "?"))))
+  (pb/let [(person name age) p] name) ; => \"John\""
+  (let* ((pred-sym (pb/join-symbol (list name "?"))))
     `(progn
        (defun ,pred-sym (x)
          ,(format "Check if X is a %s struct."
-                  (pb_name name))
+                  (pb/name name))
          (when (listp x)
            (eq ',name (car-safe x))))
 
        ,@(seq-map-indexed
           (lambda (m i)
-            `(defun ,(pb_join-symbol (list name "." m)) (x)
+            `(defun ,(pb/join-symbol (list name "." m)) (x)
                ,(format "Get the %s field from the %s struct."
-                        (pb_name m)
-                        (pb_name name))
+                        (pb/name m)
+                        (pb/name name))
                (when (,pred-sym x)
                  (nth ,(1+ i) x))))
           members)
 
        (defun ,name ,members
          ,(format "Create a new %s struct with the given fields."
-                  (pb_name name))
+                  (pb/name name))
          (list ',name ,@members))
 
        (pb-destructure_extend ',name
@@ -75,21 +75,21 @@ Example:
 
   (cl-assert
    (equal
-    (pb_if [(person a b c) '(not-person x z y)]
+    (pb/if [(person a b c) '(not-person x z y)]
            (list a b c)
            :ok)
     :ok))
 
   (cl-assert
    (equal
-    (pb_let [x (person "Pierre" 43)]
+    (pb/let [x (person "Pierre" 43)]
       (list (person? x)
             (person.name x)))
     '(t "Pierre")))
 
   (cl-assert
    (equal
-    (pb_let [(person name age) (person "Pierre" 43)]
+    (pb/let [(person name age) (person "Pierre" 43)]
       (list name age))
     '("Pierre" 43)))
 
@@ -99,7 +99,7 @@ Example:
 
   (cl-assert
    (equal
-    (pb_let [(as emp
+    (pb/let [(as emp
                  (employee x y (and (address? a)
                                     (address street city))))
              (employee "Pierre"
@@ -130,16 +130,16 @@ Example:
   (pb-struct_deftag maybe)
   (maybe 42)         ; => (maybe . 42)
   (maybe? (maybe 42)) ; => t
-  (pb_let [(maybe x) (maybe 42)] x) ; => 42
+  (pb/let [(maybe x) (maybe 42)] x) ; => 42
 
 With validation:
   (pb-struct_deftag numbox #'numberp)
   (numbox 1)         ; => (numbox . 1)
   (numbox \"hello\")  ; => nil (validation failed)"
-  (let ((pred-sym (pb_join-symbol (list tag "?"))))
+  (let ((pred-sym (pb/join-symbol (list tag "?"))))
     `(progn
        (defun ,pred-sym (x)
-         ,(format "Return X if it is a %s tagged value." (pb_name tag))
+         ,(format "Return X if it is a %s tagged value." (pb/name tag))
          (and (consp x)
               (eq ',tag (car x))
               ,(if content-pred
@@ -148,7 +148,7 @@ With validation:
               x))
 
        (defun ,tag (x &rest xs)
-         ,(format "Create a new %s tagged value." (pb_name tag))
+         ,(format "Create a new %s tagged value." (pb/name tag))
          (let ((x (if xs (cons x xs) x)))
            ,(if content-pred
                 `(when (funcall ,content-pred x)
@@ -169,18 +169,18 @@ With validation:
 
   (cl-assert
    (and
-    (pb_eq (maybe 42) '(maybe . 42) (cons 'maybe 42))
+    (pb/eq (maybe 42) '(maybe . 42) (cons 'maybe 42))
     (maybe? (maybe 42))
     (equal (maybe (list 1 2))
            (maybe 1 2))
     (null (maybe? '(other . 42)))
-    (pb_eq (pb_let [(maybe x) (maybe 42)] x)
-           (pb_let [(maybe x) (cons 'maybe 42)] x)
-           (pb_if [(maybe x) (maybe 42)]
+    (pb/eq (pb/let [(maybe x) (maybe 42)] x)
+           (pb/let [(maybe x) (cons 'maybe 42)] x)
+           (pb/if [(maybe x) (maybe 42)]
                   x
                   :not-maybe)
            42)
-    (equal (pb_if [(maybe x) '(other . 42)]
+    (equal (pb/if [(maybe x) '(other . 42)]
                   x
                   :not-maybe)
            :not-maybe)))
@@ -191,14 +191,14 @@ With validation:
 
   (cl-assert
    (and
-    (pb_eq (numbox 1) (cons 'numbox 1))
+    (pb/eq (numbox 1) (cons 'numbox 1))
     (null (numbox 'io))
-    (equal 1 (pb_let [(numbox x) (numbox 1)] x))
-    (null (pb_let [(numbox x) (cons 'numbox 'io)] x)))))
+    (equal 1 (pb/let [(numbox x) (numbox 1)] x))
+    (null (pb/let [(numbox x) (cons 'numbox 'io)] x)))))
 
 '(pb-struct_deftag-tests)
 
-(pb_comment
+(pb/comment
  (pb-struct_deftag km2)
 
  (km2? (km2 :a 1 :b 2 :c (km2 :i 4))))

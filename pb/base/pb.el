@@ -14,64 +14,64 @@
 (require 'cl-lib)
 (require 'seq)
 
-(defun pb_first (s)
+(defun pb/first (s)
   "Return the first element of the sequence S."
   (car s))
 
-(defun pb_second (s)
+(defun pb/second (s)
   "Return the second element of the sequence S."
   (cadr s))
 
-(defun pb_third (s)
+(defun pb/third (s)
   "Return the third element of the sequence S."
   (caddr s))
 
-(defun pb_symbol-to-keyword (sym)
+(defun pb/symbol-to-keyword (sym)
   "Convert the symbol SYM to a keyword."
   (intern (concat ":" (symbol-name sym))))
 
 
-(defun pb_keyword-name (kw)
+(defun pb/keyword-name (kw)
   "Get the name of KW (its `symbol-name' without colon)."
   (if (keywordp kw)
       (substring (symbol-name kw) 1)))
 
 
-(defun pb_keyword-to-symbol (kw)
+(defun pb/keyword-to-symbol (kw)
   "Convert the keyword KW to a symbol."
-  (if-let ((name (pb_keyword-name kw)))
+  (if-let ((name (pb/keyword-name kw)))
       (intern name)
     nil))
 
-(defun pb_name (x)
+(defun pb/name (x)
   "Return the name (string) of X (string, keyword or symbol)."
   (cond ((stringp x) x)
-        ((keywordp x) (pb_keyword-name x))
+        ((keywordp x) (pb/keyword-name x))
         ((symbolp x) (symbol-name x))))
 
-(defun pb_join-string (xs &optional sep)
+(defun pb/join-string (xs &optional sep)
   "Build a string from given XS, using SEP as join."
-  (mapconcat #'pb_name xs (or sep "")))
+  (mapconcat #'pb/name xs (or sep "")))
 
-(defun pb_join-symbol (xs &optional sep)
+(defun pb/join-symbol (xs &optional sep)
   "Build a symbol from given XS, using SEP as join."
-  (intern (pb_join-string xs sep)))
+  (intern (pb/join-string xs sep)))
 
-(defun pb_join-keyword (xs &optional sep)
+(defun pb/join-keyword (xs &optional sep)
   "Build a keyword from given XS, using SEP as join."
-  (intern (concat ":" (pb_join-string xs sep))))
+  (intern (concat ":" (pb/join-string xs sep))))
 
-(defun pb_string (&rest xs)
+(defun pb/string (&rest xs)
   "Build a string from the names of given XS (strings, keywords or symbols)."
-  (mapconcat #'pb_name xs ""))
+  (mapconcat #'pb/name xs ""))
 
-(defun pb_symbol (&rest xs)
+(defun pb/symbol (&rest xs)
   "Build a symbol joining the names of given XS with '-'."
-  (pb_join-symbol xs "-"))
+  (pb/join-symbol xs "-"))
 
-(defun pb_keyword (&rest xs)
+(defun pb/keyword (&rest xs)
   "Build a keyword joining the names of given XS with '-'."
-  (pb_join-keyword xs "-"))
+  (pb/join-keyword xs "-"))
 
 (defmacro pb-> (x &rest forms)
   "Threads X through FORMS as first argument."
@@ -93,7 +93,7 @@
    forms
    x))
 
-(defmacro pb->_ (&rest forms)
+(defmacro pb->/ (&rest forms)
   "Thread the first argument into following FORMS.
 using the _ placeholder to determine threaded value positioning."
   (cl-destructuring-bind (ret . bindings) (reverse forms)
@@ -104,11 +104,11 @@ using the _ placeholder to determine threaded value positioning."
              (list))
        ,ret)))
 
-(defmacro pb_comment (&rest _)
+(defmacro pb/comment (&rest _)
   "A macro that always expands to nil."
   ())
 
-(defun pb_slurp (file-path)
+(defun pb/slurp (file-path)
   "Return the contents of FILE-PATH as a string.
 Returns nil if the file doesn't exist or can't be read."
   (condition-case nil
@@ -117,10 +117,10 @@ Returns nil if the file doesn't exist or can't be read."
         (buffer-string))
     (file-error nil)))
 
-(defmacro pb_setq (var expr)
+(defmacro pb/setq (var expr)
   `(setq ,var (let ((_ ,var)) ,expr)))
 
-(defun pb_eq (&rest xs)
+(defun pb/eq (&rest xs)
   "Compares every element of XS for equality using `equal'."
   (if xs
     (let ((first (car xs)))
@@ -128,39 +128,39 @@ Returns nil if the file doesn't exist or can't be read."
                 (cdr xs)))
     t))
 
-(defun pb_test ()
+(defun pb/test ()
   "Run some assertions about this file."
   (cl-assert
-   (and (equal "pierre" (pb_keyword-name :pierre))
-        (equal 'pierre (pb_keyword-to-symbol :pierre))
-        (equal :pierre (pb_symbol-to-keyword 'pierre))
-        (equal :foo-bar (pb_keyword "foo" "bar"))
-        (equal 'foo-bar (pb_symbol "foo" "bar"))
-        (equal 'foo-bar (pb_symbol "foo" 'bar))
-        (equal :foo_bar (pb_join-keyword (list "foo" "bar") "_"))
-        (equal 'foo_bar (pb_join-symbol (list "foo" "bar") "_"))
-        (not (pb_comment non sense))
-        (stringp (pb_slurp "~/.doom.d/pb/base/pb.el"))))
+   (and (equal "pierre" (pb/keyword-name :pierre))
+        (equal 'pierre (pb/keyword-to-symbol :pierre))
+        (equal :pierre (pb/symbol-to-keyword 'pierre))
+        (equal :foo-bar (pb/keyword "foo" "bar"))
+        (equal 'foo-bar (pb/symbol "foo" "bar"))
+        (equal 'foo-bar (pb/symbol "foo" 'bar))
+        (equal :foo_bar (pb/join-keyword (list "foo" "bar") "_"))
+        (equal 'foo_bar (pb/join-symbol (list "foo" "bar") "_"))
+        (not (pb/comment non sense))
+        (stringp (pb/slurp "~/.doom.d/pb/base/pb.el"))))
 
-  (progn (defvar pb_swap-testvar 0)
-         (setq pb_swap-testvar 0)
-         (pb_setq pb_swap-testvar (1+ _))
-         (cl-assert (equal pb_swap-testvar 1)))
+  (progn (defvar pb/swap-testvar 0)
+         (setq pb/swap-testvar 0)
+         (pb/setq pb/swap-testvar (1+ _))
+         (cl-assert (equal pb/swap-testvar 1)))
 
   (cl-assert
-   (and (pb_eq 1 1)
-        (pb_eq "hello" "hello")
-        (pb_eq '(1 2 3) '(1 2 3))
-        (pb_eq :keyword :keyword)
-        (pb_eq 'symbol 'symbol)
-        (not (pb_eq 1 2))
-        (not (pb_eq "hello" "world"))
-        (not (pb_eq '(1 2 3) '(1 2)))
-        (not (pb_eq :keyword :other))
-        (pb_eq) ; empty call returns t
-        (pb_eq 42) ; single element returns t
-        (pb_eq 42 42 42) ; multiple equal elements
-        (not (pb_eq 42 42 43)))))
+   (and (pb/eq 1 1)
+        (pb/eq "hello" "hello")
+        (pb/eq '(1 2 3) '(1 2 3))
+        (pb/eq :keyword :keyword)
+        (pb/eq 'symbol 'symbol)
+        (not (pb/eq 1 2))
+        (not (pb/eq "hello" "world"))
+        (not (pb/eq '(1 2 3) '(1 2)))
+        (not (pb/eq :keyword :other))
+        (pb/eq) ; empty call returns t
+        (pb/eq 42) ; single element returns t
+        (pb/eq 42 42 42) ; multiple equal elements
+        (not (pb/eq 42 42 43)))))
 
 (pb_test)
 

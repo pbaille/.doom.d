@@ -34,7 +34,7 @@
 (defun pb-fennel_repl ()
   "Start fennel repl if not existing, splitting window."
   (interactive)
-  (pb-misc_window-split
+  (pb-misc/window-split
    (or (and (buffer-live-p fennel-repl--buffer)
             fennel-repl--buffer)
        (pb-fennel_repl-start))))
@@ -86,7 +86,7 @@ When DIR is provided, save the Lua script there."
   (interactive)
   (let ((s (pb-fennel_compile (pb-fennel_buffer-file-name-escaped-spaces)))
         (lua-filename (concat (file-name-base) ".lua")))
-    (pb-misc_spit s (concat (or dir pb-fennel_lua-5-4-install-path) "/" lua-filename))))
+    (pb-misc/spit s (concat (or dir pb-fennel_lua-5-4-install-path) "/" lua-filename))))
 
 (defun pb-fennel_show-fennel-compilation ()
   "Compile and display the current Fennel buffer as Lua."

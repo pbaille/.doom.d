@@ -17,12 +17,12 @@
 (require 'org)
 (require 'org-element)
 
-(defun pb-org-babel_strip-lisp-comments (code)
+(defun pb-org-babel/strip-lisp-comments (code)
   "Remove comments from a string of Lisp CODE.
 ; (semi colon) is assumed to be the inline comment character."
   (replace-regexp-in-string "\\(;.*$\\)" "" code nil nil 1))
 
-(defvar pb-org-babel_custom-params
+(defvar pb-org-babel/custom-params
   (km :clojure
       (km
        :pp (km :args (lambda (args)
@@ -30,31 +30,31 @@
                                  (:wrap . "src clojure"))
                                args))))))
 
-(defun pb-org-babel_add-custom-param (name lang spec)
+(defun pb-org-babel/add-custom-param (name lang spec)
   "Add a custom param named NAME for org LANG block.
 SPEC:"
   (cl-assert (and (keywordp name)
                   (keywordp lang)
                   (km? spec)))
-  (setq pb-org-babel_custom-params
-        (km_put pb-org-babel_custom-params
+  (setq pb-org-babel/custom-params
+        (km_put pb-org-babel/custom-params
                 (list lang name)
                 spec)))
 
-(defun pb-org-babel_execute-src-block-hook (fun &optional arg info params)
+(defun pb-org-babel/execute-src-block-hook (fun &optional arg info params)
   "Wraps org-babel-execute-src-block function."
-  (pb_if [(list lang content args) info
-          custom-params (km_get pb-org-babel_custom-params (pb_keyword lang))
+  (pb/if [(list lang content args) info
+          custom-params (km_get pb-org-babel/custom-params (pb/keyword lang))
           ;; because of inline comments bug
           content (if (equal "clojure" lang)
-                      (pb-org-babel_strip-lisp-comments content)
+                      (pb-org-babel/strip-lisp-comments content)
                     content)
-          (cons content args) (seq-reduce (pb_fn [(cons content args) (cons k wrappers)]
+          (cons content args) (seq-reduce (pb/fn [(cons content args) (cons k wrappers)]
                                                  (if (assoc k args)
-                                                     (cons (pb_if [f (km_get wrappers :content)]
+                                                     (cons (pb/if [f (km_get wrappers :content)]
                                                                   (funcall f content)
                                                                   content)
-                                                           (pb_if [f (km_get wrappers :args)]
+                                                           (pb/if [f (km_get wrappers :args)]
                                                                   (funcall f args)
                                                                   args))
                                                    (cons content args)))
@@ -64,17 +64,17 @@ SPEC:"
          (funcall fun arg info params)
          (funcall fun arg info params)))
 
-(defun pb-org-babel_insert-result-hook (fun result result-params info &rest more)
+(defun pb-org-babel/insert-result-hook (fun result result-params info &rest more)
   "Wraps org-babel-insert-result function."
-  (pb_if [(list lang content args) info
+  (pb/if [(list lang content args) info
           ;; because of inline comment bug
           content (if (equal "clojure" lang)
-                      (pb-org-babel_strip-lisp-comments content)
+                      (pb-org-babel/strip-lisp-comments content)
                     content)
-          custom-params (km_get pb-org-babel_custom-params (pb_keyword lang))]
-         (pb_if [result (seq-reduce (pb_fn [result (cons k wrappers)]
+          custom-params (km_get pb-org-babel/custom-params (pb/keyword lang))]
+         (pb/if [result (seq-reduce (pb/fn [result (cons k wrappers)]
                                            (if (assoc k args)
-                                               (pb_if [f (km_get wrappers :result)]
+                                               (pb/if [f (km_get wrappers :result)]
                                                       (funcall f result)
                                                       result)
                                              result))
@@ -86,30 +86,30 @@ SPEC:"
                        more))
          (apply fun result result-params info more)))
 
-(advice-add 'org-babel-execute-src-block :around #'pb-org-babel_execute-src-block-hook)
+(advice-add 'org-babel-execute-src-block :around #'pb-org-babel/execute-src-block-hook)
 
-(advice-add 'org-babel-insert-result :around #'pb-org-babel_insert-result-hook)
+(advice-add 'org-babel-insert-result :around #'pb-org-babel/insert-result-hook)
 
 (progn :treesit
        (require 'treesit)
        (require 'pb-org)
 
-       (defvar pb-org-babel_lang->treesit-lang
+       (defvar pb-org-babel/lang->treesit-lang
          '((emacs-lisp . elisp)
            (clojure . clojure)
            (clojurescript . clojure)
            (clojurec . clojure)))
 
-       (defun pb-org-babel_lang-string->treesit-lang (lang)
-           (or (alist-get (intern lang) pb-org-babel_lang->treesit-lang)
+       (defun pb-org-babel/lang-string->treesit-lang (lang)
+           (or (alist-get (intern lang) pb-org-babel/lang->treesit-lang)
                (intern lang)))
 
        (alist-get (intern "emacs-lisp")
-                  pb-org-babel_lang->treesit-lang)
+                  pb-org-babel/lang->treesit-lang)
 
        (progn :prepare-all-sub-ranges
 
-              (defun pb-org-babel_get-src-blocks ()
+              (defun pb-org-babel/get-src-blocks ()
                 (interactive)
                 (when (derived-mode-p 'org-mode)
                   (let ((src-blocks '()))
@@ -129,47 +129,47 @@ SPEC:"
                             (push (cons lang-symbol (cons beg block-end)) src-blocks)))))
                     src-blocks)))
 
-              (defun pb-org-babel_get-lang-ranges ()
-                (mapcar (pb_fn ((cons lang ranges))
-                               (cons (or (alist-get lang pb-org-babel_lang->treesit-lang)
+              (defun pb-org-babel/get-lang-ranges ()
+                (mapcar (pb/fn ((cons lang ranges))
+                               (cons (or (alist-get lang pb-org-babel/lang->treesit-lang)
                                          lang)
                                      (seq-reverse (mapcar #'cdr ranges))))
                         (sq/group-by #'car
-                                     (pb-org-babel_get-src-blocks))))
+                                     (pb-org-babel/get-src-blocks))))
 
-              (defun pb-org-babel_setup-language-at-point-function ()
+              (defun pb-org-babel/setup-language-at-point-function ()
                 (setq-local treesit-language-at-point-function
                             (lambda (&rest _)
                               (if (eq major-mode 'org-mode)
                                   (if-let ((lang-str
-                                            (and (not (pb-org_at-code-block-p))
-                                                 (pb-org_code-block-language))))
-                                      (pb-org-babel_lang-string->treesit-lang lang-str)
+                                            (and (not (pb-org/at-code-block-p))
+                                                 (pb-org/code-block-language))))
+                                      (pb-org-babel/lang-string->treesit-lang lang-str)
                                     'org)
                                 (treesit-parser-language (car (treesit-parser-list)))))))
 
-              (defun pb-org-babel_init-buffer ()
+              (defun pb-org-babel/init-buffer ()
                 (interactive)
                 (treesit-parser-create 'org)
-                (pb-org-babel_setup-language-at-point-function)
+                (pb-org-babel/setup-language-at-point-function)
                 (let (parsers)
-                  (dolist (x (pb-org-babel_get-lang-ranges) parsers)
-                    (pb_let [(cons lang ranges) x
+                  (dolist (x (pb-org-babel/get-lang-ranges) parsers)
+                    (pb/let [(cons lang ranges) x
                              parser (treesit-parser-create lang)]
                       (treesit-parser-set-included-ranges parser ranges)
                       (push parser parsers)))))
 
-              (defun pb-org-babel_focus-code-block ()
+              (defun pb-org-babel/focus-code-block ()
                 (interactive)
                 (treesit-parser-create 'org)
-                (pb-org-babel_setup-language-at-point-function)
+                (pb-org-babel/setup-language-at-point-function)
                 (print "focus")
-                (print (save-excursion (pb-org_code-block-goto-beg)
-                                       (pb-org_code-block-content-bounds)))
-                (if-let ((bounds (save-excursion (pb-org_code-block-goto-beg)
-                                                 (pb-org_code-block-content-bounds))))
-                    (let* ((lang (pb-org_code-block-language))
-                           (treesit-lang (pb-org-babel_lang-string->treesit-lang lang))
+                (print (save-excursion (pb-org/code-block-goto-beg)
+                                       (pb-org/code-block-content-bounds)))
+                (if-let ((bounds (save-excursion (pb-org/code-block-goto-beg)
+                                                 (pb-org/code-block-content-bounds))))
+                    (let* ((lang (pb-org/code-block-language))
+                           (treesit-lang (pb-org-babel/lang-string->treesit-lang lang))
                            (parser (condition-case nil
                                        (treesit-parser-create treesit-lang)
                                      (error (message "Failed to create parser for %s" lang)

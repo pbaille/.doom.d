@@ -14,13 +14,13 @@
 (require 'pb)
 (require 'pb-destructure)
 
-(defun pb-flow_thunk-symbols (n)
+(defun pb-flow/thunk-symbols (n)
   "Generating N symbols to hold case thunks."
   (mapcar (lambda (x)
             (gensym (format "case_%s_" x)))
           (sq_range 0 n)))
 
-(pb_defun pb-flow_compile-case
+(pb_defun pb-flow/compile-case
   [(and case
         (km_keys test bindings return next))]
   "Compile a single case from a case map.
@@ -29,51 +29,51 @@ or falling through to the next case."
   (let ((cont (when next (list next))))
     (cond
      (test `(if ,test ,return ,cont))
-     (bindings (pb_let [(cons (list b1 b2) bs) bindings]
+     (bindings (pb/let [(cons (list b1 b2) bs) bindings]
                        `(if-let ((,b1 ,b2))
-                            ,(pb-flow_compile-case (km_put case :bindings bs))
+                            ,(pb-flow/compile-case (km_put case :bindings bs))
                           ,cont)))
      (t return))))
 
-(defun pb-flow_cases->thunks (cases)
+(defun pb-flow/cases->thunks (cases)
   "Convert a list of CASES into thunk expressions.
 Converts each case into a list of three elements:
 symbol, empty list, and a compiled case."
   (mapcar (lambda (case)
-            (list (km_get case :symbol) () (pb-flow_compile-case case)))
+            (list (km_get case :symbol) () (pb-flow/compile-case case)))
         cases))
 
-(defun pb-flow_normalize-body (body)
+(defun pb-flow/normalize-body (body)
   "Normalize the given BODY ensuring it has an even number of elements.
 If the count of elements is odd, add a bottom case with a nil return."
   (if (cl-oddp (length body))
-      (append (sq_butlast body) (list :pb-flow_bottom (sq_last body)))
-    (append body (list :pb-flow_bottom nil))))
+      (append (sq_butlast body) (list :pb-flow/bottom (sq_last body)))
+    (append body (list :pb-flow/bottom nil))))
 
-(defun pb-flow_body->cases (body)
+(defun pb-flow/body->cases (body)
   "Convert an expression BODY into a list of cases.
 Each case is a map containing keys :return, :symbol, :next, :test, :bindings."
-  (let* ((normalized-body (pb-flow_normalize-body body))
+  (let* ((normalized-body (pb-flow/normalize-body body))
          (case-count (round (/ (length normalized-body) 2))))
-    (seq-mapn (pb_fn [(list left right) (list sym nxt)]
+    (seq-mapn (pb/fn [(list left right) (list sym nxt)]
                      (let ((bindings? (vectorp left))
-                           (bottom? (equal :pb-flow_bottom left)))
+                           (bottom? (equal :pb-flow/bottom left)))
                        (km
                         :return right
                         :symbol sym
                         :next (unless bottom? nxt)
                         :test (unless (or bindings? bottom?) left)
-                        :bindings (when bindings? (sq_join (mapcar (pb_fn [(list pat seed)]
+                        :bindings (when bindings? (sq_join (mapcar (pb/fn [(list pat seed)]
                                                                           (pb-destructure pat seed))
                                                                    (sq_partition 2 2 (append left ()))))) )))
               (sq_partition 2 2 normalized-body)
-              (sq_partition 2 1 (append (pb-flow_thunk-symbols case-count)
+              (sq_partition 2 1 (append (pb-flow/thunk-symbols case-count)
                                         (list nil))))))
 
-(defun pb-flow_emit-form (body)
+(defun pb-flow/emit-form (body)
   "Transform a normalized BODY into a form.
 The resulting form is either a single return value or a `cl-labels' expression."
-  (let* ((thunks (pb-> (pb-flow_body->cases body) pb-flow_cases->thunks))
+  (let* ((thunks (pb-> (pb-flow/body->cases body) pb-flow/cases->thunks))
          (return (nth 2 (car thunks))))
     (if-let ((bindings (cdr thunks)))
         `(cl-labels ,bindings ,return)
@@ -82,17 +82,17 @@ The resulting form is either a single return value or a `cl-labels' expression."
 (defmacro pb-flow (&rest body)
   "Emit a flow control form from the provided BODY code blocks."
   (declare (indent nil))
-  (pb-flow_emit-form body))
+  (pb-flow/emit-form body))
 
-(defmacro pb-flow_fn (&rest decl)
+(defmacro pb-flow/fn (&rest decl)
   "Create a lambda function that use the `pb-flow' control.
 DECL can be prefixed by a name for the lambda and a docstring.
 Followed by a flat serie of cases of the form args-pattern return-expr."
-  (pb_let [(cons name xs) (if (symbolp (car decl)) decl (cons nil decl))
+  (pb/let [(cons name xs) (if (symbolp (car decl)) decl (cons nil decl))
            (cons doc body) (if (stringp (car xs)) xs (cons nil xs))
            argsym (gensym "args_")
            compiled-body `(,@(if doc (list doc))
-                           (pb-flow ,@(sq_join (mapcar (pb_fn [(list pat ret)]
+                           (pb-flow ,@(sq_join (mapcar (pb/fn [(list pat ret)]
                                                               (list (vector (cons 'list (append pat ())) argsym) ret))
                                                        (sq_partition 2 2 body)))))]
           (if name
@@ -102,7 +102,7 @@ Followed by a flat serie of cases of the form args-pattern return-expr."
             `(lambda (&rest ,argsym)
                ,@compiled-body))))
 
-(defun pb-flow_tests ()
+(defun pb-flow/tests ()
   "Some assertions."
   (cl-assert
    (and (not (pb-flow (equal 3 1) :ok))
@@ -125,14 +125,14 @@ Followed by a flat serie of cases of the form args-pattern return-expr."
                         x)
                23)
 
-        (pb_let [f (pb_fn [x]
+        (pb/let [f (pb/fn [x]
                           (pb-flow (> x 0) (list :pos x)
                                    (< x 0) (list :neg x)
                                    :zero))]
           (and (equal :zero (funcall f 0))
                (equal (list :pos 1) (funcall f 1))
                (equal (list :neg -1) (funcall f -1))))
-        (equal (let ((f (pb-flow_fn
+        (equal (let ((f (pb-flow/fn
                          [(list :pair x y)] (list :pair (km :left x :right y))
                          [(list :atom x)] (list :atom x)
                          [(cons x :pouet)] (list :case3 x))))
@@ -141,14 +141,14 @@ Followed by a flat serie of cases of the form args-pattern return-expr."
                        (funcall f (cons :yop :pouet))))
                '((:pair (:left 1 :right 2)) (:atom 2) (:case3 :yop)))
         (equal (list 5 4 3 2 1)
-               (funcall (pb-flow_fn rec [x] (if (> x 0)
+               (funcall (pb-flow/fn rec [x] (if (> x 0)
                                                 (cons x (rec (- x 1)))))
                         5)))))
 
 (pb-flow_tests)
 
-(defalias 'pb_if 'pb-flow)
-(defalias 'pb_fm 'pb-flow_fn)
+(defalias 'pb/if 'pb-flow)
+(defalias 'pb/fm 'pb-flow/fn)
 
 (provide 'pb-flow)
 ;;; pb-flow.el ends here.

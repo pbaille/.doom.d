@@ -21,8 +21,8 @@
 
        (evil-define-state pb-lisp
          "PB Lisp state."
-         :tag " PB_LISP "
-         :message "-- PB_LISP --"
+         :tag " PB/LISP "
+         :message "-- PB/LISP --"
          :enable (normal)
          :entry-hook (pb-lisp/enter-mode)
          :exit-hook (pb-lisp/exit-mode))

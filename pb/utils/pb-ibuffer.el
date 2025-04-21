@@ -13,7 +13,7 @@
 
 (require 'ibuffer-sidebar)
 
-(defun pb-ibuffer_sidebar-visit-buffer ()
+(defun pb-ibuffer/sidebar-visit-buffer ()
   "Visit the buffer associated with the currently selected line in Ibuffer sidebar.
 
 If the buffer is displayed in an existing window, the function selects
@@ -30,35 +30,35 @@ to quickly switch to buffers."
         (progn (windmove-right)
                (switch-to-buffer buf)))))
 
-(defun pb-ibuffer_sidebar-focus ()
+(defun pb-ibuffer/sidebar-focus ()
   "Switch to ibuffer-sidebar if opened."
   (interactive)
   (let ((window (get-buffer-window "*:buffers:*")))
     (if window
         (select-window window))))
 
-(defun pb-ibuffer_sidebar-jump-to-current-buffer ()
+(defun pb-ibuffer/sidebar-jump-to-current-buffer ()
   "Focus ibuffer-sidebar on the line corresponding to the current buffer."
   (interactive)
   (let ((current-buffer (current-buffer)))
-    (pb-ibuffer_sidebar-focus)
+    (pb-ibuffer/sidebar-focus)
     (goto-char (point-min))
     (unless (search-forward (buffer-name current-buffer) nil t)
       (goto-char (point-min)))
     (beginning-of-line-text)
     (recenter)))
 
-(defun pb-ibuffer_projectile-hook-fn ()
+(defun pb-ibuffer/projectile-hook-fn ()
   "Projectile ibuffer hook."
   (setq ibuffer-filter-groups (ibuffer-projectile-generate-filter-groups)))
 
-(add-hook 'ibuffer-mode-hook #'pb-ibuffer_projectile-hook-fn)
+(add-hook 'ibuffer-mode-hook #'pb-ibuffer/projectile-hook-fn)
 
 ;; trying to bind click1 to visit buffer for sidebar...
 '(:map ibuffer-mode-filter-group-map
-        :n "<mouse-1>" #'pb-ibuffer_sidebar-visit-buffer)
+        :n "<mouse-1>" #'pb-ibuffer/sidebar-visit-buffer)
 ;; should not be obliged to advice...
-(advice-add #'ibuffer-mouse-toggle-mark :override #'pb-ibuffer_sidebar-visit-buffer)
+(advice-add #'ibuffer-mouse-toggle-mark :override #'pb-ibuffer/sidebar-visit-buffer)
 
 (provide 'pb-ibuffer)
 

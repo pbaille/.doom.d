@@ -66,7 +66,7 @@ therefore F has to be applied meaninfully."
   (pb-text-properties_update-faces (get-buffer "*delete-me*") 3 13 (lambda (pl) (km_upd pl :background (lambda (c) (pb-color (or c :white) (lighten .5))))))
   (pb-text-properties_update-faces (get-buffer "*delete-me*")
                                    2 10
-                                   (lambda (pl) (pb-color_walk pl (lambda (c) (pb-color_blend (pb-color :blue) c .5)))))
+                                   (lambda (pl) (pb-color/walk pl (lambda (c) (pb-color/blend (pb-color :blue) c .5)))))
   (with-current-buffer (get-buffer-create "*delete-me*")
     (erase-buffer)
     (insert (propertize "hello you ---------------"

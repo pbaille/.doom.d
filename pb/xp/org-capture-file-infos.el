@@ -3,7 +3,7 @@
 '(progn (switch-to-buffer "scratch.org")
         (goto-char (org-find-olp (list "~/org/scratch.org" "top" "three" "3.2"))))
 
-(km_defun pb-org_find-or-create-olp-aux
+(km_defun pb-org/find-or-create-olp-aux
           (:as opts
                file current-path remaining-path)
           (let* ((next-path (append current-path (list (car remaining-path))))
@@ -15,14 +15,14 @@
                                           :current-path next-path
                                           :remaining-path remaining-next)))
                   (if remaining-next
-                      (pb-org_find-or-create-olp-aux next-opts)
+                      (pb-org/find-or-create-olp-aux next-opts)
                     next-opts))
               opts)))
 
-(defun pb-org_find-or-create-olp (file path)
+(defun pb-org/find-or-create-olp (file path)
   "Find or create outline path PATH in FILE."
   (km_let ((remaining-path marker)
-           (pb-org_find-or-create-olp-aux
+           (pb-org/find-or-create-olp-aux
             (km :file file
                 :marker 0
                 :current-path ()
@@ -33,31 +33,31 @@
           (cl-loop for i in remaining-path
                    do (org-insert-subheading 0) (insert i))))
 
-(defun pb-org_put (file path content)
+(defun pb-org/put (file path content)
   "Put CONTENT at PATH in FILE."
-  (pb-org_find-or-create-olp file path)
+  (pb-org/find-or-create-olp file path)
   (cond ((stringp content) (evil-open-below 1) (insert content))
         ((km? content)
          (org-set-tags (km_get content :tags))
          (evil-open-below 1) (insert (km_get content :text)))))
 
-(defvar pb-org_file-infos "~/org/file-infos.org"
+(defvar pb-org/file-infos "~/org/file-infos.org"
   "The main org file to hold file infos.")
 
-(defun pb-org_insert-file-info ()
+(defun pb-org/insert-file-info ()
   "Return the capture target for file info."
   (interactive)
-  (pb-org_find-or-create-olp pb-org_file-infos
+  (pb-org/find-or-create-olp pb-org/file-infos
                              (split-string (buffer-file-name) "/" t))
   (org-narrow-to-subtree)
   (org-end-of-subtree))
 
 '(:org-put-tries
-  (pb-org_find-or-create-olp "~/org/scratch.org" (list "top" "tao"))
-  (pb-org_find-or-create-olp "~/org/scratch.org" (list "top" "tao" "baz" "iop"))
-  (pb-org_put "~/org/scratch.org" (list "top" "tao" "baz" "iop")
+  (pb-org/find-or-create-olp "~/org/scratch.org" (list "top" "tao"))
+  (pb-org/find-or-create-olp "~/org/scratch.org" (list "top" "tao" "baz" "iop"))
+  (pb-org/put "~/org/scratch.org" (list "top" "tao" "baz" "iop")
               "hello you")
-  (pb-org_put "~/org/scratch.org" (list "top" "tao" "baz" "iop")
+  (pb-org/put "~/org/scratch.org" (list "top" "tao" "baz" "iop")
               (km :tags (list "pouet" "foo")
                   :text "very interesting indeed")))
 

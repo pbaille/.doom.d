@@ -1,6 +1,6 @@
 ;;; config/scratch.el -*- lexical-binding: t; -*-
 
-(pb_comment
+(pb/comment
  :scratch-temp
 
  '(load "~/.doom.d/parts/color-picker/color-picker.el")
@@ -38,11 +38,11 @@
     ("C-<left>" . centaur-tabs-backward)
     ("C-<right>" . centaur-tabs-forward)))
 
-(pb_comment
+(pb/comment
  (length (window-prev-buffers))
  (length (window-next-buffers)))
 
-(pb_comment
+(pb/comment
 
  ;; Setting window parameters
  (set-window-parameter nil 'my-param "my-value")

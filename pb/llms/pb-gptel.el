@@ -58,7 +58,7 @@
 
    This creates a well-structured prompt by combining multiple prompt elements
    from the tree, allowing for modular and reusable prompt components."
-  (pb_let [values (pb-tree_get-path-values pb-prompt/tree path)]
+  (pb/let [values (pb-tree_get-path-values pb-prompt/tree path)]
     (mapconcat #'pb-prompt/mk values "\n\n")))
 
 (defvar pb-gptel/models
@@ -230,7 +230,7 @@ This is a darkened version of the default theme background.")
 
    When called interactively, prompts for instructions to guide the modification."
   (interactive)
-  (pb_let [(km_keys prompt callback) options
+  (pb/let [(km_keys prompt callback) options
            prompt (or prompt
                       (read-string "Edit current expression: "))]
     (progn :style
@@ -252,7 +252,7 @@ This is a darkened version of the default theme background.")
              :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
                                "Don't use markdown code block syntax or any non-valid code in your output."
                                "If you have to write prose, use appropriate comment syntax."]
-             :expression (pb-symex_current-as-string)
+             :expression (pb-symex/current-as-string)
              :task (or prompt
                        (read-string "Edit current expression: "))))
 
@@ -276,7 +276,7 @@ This is a darkened version of the default theme background.")
 
    When called interactively, prompts for instructions to guide the modification."
   (interactive)
-  (pb_let [(km_keys prompt callback) options]
+  (pb/let [(km_keys prompt callback) options]
     (pb-gptel/request
      ;; Create a structured prompt with context information
      (km :context
@@ -333,7 +333,7 @@ This is a darkened version of the default theme background.")
    After the GPT response is inserted, a new level-2 header is added
    to continue the conversation."
   (interactive)
-  (pb_let [(km_keys prompt selection) options]
+  (pb/let [(km_keys prompt selection) options]
     (let* ((source-buffer (current-buffer))
            (file-path (buffer-file-name))
            (file-name (if file-path
@@ -458,7 +458,7 @@ This is a darkened version of the default theme background.")
    The chat buffer supports ongoing conversation through gptel-mode."
   (interactive)
   (pb-gptel/current-buffer-chat
-   (km :selection (pb-symex_current-as-string))))
+   (km :selection (pb-symex/current-as-string))))
 
 (progn :tools
 
@@ -480,7 +480,7 @@ This is a darkened version of the default theme background.")
        (defvar pb-gptel/clojure-evaluation-tool
          (gptel-make-tool
           :name "eval_clojure"
-          :function #'pb-clojure_gptel-tool-function
+          :function #'pb-clojure/gptel-tool-function
           :description "Evaluates Clojure code in the current CIDER REPL."
           :args (list '(:name "code"
                         :type string
@@ -528,7 +528,7 @@ This is a darkened version of the default theme background.")
                  :confirm t)
                 "A tool that allows editing source files in the current context by inserting content at specified positions.")))
 
-(pb_comment
+(pb/comment
  :coerce-non-utf-8-char-to-unicode
  ;; gptel curl do not like non-utf-8
  (pb-gptel/request (with-current-buffer "*Embark Collect: consult-imenu - *"

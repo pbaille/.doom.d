@@ -87,13 +87,13 @@
            :unnarrowed t
            :immediate-finish t)))
 
-  (defun pb-org_disable-flycheck-in-org-src-buffers ()
+  (defun pb-org/disable-flycheck-in-org-src-buffers ()
     "Disable flycheck when editing Org source blocks."
     (when (bound-and-true-p flycheck-mode)
       (flycheck-mode -1)))
 
   (add-hook 'org-src-mode-hook
-            #'pb-org_disable-flycheck-in-org-src-buffers)) ;; "◉"  "✳"
+            #'pb-org/disable-flycheck-in-org-src-buffers)) ;; "◉"  "✳"
 
 (use-package org-bullets
   :config

@@ -8,19 +8,19 @@
           (lighten .5)
           (hue-wheel 6))
 
-(let ((base (pb-color (pb-color_random)
+(let ((base (pb-color (pb-color/random)
                       (desaturate .4))))
-  (list (pb-color_darken base 0.6)
-        (pb-color_lighten (pb-color_complementary base) 0.6)))
+  (list (pb-color/darken base 0.6)
+        (pb-color/lighten (pb-color/complementary base) 0.6)))
 
 (defun rand-color ()
-  (pb-color_random))
+  (pb-color/random))
 
 (let ((c (rand-color)))
   (list c
         (pb-color c
                   (complementary)
-                  (set-lightness (- 1 (pb-color_lightness c))))))
+                  (set-lightness (- 1 (pb-color/lightness c))))))
 
 (defun color-walk (data f)
   ""
@@ -49,19 +49,19 @@
 
 (defun pb-theme_palette (fg)
   "Derive a theme palette from a foreground color FG."
-  (let* ((bg (pb-color_complementary fg))
+  (let* ((bg (pb-color/complementary fg))
 
          (decline (lambda (x)
-                    (let* ((dimed (pb-color_neutralize-lightness x .1))
-                           (vivid (pb-color_exacerbate-lightness x .3))
-                           (alt (pb-color_update-hue dimed (lambda (x) (+ .1 x))))
-                           (alt2 (pb-color_update-hue dimed (lambda (x) (- x .1)))))
+                    (let* ((dimed (pb-color/neutralize-lightness x .1))
+                           (vivid (pb-color/exacerbate-lightness x .3))
+                           (alt (pb-color/update-hue dimed (lambda (x) (+ .1 x))))
+                           (alt2 (pb-color/update-hue dimed (lambda (x) (- x .1)))))
                       (list :main x
                             :dim dimed
                             :vivid vivid
                             :alt alt
                             :alt2 alt2
-                            :accent (pb-color_complementary-hue x)))))
+                            :accent (pb-color/complementary-hue x)))))
 
          (colors (km_into ()
                           (seq-mapn #'cons
@@ -74,31 +74,31 @@
          (decline-color
           (lambda (c)
             (let ((fg (list :main c
-                            :warmer (pb-color_warm c .1)
-                            :cooler (pb-color_cool c .1)
+                            :warmer (pb-color/warm c .1)
+                            :cooler (pb-color/cool c .1)
                             :faint (pb-color c
                                              (desaturate .7)
                                              (neutralize-lightness .5)))))
               (list :fg fg
-                    :bg (color-walk fg #'pb-color_complementary-lightness))))))
+                    :bg (color-walk fg #'pb-color/complementary-lightness))))))
 
     (list :bg (funcall decline bg)
           :fg (funcall decline fg)
           :colors (km_map
                    colors
-                   (pb_fn [(cons name c)]
+                   (pb/fn [(cons name c)]
                           (cons name (funcall decline-color c)))))))
 
 (defun km_flat (m sep)
-  (seq-mapcat (pb_fn [(cons k v)]
+  (seq-mapcat (pb/fn [(cons k v)]
                      (if (km? v)
                          (km_map (km_flat v sep)
-                                 (pb_fn [(cons k1 v1)]
+                                 (pb/fn [(cons k1 v1)]
                                         (cons (intern
                                                (concat ":"
-                                                       (pb_keyword-name k)
+                                                       (pb/keyword-name k)
                                                        sep
-                                                       (pb_keyword-name k1)))
+                                                       (pb/keyword-name k1)))
                                               v1)))
                        (list k v)))
               (km_entries m)))
@@ -118,22 +118,22 @@
                                                           (_ variant))))))))))
 
 (defun pb-theme_rand-palette ()
-  (pb-> (pb-color_from-hsl
-         (list (pb-color_random-value) .2 .8))
+  (pb-> (pb-color/from-hsl
+         (list (pb-color/random-value) .2 .8))
         (pb-theme_palette)
         (km_flat "-")
         (km_map-keys
-         (lambda (x) (pb_keyword-to-symbol
+         (lambda (x) (pb/keyword-to-symbol
                  (or (pb-theme_transform-color-key x "-") x))))
         (km_map-vals #'list)
         (km_entries))
 
   )
 
-(pprob (let* ((palette (pb-theme_palette (pb-color_from-hsl
-                                          (list (pb-color_random-value) .5 .8))))
+(pprob (let* ((palette (pb-theme_palette (pb-color/from-hsl
+                                          (list (pb-color/random-value) .5 .8))))
 
-              (light (color-walk palette #'pb-color_complementary-lightness)))
+              (light (color-walk palette #'pb-color/complementary-lightness)))
 
          (list :dark palette
                :light light)))

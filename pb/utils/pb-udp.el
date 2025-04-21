@@ -13,11 +13,11 @@
 
 (require 'json)
 
-(defvar pb-udp_default-state (list :id nil :data ""))
+(defvar pb-udp/default-state (list :id nil :data ""))
 
-(defun pb-udp_mk-proc-filter (handler)
+(defun pb-udp/mk-proc-filter (handler)
   "Build a process filter function given an OPS plist."
-  (let ((state pb-udp_default-state))
+  (let ((state pb-udp/default-state))
     (lambda (_ string)
       (let ((json-object-type 'plist)
             (json-array-type 'list))
@@ -27,7 +27,7 @@
                (data (plist-get json-message :data)))
           (when id
             (unless (equal (plist-get state :id) id)
-              (setq state pb-udp_default-state))
+              (setq state pb-udp/default-state))
             (cond ((and data (not op))
                    (setq state
                          (list :id id
@@ -37,13 +37,13 @@
                                    (plist-put json-message :data (plist-get state :data))
                                  json-message))
                           (ret (funcall handler msg)))
-                     (setq state pb-udp_default-state)
+                     (setq state pb-udp/default-state)
                      ret))
                   (t
-                   (setq state pb-udp_default-state)
+                   (setq state pb-udp/default-state)
                    (error (format "bad format msg: %s" json-message))))))))))
 
-(defun pb-udp_start-listening (host port handler)
+(defun pb-udp/start-listening (host port handler)
   (let ((proc (make-network-process
                :name "pb-udp-proc"
                :buffer "*pb-udp-proc*"
@@ -52,15 +52,15 @@
                :server t
                :family 'ipv4
                :type 'datagram)))
-    (set-process-filter proc (pb-udp_mk-proc-filter handler))
+    (set-process-filter proc (pb-udp/mk-proc-filter handler))
     proc))
 
 '(:tries
 
-  (delete-process pb-udp_receive-proc)
+  (delete-process pb-udp/receive-proc)
 
-  (defvar pb-udp_receive-proc
-    (pb-udp_start-listening 'local
+  (defvar pb-udp/receive-proc
+    (pb-udp/start-listening 'local
                             "8088"
                             (lambda (opts)
                               (let ((op (plist-get opts :op))
@@ -68,21 +68,21 @@
                                 (cond ((equal op "print") (print data))
                                       (t (error "unknown op")))))))
 
-  (delete-process pb-udp_send-proc)
+  (delete-process pb-udp/send-proc)
 
-  (defvar pb-udp_send-proc
+  (defvar pb-udp/send-proc
     (make-network-process
-     :name "*pb-udp_out*"
+     :name "*pb-udp/out*"
      :host 'local
      :service "8088"
      :type 'datagram
      :family 'ipv4))
 
-  (process-send-string pb-udp_send-proc
+  (process-send-string pb-udp/send-proc
                        (json-encode-plist '(:id 1 :op :print :data "yo")))
-  (process-send-string pb-udp_send-proc
+  (process-send-string pb-udp/send-proc
                        (json-encode-plist '(:id 2 :data "yo")))
-  (process-send-string pb-udp_send-proc
+  (process-send-string pb-udp/send-proc
                        (json-encode-plist '(:id 2 :op :print))))
 
 (provide 'pb-udp)

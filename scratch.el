@@ -104,7 +104,7 @@ This only takes care of filling docstring correctly."
        (add-hook 'org-export-before-processing-hook #'my/handle-export-audio)
        )
 
-(defun pb_force-modeline
+(defun pb/force-modeline
     ()
   (interactive)
   (setq-local mode-line-format

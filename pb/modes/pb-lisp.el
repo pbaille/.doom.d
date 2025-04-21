@@ -20,8 +20,8 @@
 
        (evil-define-state pb-lisp
          "PB Lisp state."
-         :tag " PB_LISP "
-         :message "-- PB_LISP --"
+         :tag " PB/LISP "
+         :message "-- PB/LISP --"
          :enable (normal)
          :entry-hook (pb-lisp/enter-mode)
          :exit-hook (pb-lisp/exit-mode))
@@ -43,7 +43,7 @@
        (defun pb-lisp/parser-setup ()
          "Setup tree-sitter parser for current elisp buffer."
          (if (eq major-mode 'org-mode)
-             (pb-org-babel_focus-code-block)
+             (pb-org-babel/focus-code-block)
            (when-let ((lang (or (treesit-language-at (point))
                                 (alist-get major-mode pb-lisp/major-mode->treesit-lang))))
              (print (cons "parser setup " lang))
@@ -66,7 +66,7 @@
          (print "exit pb-lisp")
          (pb-lisp/delete-overlay)
          (when (eq major-mode 'org-mode)
-           (pb-org-babel_init-buffer))
+           (pb-org-babel/init-buffer))
          (pb-lisp/reset-local-fringe-face)))
 
 (progn :selection
@@ -101,7 +101,7 @@
        (defun pb-lisp/set-selection (bounds)
          "Set selection to all named nodes within BOUNDS.
           BOUNDS is a cons cell (start . end) with buffer positions."
-         (pb_let [(cons start end) bounds
+         (pb/let [(cons start end) bounds
                   parser-lang (alist-get major-mode pb-lisp/major-mode->treesit-lang)]
            (when parser-lang
              (let* ((first-node (treesit-node-at start parser-lang))
@@ -160,7 +160,7 @@
          (face-remap-add-relative 'fringe :background (face-attribute 'default :background))
          (flycheck-refresh-fringes-and-margins))
 
-       (pb_comment (pb-lisp/reset-local-fringe-face)
+       (pb/comment (pb-lisp/reset-local-fringe-face)
                    (pb-lisp/set-local-fringe-face)))
 
 (progn :current-node
@@ -272,13 +272,13 @@
 
        (defun pb-lisp/log-node (&optional node)
          (interactive)
-         (pb-elisp_display-expression
+         (pb-elisp/display-expression
           (pb-lisp/node-infos node)
           #'km_pp))
 
        (defun pb-lisp/log-nodes (&optional node)
          (interactive)
-         (pb-elisp_display-expression
+         (pb-elisp/display-expression
           (mapcar #'pb-lisp/node-infos
                   (pb-lisp/get-current-nodes))
           #'km_pp))
@@ -544,7 +544,7 @@
        (defun pb-lisp/swap-siblings (direction)
          "Transpose the current node with its next or previous sibling.
          DIRECTION should be 'next or 'prev."
-         (pb_let [nodes (pb-lisp/get-selected-nodes)
+         (pb/let [nodes (pb-lisp/get-selected-nodes)
                   first-node (car nodes)
                   parent (treesit-node-parent first-node)
                   last-node (sq_last nodes)
@@ -874,7 +874,7 @@
              :eval-pretty
              (lambda (node-text)
                (interactive)
-               (pb-elisp_display-expression (eval (read (concat "(progn " node-text ")")))))))
+               (pb-elisp/display-expression (eval (read (concat "(progn " node-text ")")))))))
 
        (defvar pb-lisp/clojure-methods
          (km :eval
@@ -897,8 +897,8 @@
                (interactive)
                (save-excursion
                  (goto-char (pb-lisp/selection-end))
-                 (let* ((lang (pb-org_code-block-language))
-                        (treesit-lang (pb-org-babel_lang-string->treesit-lang lang))
+                 (let* ((lang (pb-org/code-block-language))
+                        (treesit-lang (pb-org-babel/lang-string->treesit-lang lang))
                         (methods (alist-get (intern (format "%s-mode" lang)) pb-lisp/major-mode->methods)))
                    (if methods
                        ;; Use language-specific eval method if available
@@ -911,8 +911,8 @@
                (interactive)
                (save-excursion
                  (goto-char (pb-lisp/selection-end))
-                 (let* ((lang (pb-org_code-block-language))
-                        (treesit-lang (pb-org-babel_lang-string->treesit-lang lang))
+                 (let* ((lang (pb-org/code-block-language))
+                        (treesit-lang (pb-org-babel/lang-string->treesit-lang lang))
                         (methods (alist-get (intern (format "%s-mode" lang)) pb-lisp/major-mode->methods)))
                    (if methods
                        ;; Use language-specific pretty eval method if available
@@ -1065,7 +1065,7 @@
                "e" #'pb-lisp/eval-current-node
                (kbd "C-e") #'pb-lisp/eval-pretty
 
-               "t" #'pb-misc_toggle-hiding
+               "t" #'pb-misc/toggle-hiding
                (kbd "C-t") #'hs-hide-level
                (kbd "q r") #'pb-lisp/gptel-request-replace
                "?" #'pb-lisp/log-node))
@@ -1084,7 +1084,7 @@
 
        (defun pb-lisp/gptel-request-replace (&optional options)
          (interactive)
-         (pb_let [(km_keys prompt callback) options]
+         (pb/let [(km_keys prompt callback) options]
            (pb-gptel/request
 
             (km :context
