@@ -165,29 +165,30 @@
          (km :context
              (mapcar
               (lambda (ctx-item)
-                (cl-case (intern (km/get ctx-item :type))
-                  (buffer
-                   (km/put ctx-item
-                           :content (with-current-buffer (km/get ctx-item :buffer-name)
-                                      (buffer-substring-no-properties (point-min) (point-max)))))
+                (when (not (km/get ctx-item :disabled))
+                  (cl-case (intern (km/get ctx-item :type))
+                    (buffer
+                     (km/put ctx-item
+                             :content (with-current-buffer (km/get ctx-item :buffer-name)
+                                        (buffer-substring-no-properties (point-min) (point-max)))))
 
-                  (context
-                   (km/put ctx-item
-                           :content
-                           (pb-prompt/context-km
-                            (pb-prompt/get-saved-context
-                             (km/get ctx-item :name)))))
+                    (context
+                     (km/put ctx-item
+                             :content
+                             (pb-prompt/context-km
+                              (pb-prompt/get-saved-context
+                               (km/get ctx-item :name)))))
 
-                  ((file dir)
-                   (pb-prompt/describe-path (km/get ctx-item :path)))
+                    ((file dir)
+                     (pb-prompt/describe-path (km/get ctx-item :path)))
 
-                  (function
-                   (call-interactively (km/get ctx-item :function)))
+                    (function
+                     (call-interactively (km/get ctx-item :function)))
 
-                  (url
-                   (eww-browse-url (km/get ctx-item :url)))
+                    (url
+                     (eww-browse-url (km/get ctx-item :url)))
 
-                  (otherwise ctx-item)))
+                    (otherwise ctx-item))))
               context)))
 
        (defun pb-prompt/context-prompt (&optional context)
@@ -438,8 +439,6 @@
              (message "Edit function name between [[ ]] and function body. Press C-c C-c when done"))
            (switch-to-buffer buffer)))
 
-
-
        (defun pb-prompt/add-function ()
          "Add a function (that generates context-item) to the context.
           This allows adding dynamic content to the prompt context that can be
@@ -457,7 +456,7 @@
             ((eq choice ?e)
              (let* ((obarray-functions
                      (seq-filter (lambda (sym)
-                                   (and (symbolp sym)
+         (and (symbolp sym)
                                         (fboundp sym)
                                         (not (special-form-p sym))
                                         (not (macrop sym))))
@@ -479,7 +478,7 @@
                 (km :name func-name
                     :code "(lambda ()\n (interactive)\n ())")
                 (lambda (func func-expr new-func-name)
-                  (pb-prompt/add-item!
+         (pb-prompt/add-item!
                    (km :type "function"
                        :name (or new-func-name func-name)
                        :code func-expr
@@ -603,6 +602,9 @@
            (:key "C-p" :desc "Yank item from ring"
             :category "clipboard"
             :function pb-prompt/yank-context-item-from-ring)
+           (:key "x" :desc "Toggle disable item at point"
+            :category "edition"
+            :function pb-prompt/toggle-context-item-disabled-at-point)
            (:key "?" :desc "Show help menu"
             :category "help"
             :function pb-prompt/context-browser-help-menu)))
@@ -759,9 +761,12 @@
                                       (lambda (item) (km/get item :type))
                                       context)))
 
+                 (insert (propertize "RET: browse, h.j.k.l: navigate, ?: help, q: quit\n"
+                                     'face 'lsp-details-face))
+
                  ;; Insert title with face
-                 (insert (propertize title 'face 'font-lock-keyword-face) "\n")
-                 (insert (propertize (make-string (length title) ?-) 'face 'font-lock-comment-face) "\n\n")
+                 (insert "\n" (propertize title 'face 'custom-modified) "\n\n\n")
+                 '(insert (propertize (make-string (length title) ?-) 'face 'font-lock-comment-face) "\n\n")
 
                  ;; Group by type
                  (dolist (type-group (sort items-by-type
@@ -770,7 +775,7 @@
                          (items (cdr type-group)))
                      ;; Type header with face
                      (insert (concat (propertize ": " 'face 'font-lock-doc-face)
-                                     (propertize type 'face 'font-lock-type-face)
+                                     (propertize type 'face 'magit-diff-removed)
                                      (propertize (format " (%d)" (length items)) 'face 'font-lock-doc-face))
                              "\n\n")
 
@@ -778,25 +783,24 @@
                      (dolist (item items)
                        (let* ((id (km/get item :id))
                               (desc (pb-prompt/-context-item-description item))
-                              ;; Format line with colored bullet and ID with a different face
-                              (bullet (propertize "• " 'face '(:foreground "pink")))
-                              (id-text (propertize (format "[%s]" id) 'face 'font-lock-doc-face))
+                              (disabled (km/get item :disabled))
+                              (bullet (propertize "• " 'face 'custom-set))
+                              (id-text (propertize (format "[%s]" id) 'face 'lsp-details-face))
                               (line (format "%s%s %s\n" bullet desc id-text)))
-                         ;; Add properties to make the item retrievable
                          (add-text-properties 0 (length line)
-                                              `(context-item ,item
-                                                context-item-id ,id)
-                                              line)
-                         (insert line)))
+                                              `(context-item ,item context-item-id ,id) line)
+                         (if disabled
+                             (insert (propertize line 'face 'font-lock-comment-face))
+                           (insert line))))
                      (insert "\n")))))
 
              (goto-char (point-min))
              ;; Set mode and header line
              (pb-prompt/context-browser-mode)
              (setq-local pb-prompt/context-browser-focus name)
-             (setq-local header-line-format
-                         (propertize "RET: browse, d: delete, v: view details, r: refresh, q: quit"
-                                     'face 'header-line)))
+             '(setq-local header-line-format
+                          (propertize "RET: browse, d: delete, v: view details, r: refresh, q: quit"
+                                      'face 'font-lock-comment-face)))
 
            (switch-to-buffer buffer)
            (pb-prompt/goto-next-item)))
@@ -915,7 +919,8 @@
                      (let* ((content (km/get item :documentation))
                             (first-line (car (split-string content "\n")))
                             (truncated-line (truncate-string-to-width first-line 80 nil nil "...")))
-                       (concat (km/get item :name) " :: " truncated-line)))
+                       (concat (km/get item :name) " :: " (propertize truncated-line
+                                                                      'face 'term-faint))))
                     (otherwise
                      (format "Item of type: %s" type)))))
 
@@ -1146,6 +1151,21 @@
                 (pb-prompt/add-path)
                 (pb-prompt/refresh-context-browser))
 
+              (defun pb-prompt/toggle-context-item-disabled-at-point ()
+                "Toggle the :disabled property of the context item at point."
+                (interactive)
+                (print "toggle disabled")
+                (when-let ((item (pb-prompt/context-item-at-point)))
+                  (pb-prompt/update-focused-context
+                   (lambda (ctx)
+                     (mapcar (lambda (ctx-item)
+                               (if (equal (km/get ctx-item :id) (km/get item :id))
+                                   (km/put ctx-item :disabled (not (km/get ctx-item :disabled)))
+                                 ctx-item))
+                             ctx)))
+                  (pb-prompt/refresh-context-browser)
+                  (message "Toggled disabled for item: %s" (pb-prompt/-context-item-description item))))
+
               (defun pb-prompt/delete-context-item-at-point ()
                 "Delete the context item at point from the current context."
                 (interactive)
@@ -1154,13 +1174,12 @@
                   (if (yes-or-no-p (format "Delete item %s? "
                                            (pb-prompt/-context-item-description item)))
                       (progn
-                                        ; Remove from actual context
+                        (add-to-list 'pb-prompt/context-ring item)
                         (pb-prompt/update-focused-context
                          (lambda (ctx)
                            (seq-remove (lambda (i)
                                          (equal (km/get i :id) id))
                                        ctx)))
-                        ;; Refresh the browser
                         (pb-prompt/refresh-context-browser)
                         (message "Item deleted"))
                     (message "Deletion cancelled"))))))
@@ -1208,7 +1227,6 @@
          (km/upd acc type (pb/fn [c] (1+ (or c 0)))))
                                       types
                                       nil)))
-                   (print type-counts)
                    ;; Context name with bullet and count
                    (insert (propertize "• " 'face '(:foreground "pink"))
                            name
@@ -1420,7 +1438,6 @@
               ;; Add hook to save contexts when Emacs exits
               (add-hook 'kill-emacs-hook #'pb-prompt/save-contexts-to-file)))
 
-
 (progn :git-utils
 
        (require 'pb-git)
@@ -1442,11 +1459,11 @@
 
            ;; Send the request to generate a commit message
            (gptel-request
-               prompt
-             :callback
-             (lambda (response _info)
-               ;; Find the magit commit message buffer
-               (when-let ((commit-buffer (pb-git/magit-commit-buffer)))
+           prompt
+         :callback
+         (lambda (response _info)
+         ;; Find the magit commit message buffer
+         (when-let ((commit-buffer (pb-git/magit-commit-buffer)))
                  (with-current-buffer commit-buffer
                    ;; Insert the generated message at the beginning of the buffer
                    (goto-char (point-min))
@@ -1479,7 +1496,7 @@
           buffer with the diff content to analyze changes using GPT."
          (interactive)
          (with-temp-buffer
-           (let* ((current-branch (magit-get-current-branch))
+         (let* ((current-branch (magit-get-current-branch))
                   (branches (magit-list-branch-names))
                   (selected-branch (completing-read
                                     (format "Compare %s with branch: " current-branch)
@@ -1516,10 +1533,10 @@
 
                ;; Add key bindings similar to other chat buffers
                (evil-define-key nil 'local (kbd "s-q <return>")
-                 (lambda () (interactive)
-                   (call-interactively #'gptel-send)
-                   (evil-insert-newline-below)
-                   (goto-char (point-max))))
+         (lambda () (interactive)
+         (call-interactively #'gptel-send)
+         (evil-insert-newline-below)
+         (goto-char (point-max))))
 
                ;; Insert the header content
                (insert (format "* Diff: %s..%s\n\n" current-branch selected-branch))
@@ -1537,7 +1554,12 @@
 
 ;;; examples
 
-[
+[(pb-prompt/update-focused-context
+  (lambda (ctx)
+    (seq-filter (lambda (item)
+                  (km/get item :type))
+                ctx)))
+
  (pb-prompt/context-prompt)
  (setq pb-prompt/context ())
  (car pb-prompt/context)
