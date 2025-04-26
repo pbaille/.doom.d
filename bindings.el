@@ -113,7 +113,10 @@
                  "s-i" #'ibuffer)
 
           (:desc "*messages*"
-                 "m" #'pb-misc/switch-to-message-buffer)
+                 "M" #'pb-misc/switch-to-message-buffer)
+
+          (:desc "meta buffers"
+                 "m" #'pb-misc/switch-to-meta-buffer)
 
           (:desc "terminals"
                  "t" #'pb-misc/select-vterm-buffer)
@@ -153,7 +156,9 @@
           (:desc "previous"
                  "h" #'previous-buffer)
 
-          (:desc "elisp eval" "C-e" #'pb-misc/elisp-eval))
+          (:desc "elisp eval" "C-e" (lambda ()
+                                      (interactive)
+                                      (pb-misc/elisp-eval 'split))))
 
  (:prefix ("s-q" . "LLMs")
 
