@@ -390,5 +390,49 @@
      (sit-for 1)
      nil)))
 
+(defun pb-misc/switch-to-meta-buffer ()
+  "Switch between related meta buffers and their source buffer.
+   If current buffer is a regular buffer, find meta buffers (EVAL_, SCRATCH_, etc.)
+   related to it. If current buffer is a meta buffer, allow switching to the
+   source buffer or other related meta buffers."
+  (interactive)
+  (let* ((current-name (buffer-name))
+         (is-meta-buffer (string-match-p "^\\(EVAL_\\|SCRATCH_\\|CHAT_\\)\\|^\\*narrowed: " current-name))
+         (base-name (if is-meta-buffer
+                        (cond
+                         ((string-match "^EVAL_\\(.*\\)" current-name)
+                          (match-string 1 current-name))
+                         ((string-match "^SCRATCH_\\(.*\\)" current-name)
+                          (match-string 1 current-name))
+                         ((string-match "^CHAT_\\(.*\\)" current-name)
+                          (match-string 1 current-name))
+                         ((string-match "^\\*narrowed: \\(.*\\)\\*$" current-name)
+                          (match-string 1 current-name))
+                         (t nil))
+                      current-name))
+         (meta-pattern (if base-name
+                           (concat "\\(^EVAL_\\|^SCRATCH_\\|^CHAT_\\|^\\*narrowed: \\)"
+                                   (regexp-quote base-name))
+                         ""))
+         (matching-buffers (seq-filter
+                            (lambda (buffer)
+                              (let ((buf-name (buffer-name buffer)))
+                                (or (and is-meta-buffer
+                                         (string= buf-name base-name))
+                                    (string-match-p meta-pattern buf-name))))
+                            (buffer-list))))
+    (if (null matching-buffers)
+        (message "No related buffers found for %s" current-name)
+      (let* ((buffer-names (mapcar #'buffer-name matching-buffers))
+             (selected (consult--read
+                        buffer-names
+                        :prompt "Select buffer: "
+                        :sort t
+                        :require-match t
+                        :category 'buffer
+                        :state (consult--buffer-state))))
+        (when selected
+          (switch-to-buffer selected))))))
+
 (provide 'pb-misc)
 ;;; pb-misc.el ends here.
