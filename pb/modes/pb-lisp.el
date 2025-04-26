@@ -544,19 +544,19 @@
        (defun pb-lisp/swap-siblings (direction)
          "Transpose the current node with its next or previous sibling.
          DIRECTION should be 'next or 'prev."
-         (pb/let [nodes (pb-lisp/get-selected-nodes)
-                  first-node (car nodes)
-                  parent (treesit-node-parent first-node)
-                  last-node (sq/last nodes)
-                  start-point (treesit-node-start first-node)
-                  end-point (treesit-node-end last-node)
-                  sibling (cond ((eq direction 'next) (treesit-node-next-sibling last-node t))
-                                ((eq direction 'prev) (treesit-node-prev-sibling first-node t))
-                                (t nil))
-                  selection-text (buffer-substring-no-properties start-point end-point)
-                  sibling-start (and sibling (treesit-node-start sibling))
-                  sibling-end (and sibling (treesit-node-end sibling))
-                  sibling-text (and sibling (buffer-substring-no-properties sibling-start sibling-end))]
+         (let* ((nodes (pb-lisp/get-selected-nodes))
+                (first-node (car nodes))
+                (parent (treesit-node-parent first-node))
+                (last-node (sq/last nodes))
+                (start-point (treesit-node-start first-node))
+                (end-point (treesit-node-end last-node))
+                (sibling (cond ((eq direction 'next) (treesit-node-next-sibling last-node t))
+                               ((eq direction 'prev) (treesit-node-prev-sibling first-node t))
+                               (t nil)))
+                (selection-text (buffer-substring-no-properties start-point end-point))
+                (sibling-start (and sibling (treesit-node-start sibling)))
+                (sibling-end (and sibling (treesit-node-end sibling)))
+                (sibling-text (and sibling (buffer-substring-no-properties sibling-start sibling-end))))
            (when (and parent sibling)
 
              (save-excursion
@@ -960,66 +960,47 @@
          (funcall (pb-lisp/get-method :eval-pretty)
                   (pb-lisp/current-selection-as-string))))
 
-(quote
- (progn :improved-selection
+(progn :narrow-mode
 
+       ;; Flag to track if we're in narrow mode
+       (defvar-local pb-lisp/narrow-mode nil
+         "When non-nil, automatically narrow to current node when navigating.")
 
-  ;; Main state variables
-  (defvar-local pb-lisp/current-node nil
-    "The current primary node (cursor position)")
+       ;; Toggle for narrow mode
+       (defun pb-lisp/toggle-narrow-mode ()
+         "Toggle the automatic narrowing of nodes when navigating."
+         (interactive)
+         (setq-local pb-lisp/narrow-mode (not pb-lisp/narrow-mode))
+         (if pb-lisp/narrow-mode
+             (progn
+               (pb-lisp/narrow-to-current)
+               (message "Narrow mode enabled - navigating will stay narrowed to current node"))
+           (widen)
+           (pb-lisp/indent-parent-node)
+           (message "Narrow mode disabled")))
 
+       ;; Narrow to current node
+       (defun pb-lisp/narrow-to-current ()
+         "Narrow buffer to the current node."
+         (interactive)
+         (widen) ;; Ensure we're not already narrowed
+         (let ((start (pb-lisp/selection-start))
+               (end (pb-lisp/selection-end)))
+           (narrow-to-region start end)
+           (pb-lisp/indent-current-node)))
 
-  (defvar-local pb-lisp/selection-count 0
-    "Number of additional siblings selected after the current node")
+       (pb/comment
+        (advice-remove 'widen #'pb-lisp/indent-current-node)
+        (advice-remove 'widen #'pb-lisp/indent-parent-node))
 
-  (defun pb-lisp/get-selected-nodes ()
-    "Return list of currently selected nodes starting from current node."
-    (print (list 'pb-lisp/get-selected-nodes
-                 pb-lisp/selection-count))
-    (let* ((node (pb-lisp/get-current-node))
-           (parent (treesit-node-parent node))
-           (idx (treesit-node-index node t))
-           (child-count (treesit-node-child-count parent t))
-           (end-idx (min (+ idx pb-lisp/selection-count) (1- child-count))))
-      (print (kmq child-count
-                  end-idx))
-      (cons node
-            (cl-loop for i from idx to end-idx
-                     collect (treesit-node-child parent i t)))))
+       ;; Advice to update narrowing after navigation
+       (defun pb-lisp/maybe-narrow-after-navigation (&rest _)
+         "If narrow-mode is enabled, narrow to the current node after navigation."
+         (when pb-lisp/narrow-mode
+           (pb-lisp/narrow-to-current)))
 
-  (defun pb-lisp/update-overlay-from-nodes ()
-    "Update overlay based on selected nodes."
-    (pb-lisp/delete-overlay)
-    (let* ((nodes (pb-lisp/get-selected-nodes))
-           (start (treesit-node-start (car nodes)))
-           (end (treesit-node-end (car (last nodes)))))
-      (let ((overlay (make-overlay start end)))
-        (overlay-put overlay 'face 'pb-lisp/overlay-face)
-        (push overlay pb-lisp/overlays))))
-
-  (defun pb-lisp/extend-selection-forward ()
-    "Extend the current selection to include the next sibling node."
-    (interactive)
-    (let* ((node (pb-lisp/get-current-node))
-           (parent (treesit-node-parent node))
-           (idx (treesit-node-index node t))
-           (child-count (treesit-node-child-count parent t)))
-      (when (< (+ idx pb-lisp/selection-count) (1- child-count))
-        (setq pb-lisp/selection-count (1+ pb-lisp/selection-count))
-        (pb-lisp/update-overlay-from-nodes))))
-
-  (defun pb-lisp/shrink-selection-forward ()
-    "Shrink the current selection by removing the last node in the forward direction."
-    (interactive)
-    (when (> pb-lisp/selection-count 0)
-      (setq pb-lisp/selection-count (1- pb-lisp/selection-count))
-      (pb-lisp/update-overlay-from-nodes)))
-
-  (defun pb-lisp/reset-selection ()
-    "Reset to single node selection."
-    (interactive)
-    (setq pb-lisp/selection-count 0)
-    (pb-lisp/update-overlay-from-nodes))))
+       ;; Advise navigation functions to handle narrowing
+       (advice-add 'pb-lisp/update-overlay :after #'pb-lisp/maybe-narrow-after-navigation))
 
 (progn :bindings
 
@@ -1111,7 +1092,6 @@
                       (pb-lisp/replace-selection res))))))))
 
 (provide 'pb-lisp)
-;;; pb-lisp.el ends here
 
 
 
@@ -1123,103 +1103,81 @@
 
 
 
+(quote
+ (progn :indented-overlays
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-(pb/comment :indented-overlays
-
-            (defun pb-lisp/update-overlay2 ()
-              "Update the highlight overlay based on the current selection.
+  (defun pb-lisp/update-overlay2 ()
+    "Update the highlight overlay based on the current selection.
                        Creates overlays to highlight the region between the start and end
                        positions specified in `pb-lisp/selection`. Handles multi-line
                        selections by creating a separate overlay for each line in the
                        selected region."
-              (interactive)
-              (pb-lisp/delete-overlay)
-              (let* ((beg (pb-lisp/selection-start))
-                     (end (pb-lisp/selection-end))
-                     (column-beg (save-excursion (goto-char beg) (current-column)))
-                     (column-end (save-excursion (goto-char end) (current-column)))
-                     (column-start (min column-beg column-end))
-                     (line-beg (line-number-at-pos beg))
-                     (line-end (line-number-at-pos end)))
+    (interactive)
+    (pb-lisp/delete-overlay)
+    (let* ((beg (pb-lisp/selection-start))
+           (end (pb-lisp/selection-end))
+           (column-beg (save-excursion (goto-char beg) (current-column)))
+           (column-end (save-excursion (goto-char end) (current-column)))
+           (column-start (min column-beg column-end))
+           (line-beg (line-number-at-pos beg))
+           (line-end (line-number-at-pos end)))
 
-                ;; Create an overlay for each line in the rectangle
-                (save-excursion
-                  (goto-char (point-min))
-                  (forward-line (1- line-beg))
-                  (while (<= (line-number-at-pos) line-end)
-                    (let ((start (progn (move-to-column column-start t) (point)))
-                          (end (progn (end-of-line) (min end (point)))))
-                      (let ((overlay (make-overlay start (max (1+ start) end))))
-                        (overlay-put overlay 'face 'pb-lisp/overlay-face)
-                        (push overlay pb-lisp/overlays)))
-                    (forward-line 1)))))
+      ;; Create an overlay for each line in the rectangle
+      (save-excursion
+        (goto-char (point-min))
+        (forward-line (1- line-beg))
+        (while (<= (line-number-at-pos) line-end)
+          (let ((start (progn (move-to-column column-start t) (point)))
+                (end (progn (end-of-line) (min end (point)))))
+            (let ((overlay (make-overlay start (max (1+ start) end))))
+              (overlay-put overlay 'face 'pb-lisp/overlay-face)
+              (push overlay pb-lisp/overlays)))
+          (forward-line 1)))))
 
-            (defun pb-lisp/update-overlay3 ()
-              "Update the highlight overlay based on the current selection with improved handling.
+  (defun pb-lisp/update-overlay3 ()
+    "Update the highlight overlay based on the current selection with improved handling.
                        Creates overlays to highlight the region between the start and end
                        positions specified in `pb-lisp/selection`. Intelligently handles multi-line
                        selections by creating appropriate overlays for each line, ensuring proper
                        highlighting even when subsequent lines start before the column-start position."
-              (interactive)
-              (pb-lisp/delete-overlay)
-              (let* ((beg (pb-lisp/selection-start))
-                     (end (pb-lisp/selection-end))
-                     (column-beg (save-excursion (goto-char beg) (current-column)))
-                     (column-end (save-excursion (goto-char end) (current-column)))
-                     (column-start (min column-beg column-end))
-                     (line-beg (line-number-at-pos beg))
-                     (line-end (line-number-at-pos end)))
+    (interactive)
+    (pb-lisp/delete-overlay)
+    (let* ((beg (pb-lisp/selection-start))
+           (end (pb-lisp/selection-end))
+           (column-beg (save-excursion (goto-char beg) (current-column)))
+           (column-end (save-excursion (goto-char end) (current-column)))
+           (column-start (min column-beg column-end))
+           (line-beg (line-number-at-pos beg))
+           (line-end (line-number-at-pos end)))
 
-                ;; Create an overlay for each line in the rectangle
-                (save-excursion
-                  (goto-char (point-min))
-                  (forward-line (1- line-beg))
+      ;; Create an overlay for each line in the rectangle
+      (save-excursion
+        (goto-char (point-min))
+        (forward-line (1- line-beg))
 
-                  ;; Handle first line specially - always highlight from beg to end of line
-                  (let* ((line-end-pos (line-end-position))
-                         (effective-end (min end line-end-pos))
-                         (overlay (make-overlay beg (max (1+ beg) effective-end))))
-                    (overlay-put overlay 'face 'pb-lisp/overlay-face)
-                    (push overlay pb-lisp/overlays))
+        ;; Handle first line specially - always highlight from beg to end of line
+        (let* ((line-end-pos (line-end-position))
+               (effective-end (min end line-end-pos))
+               (overlay (make-overlay beg (max (1+ beg) effective-end))))
+          (overlay-put overlay 'face 'pb-lisp/overlay-face)
+          (push overlay pb-lisp/overlays))
 
-                  ;; Handle subsequent lines
-                  (forward-line 1)
-                  (while (<= (line-number-at-pos) line-end)
-                    (let* ((line-start-column (save-excursion
-                                                (back-to-indentation)
-                                                (current-column)))
-                           (line-end-pos (line-end-position))
-                           (effective-start (progn
-                                              (move-to-column (if (lispy--empty-line-p)
-                                                                  column-start
-                                                                (min line-start-column column-start))
-                                                              t)
-                                              (point)))
-                           (effective-end (min end line-end-pos)))
-                      (when (<= effective-end line-end-pos) ; Ensure we don't go past EOL
-                        (let ((overlay (make-overlay effective-start (max (1+ effective-start) effective-end))))
-                          (overlay-put overlay 'face 'pb-lisp/overlay-face)
-                          (push overlay pb-lisp/overlays))))
-                    (forward-line 1))))))
+        ;; Handle subsequent lines
+        (forward-line 1)
+        (while (<= (line-number-at-pos) line-end)
+          (let* ((line-start-column (save-excursion
+                                      (back-to-indentation)
+                                      (current-column)))
+                 (line-end-pos (line-end-position))
+                 (effective-start (progn
+                                    (move-to-column (if (lispy--empty-line-p)
+                                                        column-start
+                                                      (min line-start-column column-start))
+                                                    t)
+                                    (point)))
+                 (effective-end (min end line-end-pos)))
+            (when (<= effective-end line-end-pos) ; Ensure we don't go past EOL
+              (let ((overlay (make-overlay effective-start (max (1+ effective-start) effective-end))))
+                (overlay-put overlay 'face 'pb-lisp/overlay-face)
+                (push overlay pb-lisp/overlays))))
+          ))))))
