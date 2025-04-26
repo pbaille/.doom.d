@@ -964,6 +964,7 @@
 
        (defvar pb-lisp/motion-functions
          '(pb-lisp/goto-first-child
+           pb-lisp/goto-parent
            pb-lisp/goto-last-child
            pb-lisp/goto-next-sibling
            pb-lisp/goto-prev-sibling
@@ -991,7 +992,6 @@
        (defun pb-lisp/get-progn-keyword (node)
          "Extract the keyword from a progn node if available."
          (when (and node (not (string= "source_file" (treesit-node-type node))))
-           (print node)
            (let ((node-text (treesit-node-text node)))
              (when (string-match "^(progn[[:space:]\n]+\\(:[^[:space:]\n]+\\)" node-text)
                (match-string 1 node-text)))))
@@ -1019,11 +1019,6 @@
                (push keyword path))
              (setq current-node (treesit-node-parent current-node)))
            path))
-
-       (defun pb-lisp/header-line-navigation-advice (orig-fun &rest args)
-         "Temporarily widen the buffer before navigation if narrow mode is active."
-         (apply orig-fun args)
-         (pb-lisp/update-header-line))
 
        (pb-lisp/add-navigation-advice :after #'pb-lisp/update-header-line))
 
@@ -1070,17 +1065,6 @@
 
        (progn :motion-with-widening
 
-              ;; List of all motion functions that need to be adviced
-              (defvar pb-lisp/motion-functions
-                '(pb-lisp/goto-parent
-                  pb-lisp/goto-first-child
-                  pb-lisp/goto-last-child
-                  pb-lisp/goto-next-sibling
-                  pb-lisp/goto-prev-sibling
-                  pb-lisp/goto-first-sibling
-                  pb-lisp/goto-last-sibling
-                  pb-lisp/goto-nth-child))
-
               ;; Define advice to temporarily widen buffer before navigation
               (defun pb-lisp/widen-before-navigation-advice (orig-fun &rest args)
                 "Temporarily widen the buffer before navigation if narrow mode is active."
@@ -1088,18 +1072,9 @@
                   (widen))
                 (apply orig-fun args))
 
-              ;; Apply the advice to all motion functions
-              (dolist (func pb-lisp/motion-functions)
-                (advice-add func :around #'pb-lisp/widen-before-navigation-advice))
+              (pb-lisp/add-navigation-advice :around #'pb-lisp/widen-before-navigation-advice)
 
-              ;; Optional function to remove all advice if needed
-              (defun pb-lisp/remove-navigation-advice ()
-                "Remove widening advice from all motion functions."
-                (interactive)
-                (dolist (func pb-lisp/motion-functions)
-                  (advice-remove func #'pb-lisp/widen-before-navigation-advice)))
-
-              '(pb-lisp/remove-navigation-advice)))
+              '(pb-lisp/remove-navigation-advice #'pb-lisp/widen-before-navigation-advice)))
 
 (progn :bindings
 
