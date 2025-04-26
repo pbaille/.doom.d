@@ -34,11 +34,10 @@
 
 (defun pb-sexpr/indent ()
   (interactive)
-  (if (thing-at-point 'string)
-      (pb-multiline-strings/indent-in-place (point) (symex--get-end-point 1))
-    (let ((beg (point)))
-      (indent-region beg (save-excursion (evil-jump-item)))
-      (pb-sexpr/shift-expression (- beg (point))))))
+  (let ((beg (point)))
+    (indent-region beg (save-excursion (evil-jump-item)))
+    (pb-multiline-strings/indent-in-place (point) (save-excursion (evil-jump-item)))
+    (pb-sexpr/shift-expression (- beg (point)))))
 
 (defun pb-sexpr/shift-expressions (delta)
   (let ((p (point)))
