@@ -234,6 +234,30 @@
            (when split
              (pb-misc/dwim-split))))
 
+       (defun pb-misc/elisp-eval (&optional split)
+         "Create or switch to elisp interactive eval buffer, intended to replace calling #'eval-expression.
+          This creates a dedicated buffer for evaluating Emacs Lisp expressions interactively,
+          with proper syntax highlighting and evaluation results displayed inline."
+         (interactive)
+         (let* ((buffer-name "*elisp-eval*")
+                (buffer-exists (get-buffer buffer-name))
+                (buffer (get-buffer-create buffer-name))
+                (source-buffer (current-buffer)))
+           (with-current-buffer buffer
+             (unless buffer-exists
+               (emacs-lisp-mode)
+               (flycheck-mode -1)
+               (symex-mode-interface)
+               (insert ";;; -*- lexical-binding: t; -*-\n\n;; Evaluate expressions with C-x C-e\n\n"
+                       "(with-current-buffer "
+                       "\"" (buffer-name source-buffer) "\""
+                       "\n ())")
+               (goto-char (- (point-max)
+                             2))))
+           (switch-to-buffer buffer)
+           (when split
+             (pb-misc/dwim-split))))
+
        (defun pb-misc/new-buffer ()
          "Creates a new buffer prompting user for name and major mode."
          (interactive)
