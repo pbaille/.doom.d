@@ -59,6 +59,16 @@
              (setq-local pb-fold/semi-folded nil))
     (pb-fold/semi-fold)))
 
+(defun pb-fold/toggle-fold ()
+  "Toggle between show all and hide all using hs-minor-mode."
+  (interactive)
+  (if (and (boundp 'hs-minor-mode) hs-minor-mode)
+      (save-excursion
+        (if (hs-already-hidden-p)
+            (hs-show-all)
+          (hs-hide-all)))
+    (message "hs-minor-mode is not enabled in this buffer")))
+
 (provide 'pb-fold)
 
 ;;; pb-fold.el ends here.

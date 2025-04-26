@@ -262,7 +262,7 @@
           (:desc "dired kill all" "s-k" #'pb-misc/kill-all-dired-buffers))
 
  (:prefix ("s-t" . "toggle")
-          (:desc "folding" "s-t" #'hs-toggle-hiding)
+          (:desc "folding" "s-t" #'pb-fold/toggle-fold)
           (:desc "fold level" "t l" #'hs-hide-level)
           (:desc "fold show block" "t o" #'hs-show-block)
           (:desc "flycheck" "f" #'flycheck-mode)
