@@ -976,7 +976,6 @@
                (pb-lisp/narrow-to-current)
                (message "Narrow mode enabled - navigating will stay narrowed to current node"))
            (widen)
-           (pb-lisp/indent-parent-node)
            (message "Narrow mode disabled")))
 
        ;; Narrow to current node
@@ -1000,7 +999,41 @@
            (pb-lisp/narrow-to-current)))
 
        ;; Advise navigation functions to handle narrowing
-       (advice-add 'pb-lisp/update-overlay :after #'pb-lisp/maybe-narrow-after-navigation))
+       (advice-add 'pb-lisp/update-overlay :after #'pb-lisp/maybe-narrow-after-navigation)
+
+       (progn :motion-with-widening
+
+              ;; List of all motion functions that need to be adviced
+              (defvar pb-lisp/motion-functions
+                '(pb-lisp/goto-parent
+                  pb-lisp/goto-first-child
+                  pb-lisp/goto-last-child
+                  pb-lisp/goto-next-sibling
+                  pb-lisp/goto-prev-sibling
+                  pb-lisp/goto-first-sibling
+                  pb-lisp/goto-last-sibling
+                  pb-lisp/goto-nth-child))
+
+              ;; Define advice to temporarily widen buffer before navigation
+              (defun pb-lisp/widen-before-navigation-advice (orig-fun &rest args)
+                "Temporarily widen the buffer before navigation if narrow mode is active."
+                (when pb-lisp/narrow-mode
+                  (widen))
+                (apply orig-fun args))
+
+              ;; Apply the advice to all motion functions
+              (dolist (func pb-lisp/motion-functions)
+                (advice-add func :around #'pb-lisp/widen-before-navigation-advice))
+
+              ;; Optional function to remove all advice if needed
+              (defun pb-lisp/remove-navigation-advice ()
+                "Remove widening advice from all motion functions."
+                (interactive)
+                (dolist (func pb-lisp/motion-functions)
+                  (advice-remove func #'pb-lisp/widen-before-navigation-advice)))
+
+              '(pb-lisp/remove-navigation-advice)))
+
 
 (progn :bindings
 
@@ -1059,8 +1092,6 @@
            (car binding)
            (cadr binding))))
 
-(message "pb-lisp (treesit) loaded")
-
 (progn :gptel-current-node
 
        (require 'pb-gptel)
@@ -1090,6 +1121,8 @@
                 (or callback
                     (lambda (res info)
                       (pb-lisp/replace-selection res))))))))
+
+(message "pb-lisp (treesit) loaded")
 
 (provide 'pb-lisp)
 
@@ -1179,5 +1212,4 @@
             (when (<= effective-end line-end-pos) ; Ensure we don't go past EOL
               (let ((overlay (make-overlay effective-start (max (1+ effective-start) effective-end))))
                 (overlay-put overlay 'face 'pb-lisp/overlay-face)
-                (push overlay pb-lisp/overlays))))
-          ))))))
+                (push overlay pb-lisp/overlays))))))))))
