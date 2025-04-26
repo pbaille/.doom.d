@@ -960,6 +960,73 @@
          (funcall (pb-lisp/get-method :eval-pretty)
                   (pb-lisp/current-selection-as-string))))
 
+(progn :motion-advice
+
+       (defvar pb-lisp/motion-functions
+         '(pb-lisp/goto-first-child
+           pb-lisp/goto-last-child
+           pb-lisp/goto-next-sibling
+           pb-lisp/goto-prev-sibling
+           pb-lisp/goto-first-sibling
+           pb-lisp/goto-last-sibling
+           pb-lisp/goto-nth-child))
+
+       (defun pb-lisp/add-navigation-advice (&rest args)
+         (dolist (func pb-lisp/motion-functions)
+           (apply #'advice-add func args)))
+
+       (defun pb-lisp/remove-navigation-advice (f)
+         "Remove widening advice from all motion functions."
+         (interactive)
+         (dolist (func pb-lisp/motion-functions)
+           (advice-remove func f))))
+
+(progn :header-line
+
+       ;; Variable for header line format
+       (defvar-local pb-lisp/header-line-format nil
+         "Format string for the header line in pb-lisp narrow mode.")
+
+       ;; Function to get the keyword from a progn node
+       (defun pb-lisp/get-progn-keyword (node)
+         "Extract the keyword from a progn node if available."
+         (when (and node (not (string= "source_file" (treesit-node-type node))))
+           (print node)
+           (let ((node-text (treesit-node-text node)))
+             (when (string-match "^(progn[[:space:]\n]+\\(:[^[:space:]\n]+\\)" node-text)
+               (match-string 1 node-text)))))
+
+       ;; Function to format the header line
+       (defun pb-lisp/update-header-line ()
+         "Update the header line to show the current position in the code tree."
+         (let* ((node (pb-lisp/get-current-node))
+                (path (pb-lisp/build-code-path node))
+                (path-str (if path
+                              (mapconcat #'identity path " > ")
+                            "Top level")))
+           ;; (print (kmq path node))
+           (setq-local pb-lisp/header-line-format
+                       (propertize path-str 'face 'outline-2))
+           (setq header-line-format pb-lisp/header-line-format)))
+
+       ;; Function to build the path from root to current node
+       (defun pb-lisp/build-code-path (node)
+         "Build a path of progn keywords from root to the current node."
+         (let ((path '())
+               (current-node node))
+           (while current-node
+             (when-let ((keyword (pb-lisp/get-progn-keyword current-node)))
+               (push keyword path))
+             (setq current-node (treesit-node-parent current-node)))
+           path))
+
+       (defun pb-lisp/header-line-navigation-advice (orig-fun &rest args)
+         "Temporarily widen the buffer before navigation if narrow mode is active."
+         (apply orig-fun args)
+         (pb-lisp/update-header-line))
+
+       (pb-lisp/add-navigation-advice :after #'pb-lisp/update-header-line))
+
 (progn :narrow-mode
 
        ;; Flag to track if we're in narrow mode
@@ -1033,7 +1100,6 @@
                   (advice-remove func #'pb-lisp/widen-before-navigation-advice)))
 
               '(pb-lisp/remove-navigation-advice)))
-
 
 (progn :bindings
 
