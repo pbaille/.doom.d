@@ -239,24 +239,41 @@
           This creates a dedicated buffer for evaluating Emacs Lisp expressions interactively,
           with proper syntax highlighting and evaluation results displayed inline."
          (interactive)
-         (let* ((buffer-name "*elisp-eval*")
+         (let* ((source-buffer (current-buffer))
+                (source-window (selected-window))
+                (source-buffer-name (buffer-name source-buffer))
+                (buffer-name (concat "EVAL_" source-buffer-name))
                 (buffer-exists (get-buffer buffer-name))
                 (buffer (get-buffer-create buffer-name))
-                (source-buffer (current-buffer)))
+                (eval-window nil))
            (with-current-buffer buffer
              (unless buffer-exists
                (emacs-lisp-mode)
                (flycheck-mode -1)
                (symex-mode-interface)
-               (insert ";;; -*- lexical-binding: t; -*-\n\n;; Evaluate expressions with C-x C-e\n\n"
+               (insert ";;; -*- lexical-binding: t; -*-\n\n;; Evaluate expressions with C-x C-e\n"
+                       ";; C-c C-c to evaluate buffer and quit window\n"
+                       ";; C-c C-k to quit window without evaluating\n\n"
                        "(with-current-buffer "
-                       "\"" (buffer-name source-buffer) "\""
-                       "\n ())")
-               (goto-char (- (point-max)
-                             2))))
-           (switch-to-buffer buffer)
-           (when split
-             (pb-misc/dwim-split))))
+                       "\"" source-buffer-name "\""
+                       "\n  ())")
+               (goto-char (- (point-max) 2))
+               (local-set-key (kbd "C-c C-c") (lambda ()
+                                                (interactive)
+                                                (eval-buffer)
+                                                (kill-buffer-and-window)
+                                                (when (window-live-p source-window)
+                                                  (select-window source-window))))
+               (local-set-key (kbd "C-c C-k") (lambda ()
+                                                (interactive)
+                                                (kill-buffer-and-window)
+                                                (when (window-live-p source-window)
+                                                  (select-window source-window))))
+               (evil-insert-state)))
+           (if split
+               (setq eval-window (pb-misc/dwim-split buffer))
+             (switch-to-buffer buffer))
+           (select-window (or eval-window (selected-window)))))
 
        (defun pb-misc/new-buffer ()
          "Creates a new buffer prompting user for name and major mode."
