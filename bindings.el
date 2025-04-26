@@ -151,7 +151,9 @@
                  "l" #'next-buffer)
 
           (:desc "previous"
-                 "h" #'previous-buffer))
+                 "h" #'previous-buffer)
+
+          (:desc "elisp eval" "C-e" #'pb-misc/elisp-eval))
 
  (:prefix ("s-q" . "LLMs")
 
