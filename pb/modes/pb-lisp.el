@@ -27,7 +27,13 @@
          :exit-hook (pb-lisp/exit-mode))
 
        (setq evil-pb-lisp-state-cursor `(box "magenta"))
-       (defvar pb-lisp/overlay-background-color "#3b3042")
+       (progn (setq pb-lisp/overlay-background-color "#352B3B")
+              (defface pb-lisp/overlay-face
+                `((t
+                   :inherit symex--current-node-face
+                   :extend nil :background ,pb-lisp/overlay-background-color))
+                "Face used to highlight the current tree node."
+                :group 'pb-lisp/faces))
 
        (defvar pb-lisp/modes
          '(org-mode clojure-mode clojurescript-mode clojurec-mode
@@ -65,6 +71,7 @@
          "Run on exiting sorg mode."
          (print "exit pb-lisp")
          (pb-lisp/delete-overlay)
+         (setq-local header-line-format nil)
          (when (eq major-mode 'org-mode)
            (pb-org-babel/init-buffer))
          (pb-lisp/reset-local-fringe-face)))
@@ -447,7 +454,50 @@
          (let* ((node (pb-lisp/get-current-node))
                 (count (treesit-node-child-count node))
                 (child (and (> count 0) (treesit-node-child node (1- count)))))
-           (pb-lisp/goto-node child "No child node found"))))
+           (pb-lisp/goto-node child "No child node found")))
+
+       (defun pb-lisp/goto-next-line ()
+         "Move cursor to the next line, disabling overlay and resetting current-node."
+         (interactive)
+         (let ((current-pos (point)))
+           (forward-line 1)
+           (when (eq (point) current-pos) ; If we're at the end of the buffer
+             (goto-char (point-max)))
+           (setq-local pb-lisp/current-node nil) ; Reset current node
+           (pb-lisp/delete-overlay)              ; Remove highlighting
+           (back-to-indentation)))
+
+       (defun pb-lisp/goto-previous-line ()
+         "Move cursor to the previous line, disabling overlay and resetting current-node."
+         (interactive)
+         (let ((current-pos (point)))
+           (forward-line -1)
+           (when (eq (point) current-pos) ; If we're at the beginning of the buffer
+             (goto-char (point-min)))
+           (setq-local pb-lisp/current-node nil) ; Reset current node
+           (pb-lisp/delete-overlay)              ; Remove highlighting
+           (back-to-indentation)))
+
+       (defun pb-lisp/goto-next-sibling-scrolling ()
+         "Goto to next sibling, scrolling buffer to keep cursor at the same vertical position in window."
+         (interactive)
+         (let* ((win-start (window-start))
+                (pos-in-win (- (point) win-start))
+                (line-pos (count-screen-lines win-start (point))))
+           (when (pb-lisp/goto-next-sibling)
+             ;; Adjust scroll position to keep cursor at approximately the same screen line
+             (recenter line-pos))))
+
+       (defun pb-lisp/goto-previous-sibling-scrolling ()
+         "Goto to previous sibling, scrolling buffer to keep cursor at the same vertical position in window."
+         (interactive)
+         (let* ((win-start (window-start))
+                (pos-in-win (- (point) win-start))
+                (line-pos (count-screen-lines win-start (point))))
+           (when (pb-lisp/goto-prev-sibling)
+             ;; Adjust scroll position to keep cursor at approximately the same screen line
+             (recenter line-pos)))))
+
 
 (progn :selection
 
@@ -637,7 +687,7 @@
              ;; Return to original child
              (when current-index
                (pb-lisp/goto-nth-child current-index))
-             ;; TODO not pretty, arange this
+             ;; TODO not pretty, arrange this
              (when (eq major-mode 'org-mode)
                (evil-pb-lisp-state -1)
                (evil-pb-lisp-state 1))))))
@@ -1013,7 +1063,7 @@
        (defun pb-lisp/build-code-path (node)
          "Build a path of progn keywords from root to the current node."
          (let ((path '())
-               (current-node node))
+               (current-node (treesit-node-parent node)))
            (while current-node
              (when-let ((keyword (pb-lisp/get-progn-keyword current-node)))
                (push keyword path))
@@ -1094,8 +1144,15 @@
                "l" #'pb-lisp/goto-next-sibling
                "j" #'pb-lisp/enter-node
                "k" #'pb-lisp/goto-parent
+               ;; sibling moves, fixed cursor
+               (kbd "C-S-l") #'pb-lisp/goto-next-sibling-scrolling
+               (kbd "C-S-h") #'pb-lisp/goto-previous-sibling-scrolling
+               ;; first and last
                (kbd "C-l") #'pb-lisp/goto-last-sibling
                (kbd "C-h") #'pb-lisp/goto-first-sibling
+               ;; line moves
+               (kbd "C-j") #'pb-lisp/goto-next-line
+               (kbd "C-k") #'pb-lisp/goto-previous-line
 
                "L" #'pb-lisp/extend-selection-to-next-sibling
                "H" #'pb-lisp/extend-selection-to-prev-sibling
