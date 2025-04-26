@@ -68,7 +68,8 @@
            (pb-lisp/set-local-fringe-face)))
 
        (defun pb-lisp/exit-mode ()
-         "Run on exiting sorg mode."
+         "Run on exiting sorg mode.
+          oiu"
          (print "exit pb-lisp")
          (pb-lisp/delete-overlay)
          (setq-local header-line-format nil)
@@ -186,8 +187,8 @@
        (defun pb-lisp/get-topmost-node (node)
          "Return the highest node in the tree starting from NODE.
 
-         The returned node is the highest possible node that has the same
-         start position as NODE, but excludes the root source_file node."
+          The returned node is the highest possible node that has the same
+          start position as NODE, but excludes the root source_file node."
          (let ((node-start-pos (treesit-node-start node))
                (parent (treesit-node-parent node)))
            (if parent
@@ -246,15 +247,15 @@
 
        (defun pb-lisp/get-current-node-bounds ()
          "Get the start and end positions of the current tree-sitter node.
-         Returns a cons cell (start . end) with buffer positions."
+          Returns a cons cell (start . end) with buffer positions."
          (let ((node (pb-lisp/get-current-node)))
            (cons (treesit-node-start node) (treesit-node-end node))))
 
        (defun pb-lisp/current-node-as-string ()
          "Get the string content of the current treesit node.
-         Returns the text between the start and end positions of the current
-         node as determined by `pb-lisp/get-current-node', or nil if no valid
-         node is found at point."
+          Returns the text between the start and end positions of the current
+          node as determined by `pb-lisp/get-current-node', or nil if no valid
+          node is found at point."
          (let* ((node (pb-lisp/get-current-node))
                 (start (treesit-node-start node))
                 (end (treesit-node-end node)))
@@ -292,8 +293,8 @@
 
        (defun pb-lisp/current-selection-as-string ()
          "Get the string content of the current selection overlay.
-         Returns the text within the bounds of `pb-lisp/current-overlay', or
-         nil if the overlay is not properly set or has invalid bounds."
+          Returns the text within the bounds of `pb-lisp/current-overlay', or
+          nil if the overlay is not properly set or has invalid bounds."
          (let* ((start (pb-lisp/selection-start))
                 (end (pb-lisp/selection-end)))
            (when (and start end)
@@ -343,7 +344,7 @@
 
        (defun pb-lisp/get-node-child-index (node parent)
          "Get the index of NODE among the named children of PARENT.
-         Returns nil if NODE is not a child of PARENT."
+          Returns nil if NODE is not a child of PARENT."
          (when (and node parent)
            (let ((child-count (treesit-node-child-count parent t)))
              (cl-loop for i from 0 below child-count
@@ -353,7 +354,7 @@
 
        (defun pb-lisp/get-node-idx (node)
          "Get the index of NODE among the named children of PARENT.
-         Returns nil if NODE is not a child of PARENT."
+          Returns nil if NODE is not a child of PARENT."
          (when node
            (let* ((parent (treesit-node-parent node))
                   (children (treesit-node-children parent)))
@@ -544,7 +545,7 @@
 
        (defun pb-lisp/swap-siblings_old (direction)
          "Transpose the current node with its next or previous sibling.
-         DIRECTION should be 'next or 'prev."
+          DIRECTION should be 'next or 'prev."
          (let* ((node (pb-lisp/get-current-node))
                 (parent (treesit-node-parent node))
                 (sibling (cond ((eq direction 'next) (treesit-node-next-sibling node t))
@@ -593,7 +594,7 @@
 
        (defun pb-lisp/swap-siblings (direction)
          "Transpose the current node with its next or previous sibling.
-         DIRECTION should be 'next or 'prev."
+          DIRECTION should be 'next or 'prev."
          (let* ((nodes (pb-lisp/get-selected-nodes))
                 (first-node (car nodes))
                 (parent (treesit-node-parent first-node))
@@ -652,9 +653,9 @@
 
        (defun pb-lisp/join-trailing-delimiters (start end)
          "Join trailing delimiters with preceding expressions.
-         Closing delimiters should never be the first thing of line, they should be
-         close to the last element of the enclosing expression.
-         Operates on region between START and END."
+          Closing delimiters should never be the first thing of line, they should be
+          close to the last element of the enclosing expression.
+          Operates on region between START and END."
          (interactive "r")
 
          (save-excursion
@@ -792,6 +793,27 @@
            (goto-char start)
            (save-excursion (insert " "))
            ;; (pb-lisp/indent-parent-node)
+           (evil-insert-state)))
+
+       (defun pb-lisp/insert-after-with-new-line ()
+         "Enter insert state after the current node, adding a new line first."
+         (interactive)
+         (let* ((end (pb-lisp/selection-end)))
+           (goto-char end)
+           (insert "\n")
+           (indent-according-to-mode)
+           (evil-insert-state)))
+
+       (defun pb-lisp/insert-before-with-new-line ()
+         "Enter insert state before the current node, adding a new line first."
+         (interactive)
+         (let* ((start (pb-lisp/selection-start)))
+           (goto-char start)
+           (save-excursion
+             (beginning-of-line)
+             (insert "\n"))
+           (forward-line -1)
+           (indent-according-to-mode)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-at-begining ()
@@ -981,10 +1003,10 @@
            (clojurec-mode ,@pb-lisp/clojure-methods)
            (org-mode ,@pb-lisp/org-methods))
          "Maps tree-sitter language symbols to a plist of methods/configs.
-         Each language entry contains:
-         - :parser-lang - the language symbol for the tree-sitter parser
-         - :get-node - the string name used when getting nodes with treesit-node-at
-         - :modes - list of major modes associated with this language")
+          Each language entry contains:
+          - :parser-lang - the language symbol for the tree-sitter parser
+          - :get-node - the string name used when getting nodes with treesit-node-at
+          - :modes - list of major modes associated with this language")
 
        (setq pb-lisp/major-mode->methods
              `((emacs-lisp-mode ,@pb-lisp/elisp-methods)
@@ -1005,7 +1027,7 @@
 
        (defun pb-lisp/eval-pretty ()
          "Evaluate and pretty-print the current Lisp expression.
-         Displays the result in a buffer named 'ELisp_eval'."
+          Displays the result in a buffer named 'ELisp_eval'."
          (interactive)
          (funcall (pb-lisp/get-method :eval-pretty)
                   (pb-lisp/current-selection-as-string))))
@@ -1173,6 +1195,8 @@
 
                "c" #'pb-lisp/change-selection
                "A" #'pb-lisp/insert-after
+               "O" #'pb-lisp/insert-before-with-new-line
+               "o" #'pb-lisp/insert-after-with-new-line
                "a" #'pb-lisp/insert-at-end
                "I" #'pb-lisp/insert-before
                "i" #'pb-lisp/insert-at-begining
@@ -1239,10 +1263,10 @@
 
   (defun pb-lisp/update-overlay2 ()
     "Update the highlight overlay based on the current selection.
-                       Creates overlays to highlight the region between the start and end
-                       positions specified in `pb-lisp/selection`. Handles multi-line
-                       selections by creating a separate overlay for each line in the
-                       selected region."
+     Creates overlays to highlight the region between the start and end
+     positions specified in `pb-lisp/selection`. Handles multi-line
+     selections by creating a separate overlay for each line in the
+     selected region."
     (interactive)
     (pb-lisp/delete-overlay)
     (let* ((beg (pb-lisp/selection-start))
@@ -1267,10 +1291,10 @@
 
   (defun pb-lisp/update-overlay3 ()
     "Update the highlight overlay based on the current selection with improved handling.
-                       Creates overlays to highlight the region between the start and end
-                       positions specified in `pb-lisp/selection`. Intelligently handles multi-line
-                       selections by creating appropriate overlays for each line, ensuring proper
-                       highlighting even when subsequent lines start before the column-start position."
+     Creates overlays to highlight the region between the start and end
+     positions specified in `pb-lisp/selection`. Intelligently handles multi-line
+     selections by creating appropriate overlays for each line, ensuring proper
+     highlighting even when subsequent lines start before the column-start position."
     (interactive)
     (pb-lisp/delete-overlay)
     (let* ((beg (pb-lisp/selection-start))
@@ -1309,5 +1333,4 @@
                  (effective-end (min end line-end-pos)))
             (when (<= effective-end line-end-pos) ; Ensure we don't go past EOL
               (let ((overlay (make-overlay effective-start (max (1+ effective-start) effective-end))))
-                (overlay-put overlay 'face 'pb-lisp/overlay-face)
-                (push overlay pb-lisp/overlays))))))))))
+                )
