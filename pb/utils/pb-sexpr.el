@@ -13,7 +13,7 @@
 ;;; Code:
 
 (require 'symex)
-(require 'pb-multiline-strings)
+(require 'pb-format)
 '(require 'thing-at-point)
 
 (defun pb-sexpr/shift-expression (delta)
@@ -36,7 +36,7 @@
   (interactive)
   (let ((beg (point)))
     (indent-region beg (save-excursion (evil-jump-item)))
-    (pb-multiline-strings/indent-in-place (point) (save-excursion (evil-jump-item)))
+    (pb-format/indent-strings (point) (save-excursion (evil-jump-item)))
     (pb-sexpr/shift-expression (- beg (point)))))
 
 (defun pb-sexpr/shift-expressions (delta)

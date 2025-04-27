@@ -17,6 +17,7 @@
 (require 'symex)
 (require 'pb-symex)
 (require 'flycheck)
+(require 'pb-format)
 
 (defun pb-misc/open-google ()
   "Open Google in Emacs using xwidget-webkit browser."
@@ -356,39 +357,12 @@
          (scroll-down-line 1)
          (previous-line 1)))
 
-(defun pb-misc/well-formed-lisp-buffer-p ()
-  "Check if the current buffer has well balanced parens.
-   Raises an error and goes to the position if unbalanced."
+(defun pb-misc/save-buffer ()
+  "Wraps save-buffer, handling lisp formatting stuff before doing it."
   (interactive)
-  (save-excursion
-    (condition-case err
-        (progn
-          (goto-char (point-min))
-          (scan-sexps (point-min) (point-max))
-          (when (called-interactively-p 'any)
-            (message "Balanced expressions: OK"))
-          t)
-      (scan-error
-       (goto-char (nth 2 err)) ; Go to the error position
-       (let ((error-msg (format "Unbalanced expression at line %d: %s"
-                                (line-number-at-pos)
-                                (error-message-string err))))
-         (when (called-interactively-p 'any)
-           (pulse-momentary-highlight-one-line (point)))
-         (error error-msg))))))
-
-(defadvice save-buffer (around check-balanced-expressions activate)
-  "Check for balanced expressions before saving Lisp buffers."
-  (condition-case err
-      (progn
-        (when (memq major-mode pb-lisp/modes)
-          (pb-misc/well-formed-lisp-buffer-p))
-        ad-do-it)
-    (error
-     (message "Save canceled: %s" (error-message-string err))
-     (pulse-momentary-highlight-one-line (point))
-     (sit-for 1)
-     nil)))
+  (if (memq major-mode pb-format/lisp-modes)
+    (pb-format/save-lisp-buffer)
+    (save-buffer)))
 
 (defun pb-misc/switch-to-meta-buffer ()
   "Switch between related meta buffers and their source buffer.

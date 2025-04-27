@@ -259,7 +259,7 @@
           (:desc "copy file" "C" #'doom/copy-this-file)
           (:desc "move file" "R" #'doom/move-this-file)
           (:desc "find project file" "p" #'projectile-find-file)
-          (:desc "save file" "s-s" #'save-buffer)
+          (:desc "save file" "s-s" #'pb-misc/save-buffer)
           (:desc "delete file" "D" #'doom/delete-this-file))
 
  (:prefix ("s-d" . "dired")
