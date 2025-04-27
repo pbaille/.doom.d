@@ -175,7 +175,7 @@
 
 (defun pb-org/move (move)
   "Do MOVE taking care of narrowed subtree.
-If buffer is narrowed, widen it before moving then narrow back."
+   If buffer is narrowed, widen it before moving then narrow back."
   (interactive)
   (if (pb-org/top-of-narrowed-subtree-p)
       (progn (pb-org/widen)
@@ -185,7 +185,7 @@ If buffer is narrowed, widen it before moving then narrow back."
 
 (defun pb-org/parent ()
   "Move to parent heading.
-If buffer is narrowed, widen it and narrow the next node"
+   If buffer is narrowed, widen it and narrow the next node"
   (interactive)
   (let ((node-beg (car (pb-org/node-bounds))))
     (if (equal (point) node-beg)
@@ -310,7 +310,7 @@ If buffer is narrowed, widen it and narrow the next node"
 
 (defun pb-org/forward ()
   "Move forward at the same level.
-If buffer is narrowed, widen it and narrow the next node"
+   If buffer is narrowed, widen it and narrow the next node"
   (interactive)
   (if (pb-org/top-of-narrowed-subtree-p)
       (progn (pb-org/widen)
@@ -335,7 +335,7 @@ If buffer is narrowed, widen it and narrow the next node"
 
 (defun pb-org/backward ()
   "Move backward at the same level.
-If buffer is narrowed, widen it and narrow the previous node"
+   If buffer is narrowed, widen it and narrow the previous node"
   (interactive)
   (if (pb-org/top-of-narrowed-subtree-p)
       (progn (pb-org/widen)
@@ -452,9 +452,9 @@ If buffer is narrowed, widen it and narrow the previous node"
 
 (defun pb-org/symex-eval ()
   "Evaluate the current source block using the appropriate symex method.
-This function retrieves the major mode corresponding to the current
-source block language and then calls the symex evaluation method
-appropriate for that language."
+   This function retrieves the major mode corresponding to the current
+   source block language and then calls the symex evaluation method
+   appropriate for that language."
   (funcall (let ((major-mode (pb-org/get-current-code-block-mode)))
              (symex-interface-get-method :eval))))
 
@@ -482,7 +482,7 @@ appropriate for that language."
 
 (defun pb-org/code-block-content-bounds ()
   "Get the bounds of the source block content at point.
-Return a cons cell with (start . end) positions of the content."
+   Return a cons cell with (start . end) positions of the content."
   (when (org-at-block-p)
     (save-excursion
       (let ((element (org-element-at-point)))
@@ -494,7 +494,7 @@ Return a cons cell with (start . end) positions of the content."
 
 (defun pb-org/in-code-block-p ()
   "Return non-nil if point is inside a code block.
-More specifically, return the language of the code block."
+   More specifically, return the language of the code block."
   (let ((element (org-element-at-point)))
     (and (eq (car element) 'src-block)
          (list (org-element-property :begin element)
