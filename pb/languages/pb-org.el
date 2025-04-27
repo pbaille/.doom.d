@@ -135,6 +135,7 @@
         (pb-org/semifold))
     (cond ((pb-org/folded-p) (org-cycle))
           ((pb-org/semifolded-p) (org-fold-show-subtree))
+          ((pb-org/at-code-block-p) (org-cycle))
           (t (org-fold-hide-subtree)))))
 
 ;; narrowing
