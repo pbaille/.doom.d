@@ -372,6 +372,7 @@
       (:map emacs-lisp-mode-map
        :i "C-p" #'pb-elisp/insert-package-prefix
        :n "s-j e" #'eval-buffer
+       :n "s-j b" #'tree-browser/navigate-buffer
        :n "s-l" #'evil-pb-lisp-state)
 
       (:map clojure-mode-map
