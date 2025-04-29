@@ -14,39 +14,189 @@
   (setq buffer-read-only t)
   (setq-local truncate-lines t))
 
-(progn :actions
+(progn :narrowing
 
-       (defun tree-browser/next-line ()
-         "Move to next line in tree browser."
+       (defvar-local tree-browser/narrow-mode nil
+         "When non-nil, moving the cursor in tree browser automatically narrows the source buffer.")
+
+       (defun tree-browser/toggle-narrow-mode ()
+         "Toggle narrow mode in the tree browser.
+          When enabled, navigating in the tree browser will automatically narrow
+          the source buffer to the node at point. When disabled, widen the source buffer."
          (interactive)
-         (forward-line 1)
-         (back-to-indentation))
+         (setq-local tree-browser/narrow-mode (not tree-browser/narrow-mode))
+         (if tree-browser/narrow-mode
+             (progn
+               (message "Narrow mode enabled")
+               ;; Apply narrowing immediately when turning the mode on
+               (tree-browser/apply-narrowing-at-point))
+           ;; Widen the source buffer when disabling narrow mode
+           (when-let ((buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+             (when (buffer-live-p buffer)
+               (with-current-buffer buffer
+                 (widen)
+                 (hs-show-all)
+                 (when-let ((source-window (get-buffer-window buffer t)))
+                   (with-selected-window source-window
+                     (recenter)))
+                 (message "Source buffer widened"))))
+           (message "Narrow mode disabled")))
 
-       (defun tree-browser/prev-line ()
-         "Move to previous line in tree browser."
+       (defun tree-browser/apply-narrowing-at-point ()
+         "Apply narrowing to the source buffer based on the node at point."
+         (when (and tree-browser/narrow-mode
+                    (buffer-local-value 'tree-browser/source-buffer (current-buffer)))
+           (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                       (start (plist-get node-data :start))
+                       (end (plist-get node-data :end))
+                       (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+             (when (buffer-live-p buffer)
+               (with-current-buffer buffer
+                 ;; First widen to ensure we're not nested narrowing
+                 (widen)
+                 ;; Then narrow to the new region
+                 (narrow-to-region (save-excursion (goto-char start)
+                                                   (beginning-of-line)
+                                                   (point))
+                                   end)
+                 (goto-char start)
+                 ;; Make the source buffer window redisplay to show the narrowing
+                 (when-let ((source-window (get-buffer-window buffer t)))
+                   (with-selected-window source-window
+                     (recenter)))))))))
+
+(progn :following
+
+       (defvar-local tree-browser/follow-mode nil
+         "When non-nil, navigating in the tree browser will update the source buffer position.")
+
+       (defun tree-browser/toggle-follow-mode ()
+         "Toggle follow mode in the tree browser.
+          When enabled, navigating in the tree browser will automatically update
+          the cursor position in the source buffer."
          (interactive)
-         (forward-line -1)
-         (back-to-indentation))
+         (setq-local tree-browser/follow-mode (not tree-browser/follow-mode))
+         (if tree-browser/follow-mode
+             (progn
+               (message "Follow mode enabled")
+               ;; Immediately sync the source with tree browser position
+               (tree-browser/sync-source-with-tree))
+           (message "Follow mode disabled")))
 
-       (defun tree-browser/narrow-node-at-point ()
-         "Narrow source buffer to the node at point, staying in the tree-browser buffer."
+       ;; Function to sync source buffer with tree browser position
+       (defun tree-browser/sync-source-with-tree ()
+         "Move cursor in source buffer to match the node at point in tree browser."
          (interactive)
          (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
                      (start (plist-get node-data :start))
-                     (end (plist-get node-data :end))
                      (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
-           `(pb-elisp/display-expression node-data)
            (when (buffer-live-p buffer)
-             (with-current-buffer buffer
-               (narrow-to-region start end)
-               (goto-char start))
-             ;; Make the source buffer window redisplay to show the narrowing
-             (when-let ((source-window (get-buffer-window buffer t)))
-               (with-selected-window source-window
-                 (recenter)))
-             (message "Narrowed source buffer to %s" (or (plist-get node-data :name)
-                                                         (plist-get node-data :type)
-                                                         "region")))))
+             (let ((window (get-buffer-window buffer t)))
+               (if window
+                   (with-selected-window window
+                     (goto-char start)
+                     (evil-scroll-line-to-top nil )
+                     (symex--update-overlay))
+                 (with-current-buffer buffer
+                   (goto-char start)))
+               (message "Source buffer position updated")))))
+
+       ;; Function for source buffer to sync with tree browser
+       (defun tree-browser/sync-tree-with-source ()
+         "Sync tree browser position with the current position in source buffer."
+         (interactive)
+         (when-let ((buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+           (when (buffer-live-p buffer)
+             (let ((pos (with-current-buffer buffer (point))))
+               (progn
+                 (tree-browser/position-cursor-at-node pos)
+                 (recenter))
+               (when tree-browser/narrow-mode
+                 (tree-browser/apply-narrowing-at-point))
+               (message "Tree browser position updated"))))))
+
+(progn :actions
+
+       ;; Replace the navigation functions to support follow mode
+       (defun tree-browser/next-line ()
+         "Move to next line in tree browser and sync with source if follow mode is enabled."
+         (interactive)
+         (forward-line 1)
+         (back-to-indentation)
+         (when tree-browser/narrow-mode
+           (tree-browser/apply-narrowing-at-point))
+         (when tree-browser/follow-mode
+           (tree-browser/sync-source-with-tree)))
+
+       (defun tree-browser/prev-line ()
+         "Move to previous line in tree browser and sync with source if follow mode is enabled."
+         (interactive)
+         (forward-line -1)
+         (back-to-indentation)
+         (when tree-browser/narrow-mode
+           (tree-browser/apply-narrowing-at-point))
+         (when tree-browser/follow-mode
+           (tree-browser/sync-source-with-tree)))
+
+       (defun tree-browser/up-to-parent ()
+         "Find the direct parent and put the cursor on it. Sync with source if follow mode is enabled."
+         (interactive)
+         (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                     (current-path (get-text-property (line-beginning-position) 'tree-path))
+                     (parent-path (cdr current-path))) ; Get parent path by removing first element
+           (if parent-path
+               (progn
+                 (tree-browser/goto-path parent-path)
+                 (back-to-indentation)
+                 (when tree-browser/narrow-mode
+                   (tree-browser/apply-narrowing-at-point))
+                 (when tree-browser/follow-mode
+                   (tree-browser/sync-source-with-tree))
+                 (message "Moved to parent node"))
+             (message "No parent found for this node"))))
+
+       (defun tree-browser/narrow-node-at-point ()
+         "Toggle narrowing in source buffer for the node at point.
+          This function maintains compatibility with the old behavior when narrow-mode is off."
+         (interactive)
+         (if tree-browser/narrow-mode
+             ;; In narrow mode, just toggle the mode off
+             (progn
+               (setq-local tree-browser/narrow-mode nil)
+               (when-let ((buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+                 (when (buffer-live-p buffer)
+                   (with-current-buffer buffer
+                     (widen)
+                     (when-let ((source-window (get-buffer-window buffer t)))
+                       (with-selected-window source-window
+                         (recenter)))
+                     (message "Source buffer widened"))))
+               (message "Narrow mode disabled"))
+           ;; When not in narrow mode, behave like the original function
+           (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                       (start (plist-get node-data :start))
+                       (end (plist-get node-data :end))
+                       (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+             (when (buffer-live-p buffer)
+               (with-current-buffer buffer
+                 (if (buffer-narrowed-p)
+                     (progn
+                       (widen)
+                       (when-let ((source-window (get-buffer-window buffer t)))
+                         (with-selected-window source-window
+                           (recenter)))
+                       (message "Source buffer widened"))
+                   (narrow-to-region (save-excursion (goto-char start)
+                                                     (beginning-of-line)
+                                                     (point))
+                                     end)
+                   (goto-char start)
+                   (when-let ((source-window (get-buffer-window buffer t)))
+                     (with-selected-window source-window
+                       (recenter)))
+                   (message "Narrowed source buffer to %s" (or (plist-get node-data :name)
+                                                               (plist-get node-data :type)
+                                                               "region"))))))))
 
        (defun tree-browser/scroll-to-node-at-point ()
          "Scroll source buffer to node at point (first line of window)."
@@ -66,19 +216,6 @@
                                              (plist-get node-data :type)
                                              "position"))))))
 
-       (defun tree-browser/up-to-parent ()
-         "Find the direct parent and put the cursor on it."
-         (interactive)
-         (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
-                     (current-path (get-text-property (line-beginning-position) 'tree-path))
-                     (parent-path (cdr current-path))) ; Get parent path by removing first element
-           (if parent-path
-               (progn
-                 (tree-browser/goto-path parent-path)
-                 (back-to-indentation)
-                 (message "Moved to parent node"))
-             (message "No parent found for this node"))))
-
        (defun tree-browser/quit ()
          "Quit the tree browser."
          (interactive)
@@ -92,10 +229,12 @@
          (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
                      (start (plist-get node-data :start))
                      (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
-           (when (buffer-live-p buffer)
-             (pop-to-buffer buffer)
-             (goto-char start)
-             (recenter)))))
+           (let ((should-recenter (not (or tree-browser/follow-mode tree-browser/narrow-mode))))
+             (when (buffer-live-p buffer)
+               (pop-to-buffer buffer)
+               (goto-char start)
+               (when should-recenter
+                 (recenter)))))))
 
 (progn :depth
 
@@ -391,7 +530,8 @@
            (kbd ">") 'tree-browser/increase-depth
            (kbd "<") 'tree-browser/decrease-depth
            (kbd "r") 'tree-browser/refresh
-           (kbd "n") 'tree-browser/narrow-node-at-point
+           (kbd "n") 'tree-browser/toggle-narrow-mode
+           (kbd "f") 'tree-browser/toggle-follow-mode
            (kbd "g g") 'beginning-of-buffer
            (kbd "G") 'end-of-buffer
            (kbd "/") 'isearch-forward)))
