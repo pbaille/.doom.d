@@ -356,60 +356,94 @@
 
 (progn :tree-render
 
-       (defun tree-browser/render (tree)
-         "Render TREE in the current buffer using tree structure produced by node-tree."
-         (let ((inhibit-read-only t))
-           (erase-buffer)
-           (tree-browser/render-node tree 0 () 0)))
+       (progn :window-handling
 
-       (defun tree-browser/render-node (node depth path current-depth)
-         "Render NODE at DEPTH with PATH prefix as the key path at CURRENT-DEPTH level.
-          This function is designed to work with tree structures produced by tree-browser/node-tree."
-         (when-let ((name (and (<= current-depth tree-browser/max-depth)
-                               (km? node)
-                               (or (km/get node :short-name)
-                                   (km/get node :name)))))
-           ;; Insert the current node
-           (tree-browser/insert-line name depth path node)
+              (defvar-local tree-browser/window-width 30
+                "The width of the tree browser window.")
 
-           ;; Process children if any and if we're not at max depth
-           (when-let ((children (and (< current-depth tree-browser/max-depth)
-                                     (km/get node :children))))
-             (dolist (child children)
-               (let* ((child-name (km/get child :name))
-                      (child-path (cons (pb/string child-name) path)))
-                 (tree-browser/render-node child (+ depth 2) child-path (1+ current-depth)))))))
+              (defun tree-browser/fix-window-size ()
+                "Fix the size of the tree browser window."
+                (interactive)
+                (when-let ((window (get-buffer-window (current-buffer))))
+                  (set-window-parameter window 'no-delete-other-windows t)
+                  (set-window-parameter window 'no-other-window nil)
+                  (set-window-dedicated-p window t)
+                  (window-preserve-size window t t) ; preserve width
+                  (let ((width tree-browser/window-width))
+                    (unless (= (window-width window) width)
+                      (adjust-window-trailing-edge window (- width (window-width window)) t)))))
 
-       (defun tree-browser/insert-line (name depth path node-data)
-         "Insert a line for DISP-NAME at DEPTH with PATH.
-          Indicate if it HAS-CHILDREN and store NODE-DATA as properties."
-         (let ((start (point))
-               (prefix (make-string depth ? )))
-           (insert prefix)
+              ;; Ensure window stays fixed after display changes
+              (defun tree-browser/enforce-window-width (&rest _)
+                "Maintain tree browser window width after window configuration changes."
+                (dolist (buffer (buffer-list))
+                  (with-current-buffer buffer
+                    (when (derived-mode-p 'tree-browser/mode)
+                      (when-let ((window (get-buffer-window buffer)))
+                        (let ((width tree-browser/window-width))
+                          (unless (= (window-width window) width)
+                            (adjust-window-trailing-edge window (- width (window-width window)) t))))))))
 
-           ;; Display different symbols based on node type
-           (let ((type (km/get node-data :type)))
-             (cond
-              ((string= type "section")
-               (insert (propertize "* " 'face 'font-lock-keyword-face)))
-              ((member type (list "special_form" "list" "function_definition"))
-               (insert (propertize "• " 'face 'font-lock-doc-face)))
-              (t
-               (insert (propertize "- " 'face 'font-lock-comment-face))))
+              ;; Add hook for window configuration changes
+              (add-hook 'window-configuration-change-hook 'tree-browser/enforce-window-width))
 
-             ;; Insert the name with appropriate face
-             (insert (propertize (format "%s" name)
-                                 'face (cond
-                                        ((string= type "section") 'font-lock-keyword-face)
-                                        ((member type (list "function_definition" "special_form" "list"))
-                                         'font-lock-comment-face)
-                                        (t 'font-lock-comment-face))))
 
-             (insert "\n")
+       (progn :render
 
-             ;; Store path and node data as text properties
-             (put-text-property start (point) 'tree-path path)
-             (put-text-property start (point) 'node-data node-data))))
+              (defun tree-browser/render (tree)
+                "Render TREE in the current buffer using tree structure produced by node-tree."
+                (let ((inhibit-read-only t))
+                  (erase-buffer)
+                  (tree-browser/render-node tree 0 () 0)))
+
+              (defun tree-browser/render-node (node depth path current-depth)
+                "Render NODE at DEPTH with PATH prefix as the key path at CURRENT-DEPTH level.
+                 This function is designed to work with tree structures produced by tree-browser/node-tree."
+                (when-let ((name (and (<= current-depth tree-browser/max-depth)
+                                      (km? node)
+                                      (or (km/get node :short-name)
+                                          (km/get node :name)))))
+                  ;; Insert the current node
+                  (tree-browser/insert-line name depth path node)
+
+                  ;; Process children if any and if we're not at max depth
+                  (when-let ((children (and (< current-depth tree-browser/max-depth)
+                                            (km/get node :children))))
+                    (dolist (child children)
+                      (let* ((child-name (km/get child :name))
+                             (child-path (cons (pb/string child-name) path)))
+                        (tree-browser/render-node child (+ depth 2) child-path (1+ current-depth)))))))
+
+              (defun tree-browser/insert-line (name depth path node-data)
+                "Insert a line for DISP-NAME at DEPTH with PATH.
+                 Indicate if it HAS-CHILDREN and store NODE-DATA as properties."
+                (let ((start (point))
+                      (prefix (make-string depth ? )))
+                  (insert prefix)
+
+                  ;; Display different symbols based on node type
+                  (let ((type (km/get node-data :type)))
+                    (cond
+                     ((string= type "section")
+                      (insert (propertize "* " 'face 'font-lock-keyword-face)))
+                     ((member type (list "special_form" "list" "function_definition"))
+                      (insert (propertize "• " 'face 'font-lock-doc-face)))
+                     (t
+                      (insert (propertize "- " 'face 'font-lock-comment-face))))
+
+                    ;; Insert the name with appropriate face
+                    (insert (propertize (format "%s" name)
+                                        'face (cond
+                                               ((string= type "section") 'font-lock-keyword-face)
+                                               ((member type (list "function_definition" "special_form" "list"))
+                                                'font-lock-comment-face)
+                                               (t 'font-lock-comment-face))))
+
+                    (insert "\n")
+
+                    ;; Store path and node data as text properties
+                    (put-text-property start (point) 'tree-path path)
+                    (put-text-property start (point) 'node-data node-data)))))
 
        (defun tree-browser/position-cursor-at-node (current-pos)
          "Position cursor at the node that contains CURRENT-POS in the source buffer."
@@ -460,15 +494,18 @@
 
            ;; Only create a new window if one doesn't exist for this buffer
            (unless existing-window
-             (let ((width 30)) ; Width of the tree-browser sidebar
+             (let ((width tree-browser/window-width)) ; Width of the tree-browser sidebar
                (let ((window (split-window (selected-window) (- width) 'left)))
                  (select-window window)
                  (switch-to-buffer buf)
-                 (set-window-dedicated-p window t)))) ; Make window dedicated to prevent other buffers from showing in it
+                 (set-window-parameter window 'no-delete-other-windows t)
+                 (window-preserve-size window t t)
+                 (set-window-dedicated-p window t)))) ; Make window dedicated
 
            ;; If window already exists, just switch to it
            (when existing-window
-             (select-window existing-window))
+             (select-window existing-window)
+             (tree-browser/fix-window-size))
 
            ;; Position cursor at the node containing the current position in source buffer
            (tree-browser/position-cursor-at-node current-pos)
