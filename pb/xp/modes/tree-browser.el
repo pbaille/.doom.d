@@ -219,9 +219,10 @@
        (defun tree-browser/quit ()
          "Quit the tree browser."
          (interactive)
-         (quit-window)
-         (widen)
-         '(kill-buffer))
+         (let ((buf (current-buffer)))
+           (quit-window)
+           (kill-buffer buf)
+           (widen)))
 
        (defun tree-browser/goto-source ()
          "Go to the source location of the node at point."
@@ -245,17 +246,28 @@
            (setq-local tree-browser/max-depth (1+ tree-browser/max-depth))
            (tree-browser/refresh)
            (when current-path
-             (tree-browser/goto-path current-path))))
+             (tree-browser/goto-path current-path))
+           (back-to-indentation)))
 
        (defun tree-browser/decrease-depth ()
-         "Decrease the maximum depth of the tree display."
+         "Decrease the maximum depth of the tree display.
+          If the current node would become invisible, move to its visible parent."
          (interactive)
          (when (> tree-browser/max-depth 0)
-           (let ((current-path (get-text-property (line-beginning-position) 'tree-path)))
+           (let* ((current-path (get-text-property (line-beginning-position) 'tree-path))
+                  ;; Calculate a visible parent path that won't exceed the new max depth
+                  (visible-path (when current-path
+                                  (let ((path-length (length current-path))
+                                        (new-depth (1- tree-browser/max-depth)))
+                                    (if (> path-length new-depth)
+                                        ;; Take only the elements that will be visible at new depth
+                                        (nthcdr (- path-length new-depth) current-path)
+                                      current-path)))))
              (setq-local tree-browser/max-depth (1- tree-browser/max-depth))
              (tree-browser/refresh)
-             (when current-path
-               (tree-browser/goto-path current-path)))))
+             (when visible-path
+               (tree-browser/goto-path visible-path))
+             (back-to-indentation))))
 
        (defun tree-browser/goto-path (path)
          "Go to the line containing PATH in the tree browser.
@@ -326,7 +338,7 @@
                   (base (km :type type :start start :end end)))
              (cond ((string= "source_file" type)
                     (km/put base
-                            :name (buffer-file-name)
+                            :name (file-name-nondirectory (buffer-file-name))
                             :children (seq-keep #'tree-browser/node-tree
                                                 (treesit-node-children node))))
                    ((and (string= "special_form" type)
@@ -387,7 +399,6 @@
               ;; Add hook for window configuration changes
               (add-hook 'window-configuration-change-hook 'tree-browser/enforce-window-width))
 
-
        (progn :render
 
               (defun tree-browser/render (tree)
@@ -398,7 +409,7 @@
 
               (defun tree-browser/render-node (node depth path current-depth)
                 "Render NODE at DEPTH with PATH prefix as the key path at CURRENT-DEPTH level.
-                 This function is designed to work with tree structures produced by tree-browser/node-tree."
+        This function is designed to work with tree structures produced by tree-browser/node-tree."
                 (when-let ((name (and (<= current-depth tree-browser/max-depth)
                                       (km? node)
                                       (or (km/get node :short-name)
@@ -416,7 +427,7 @@
 
               (defun tree-browser/insert-line (name depth path node-data)
                 "Insert a line for DISP-NAME at DEPTH with PATH.
-                 Indicate if it HAS-CHILDREN and store NODE-DATA as properties."
+        Indicate if it HAS-CHILDREN and store NODE-DATA as properties."
                 (let ((start (point))
                       (prefix (make-string depth ? )))
                   (insert prefix)
@@ -424,6 +435,8 @@
                   ;; Display different symbols based on node type
                   (let ((type (km/get node-data :type)))
                     (cond
+                     ((string= type "source_file")
+                      (insert "  "))
                      ((string= type "section")
                       (insert (propertize "* " 'face 'font-lock-keyword-face)))
                      ((member type (list "special_form" "list" "function_definition"))
@@ -434,6 +447,7 @@
                     ;; Insert the name with appropriate face
                     (insert (propertize (format "%s" name)
                                         'face (cond
+                                               ((string= type "source_file") 'font-lock-constant-face)
                                                ((string= type "section") 'font-lock-keyword-face)
                                                ((member type (list "function_definition" "special_form" "list"))
                                                 'font-lock-comment-face)
@@ -443,35 +457,89 @@
 
                     ;; Store path and node data as text properties
                     (put-text-property start (point) 'tree-path path)
-                    (put-text-property start (point) 'node-data node-data)))))
+                    (put-text-property start (point) 'node-data node-data))))
 
-       (defun tree-browser/position-cursor-at-node (current-pos)
-         "Position cursor at the node that contains CURRENT-POS in the source buffer."
-         (when current-pos
-           (goto-char (point-min))
-           (let ((found-line nil)
-                 (best-match nil))
-             ;; First pass: find the best matching node
-             (while (not (eobp))
-               (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
-                           (start (plist-get node-data :start))
-                           (end (plist-get node-data :end)))
-                 (when (and (>= current-pos start) (<= current-pos end))
-                   ;; If this node contains the point, save it as a potential match
-                   (setq found-line (line-number-at-pos))
-                   ;; Remember the most specific (smallest) node that contains the point
-                   (if (not best-match)
-                       (setq best-match (cons start end))
-                     (when (< (- end start) (- (cdr best-match) (car best-match)))
-                       (setq best-match (cons start end)
-                             found-line (line-number-at-pos))))))
-               (forward-line 1))
+              (defun tree-browser/refresh ()
+                "Refresh the tree browser display while preserving current position.
+        Maintains selection and expanded state of nodes where possible."
+                (interactive)
+                (let* ((inhibit-read-only t)
+                       (current-line (line-number-at-pos))
+                       (current-path (get-text-property (line-beginning-position) 'tree-path))
+                       (current-node-data (get-text-property (line-beginning-position) 'node-data)))
 
-             ;; Go to the best match if found
-             (when found-line
-               (goto-char (point-min))
-               (forward-line (1- found-line))
-               (back-to-indentation)))))
+                  ;; Store the current window's start position
+                  (let ((window-start-pos (window-start)))
+                    ;; Redraw the tree structure
+                    (tree-browser/render tree-browser/data)
+
+                    ;; Restore expansion state of previously expanded nodes
+                    ;; Try to restore position
+                    (cond
+                     ;; If we have path data, go to that specific node
+                     (current-path
+                      (tree-browser/goto-path current-path))
+
+                     ;; Otherwise try to go to the same line number, unless it's now invalid
+                     (t
+                      (goto-char (point-min))
+                      (when (> current-line 1)
+                        (forward-line (min (1- current-line)
+                                           (1- (count-lines (point-min) (point-max))))))))
+
+                    ;; Restore the window start position if possible
+                    (when (and window-start-pos
+                               (< window-start-pos (point-max)))
+                      (set-window-start (selected-window) window-start-pos))))))
+
+       (progn :utils
+
+              (defun tree-browser/position-cursor-at-node (current-pos)
+                "Position cursor at the node that contains CURRENT-POS in the source buffer."
+                (when current-pos
+                  (goto-char (point-min))
+                  (let ((found-line nil)
+                        (best-match nil))
+                    ;; First pass: find the best matching node
+                    (while (not (eobp))
+                      (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                                  (start (plist-get node-data :start))
+                                  (end (plist-get node-data :end)))
+                        (when (and (>= current-pos start) (<= current-pos end))
+                          ;; If this node contains the point, save it as a potential match
+                          (setq found-line (line-number-at-pos))
+                          ;; Remember the most specific (smallest) node that contains the point
+                          (if (not best-match)
+           (setq best-match (cons start end))
+         (when (< (- end start) (- (cdr best-match) (car best-match)))
+                              (setq best-match (cons start end)
+                                    found-line (line-number-at-pos))))))
+                      (forward-line 1))
+
+                    ;; Go to the best match if found
+                    (when found-line
+                      (goto-char (point-min))
+                      (forward-line (1- found-line))
+                      (back-to-indentation)))))
+
+              (defun tree-browser/get-node-depth (node current-pos depth)
+                "Calculate the depth of the node containing CURRENT-POS in the tree starting from NODE.
+        Returns the depth as a number, or nil if the position is not in this subtree."
+                (when (and node (km? node))
+                  (let ((start (km/get node :start))
+                        (end (km/get node :end))
+                        (children (km/get node :children)))
+
+                    ;; Check if current position is in this node's range
+                    (when (and start end (>= current-pos start) (<= current-pos end))
+                      ;; Check children first to find the deepest containing node
+                      (when children
+                        (cl-loop for child in children
+                                 for child-depth = (tree-browser/get-node-depth child current-pos (1+ depth))
+                                 when child-depth return child-depth
+                                 finally return depth))
+                      ;; If no child contains the position or no children, return current depth
+                      depth)))))
 
        (defun tree-browser/create (tree &optional buffer-name source-buffer)
          "Create a browser for TREE in a new buffer named BUFFER-NAME or *Tree Browser*.
@@ -513,55 +581,37 @@
            buf))
 
        (defun tree-browser/navigate-buffer ()
-         "Analyze current buffer with treesitter and display as tree."
+         "Analyze current buffer with treesitter and display as tree.
+          Sets the tree's max depth based on the node at point's depth and positions the cursor at that node."
          (interactive)
          (when-let ((root (tree-browser/get-treesit-root)))
-           (let ((tree (tree-browser/node-tree root)))
-             (tree-browser/create tree
-                                  (format "*Tree Browser: %s*" (buffer-name))
-                                  (current-buffer)))))
+           (let* ((tree (tree-browser/node-tree root))
+                  (current-pos (point))
+                  ;; Find the depth of the node at current position
+                  (node-depth (or (tree-browser/get-node-depth tree current-pos 0) 1))
+                  ;; Add some context by showing a level or two above
+                  (display-depth (+ node-depth 2)))
 
-       ;; Define a new version of the refresh function with more robust functionality
-       (defun tree-browser/refresh ()
-         "Refresh the tree browser display while preserving current position.
-          Maintains selection and expanded state of nodes where possible."
-         (interactive)
-         (let* ((inhibit-read-only t)
-                (current-line (line-number-at-pos))
-                (current-path (get-text-property (line-beginning-position) 'tree-path))
-                (current-node-data (get-text-property (line-beginning-position) 'node-data)))
+             ;; Create tree browser with the calculated depth
+             (let ((browser-buffer (tree-browser/create tree
+                                                        (format "*Tree Browser: %s*" (buffer-name))
+                                                        (current-buffer))))
 
-           ;; Store the current window's start position
-           (let ((window-start-pos (window-start)))
-             ;; Redraw the tree structure
-             (tree-browser/render tree-browser/data)
-
-             ;; Restore expansion state of previously expanded nodes
-             ;; Try to restore position
-             (cond
-              ;; If we have path data, go to that specific node
-              (current-path
-               (tree-browser/goto-path current-path))
-
-              ;; Otherwise try to go to the same line number, unless it's now invalid
-              (t
-               (goto-char (point-min))
-               (when (> current-line 1)
-                 (forward-line (min (1- current-line)
-                                    (1- (count-lines (point-min) (point-max))))))))
-
-             ;; Restore the window start position if possible
-             (when (and window-start-pos
-                        (< window-start-pos (point-max)))
-               (set-window-start (selected-window) window-start-pos))))))
+               ;; Set the max depth to show the node and some context
+               (with-current-buffer browser-buffer
+                 (setq-local tree-browser/max-depth display-depth)
+                 ;; Refresh to apply the new depth
+                 (tree-browser/refresh)
+                 ;; Position cursor at the node containing the current position
+                 (tree-browser/position-cursor-at-node current-pos)))))))
 
 (progn :bindings
        (when (featurep 'evil)
          (evil-define-key 'normal tree-browser/mode-map
            (kbd "j") 'tree-browser/next-line
            (kbd "k") 'tree-browser/prev-line
-           (kbd "h") 'tree-browser/up-to-parent
-           (kbd "l") 'tree-browser/scroll-to-node-at-point
+           (kbd "h") 'tree-browser/decrease-depth
+           (kbd "l") 'tree-browser/increase-depth
            (kbd "q") 'tree-browser/quit
            (kbd "RET") 'tree-browser/goto-source
            (kbd ">") 'tree-browser/increase-depth
