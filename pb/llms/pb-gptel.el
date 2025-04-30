@@ -169,7 +169,7 @@
                                        default-directory))
                 (files (let ((crm-separator "[ 	]* [ 	]*"))
                          (completing-read-multiple "Add files to context: "
-                                                   ;#'read-file-name-internal
+                                        ;#'read-file-name-internal
                                                    (projectile-current-project-files)
                                                    nil t))))
            (when files
@@ -182,7 +182,7 @@
 (require 'doom-themes)
 (defvar pb-gptel/overlay-color (doom-darken "#232530" 0.2)
   "Color used to highlight the current s-expression when being edited by GPT.
-This is a darkened version of the default theme background.")
+   This is a darkened version of the default theme background.")
 
 (defun pb-gptel/current-symex-request-handler (res info)
   "Replace current symbolic expression with GPT model response.
@@ -203,9 +203,9 @@ This is a darkened version of the default theme background.")
 
   ;; this is hardcoding horizon-tweaked theme value :(
   (progn :style
-    (face-remap-add-relative 'symex--current-node-face
-                             :background (doom-lighten "#232530" 0.03))
-    (setq evil-symex-state-cursor `("cyan" box)))
+         (face-remap-add-relative 'symex--current-node-face
+                                  :background (doom-lighten "#232530" 0.03))
+         (setq evil-symex-state-cursor `("cyan" box)))
   (symex-change 1)
   
   (if res (insert res)
@@ -219,10 +219,10 @@ This is a darkened version of the default theme background.")
 
    OPTIONS is a plist or keyword map that may contain:
    - `prompt`: A string with instructions for the language model (prompted
-     for interactively if not provided)
+   for interactively if not provided)
    - `callback`: A function to handle the response (defaults to
-     `pb-gptel/replace-current-symex-request-handler` which replaces
-     the current expression)
+   `pb-gptel/replace-current-symex-request-handler` which replaces
+   the current expression)
 
    This function creates a structured request with the current buffer context,
    the specified prompt, and the current symbolic expression, then sends it
@@ -266,9 +266,9 @@ This is a darkened version of the default theme background.")
 
    OPTIONS is a plist or keyword map that may contain:
    - `prompt`: A string with instructions for the language model (prompted
-     for interactively if not provided)
+   for interactively if not provided)
    - `callback`: A function to handle the response (defaults to a
-     function that replaces the entire buffer content)
+   function that replaces the entire buffer content)
 
    This function creates a structured request with the current buffer context,
    the specified prompt, and sends it to the language model using
@@ -333,7 +333,7 @@ This is a darkened version of the default theme background.")
    After the GPT response is inserted, a new level-2 header is added
    to continue the conversation."
   (interactive)
-  (pb/let [(km/keys prompt selection) options]
+  (pb/let [(km/keys prompt selection pop-window) options]
     (let* ((source-buffer (current-buffer))
            (file-path (buffer-file-name))
            (file-name (if file-path
@@ -342,7 +342,9 @@ This is a darkened version of the default theme background.")
            (chat-buffer-name (concat "CHAT_" file-name)))
 
       (if (get-buffer chat-buffer-name)
-          (switch-to-buffer (get-buffer chat-buffer-name))
+          (if pop-window
+              (pop-to-buffer (get-buffer chat-buffer-name))
+            (switch-to-buffer (get-buffer chat-buffer-name)))
         (let* ((major-mode-name (symbol-name major-mode))
                (selection (or selection
                               (when (use-region-p)
@@ -396,7 +398,9 @@ This is a darkened version of the default theme background.")
             (insert "** ")
 
             ;; Switch to the buffer and position cursor
-            (switch-to-buffer (current-buffer))
+            (if pop-window
+                (pop-to-buffer (current-buffer))
+              (switch-to-buffer (current-buffer)))
             (goto-char (point-max))
             (evil-insert-state)))))))
 
