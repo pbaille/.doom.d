@@ -43,6 +43,7 @@
            (message "Narrow mode disabled")))
 
        (defun tree-browser/apply-narrowing-at-point ()
+
          "Apply narrowing to the source buffer based on the node at point."
          (when (and tree-browser/narrow-mode
                     (buffer-local-value 'tree-browser/source-buffer (current-buffer)))
@@ -63,7 +64,9 @@
                  ;; Make the source buffer window redisplay to show the narrowing
                  (when-let ((source-window (get-buffer-window buffer t)))
                    (with-selected-window source-window
-                     (recenter)))))))))
+                     ;; Apply recenter based on centered mode setting
+
+                     (symex--update-overlay)))))))))
 
 (progn :following
 
@@ -85,23 +88,28 @@
 
        ;; Function to sync source buffer with tree browser position
        (defun tree-browser/sync-source-with-tree ()
-         "Move cursor in source buffer to match the node at point in tree browser."
+         "Move cursor in source buffer to match the node at point in tree browser.
+          When centered-mode is enabled, the node will be centered in the window.
+          Otherwise, the node will be positioned at the top of the window."
          (interactive)
          (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
                      (start (plist-get node-data :start))
                      (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
-           (when (buffer-live-p buffer)
-             (let ((window (get-buffer-window buffer t)))
-               (if window
-                   (with-selected-window window
-                     (goto-char start)
-                     (evil-scroll-line-to-top nil )
-                     (symex--update-overlay))
-                 (with-current-buffer buffer
-                   (goto-char start)))
-               (message "Source buffer position updated")))))
+           (let ((centered tree-browser/centered-mode))
+             (when (buffer-live-p buffer)
+               (let ((window (get-buffer-window buffer t)))
+                 (if window
+                     (with-selected-window window
+                       (goto-char start)
+                       ;; Always call evil-scroll-line-to-top first to ensure proper positioning
+                       (evil-scroll-line-to-top nil)
+                       ;; Apply centering only if centered mode is enabled
+                       (when centered (print "centered")(recenter))
+                       (symex--update-overlay))
+                   (with-current-buffer buffer
+                     (goto-char start)))
+                 (message "Source buffer position updated"))))))
 
-       ;; Function for source buffer to sync with tree browser
        (defun tree-browser/sync-tree-with-source ()
          "Sync tree browser position with the current position in source buffer."
          (interactive)
@@ -114,6 +122,49 @@
                (when tree-browser/narrow-mode
                  (tree-browser/apply-narrowing-at-point))
                (message "Tree browser position updated"))))))
+
+(progn :centered
+
+       (defvar-local tree-browser/centered-mode nil
+         "When non-nil, keep the current node centered in the source buffer.
+          This works in conjunction with follow-mode and narrow-mode.")
+
+       (defun tree-browser/toggle-centered-mode ()
+         "Toggle centered mode in the tree browser.
+          When enabled, the current node will be centered in the source buffer
+          when using follow-mode or narrow-mode."
+         (interactive)
+         (setq-local tree-browser/centered-mode (not tree-browser/centered-mode))
+         (message "Centered mode %s" (if tree-browser/centered-mode "enabled" "disabled"))
+         ;; Apply appropriate positioning immediately
+         (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                     (start (plist-get node-data :start))
+                     (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+           (let ((centered tree-browser/centered-mode))
+             (when (buffer-live-p buffer)
+               (let ((window (get-buffer-window buffer t)))
+                 (when window
+                   (with-selected-window window
+                     (goto-char start)
+                     (if centered
+                         (recenter) ;; Center in window when enabling centered mode
+                       (recenter 0)) ;; Put at top of window when disabling
+                     (symex--update-overlay))))))))
+
+       (defun tree-browser/apply-centering-at-point ()
+         "Center the current node in the source buffer if centered-mode is enabled."
+         (when (and tree-browser/centered-mode
+                    (buffer-local-value 'tree-browser/source-buffer (current-buffer)))
+           (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                       (start (plist-get node-data :start))
+                       (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+             (when (buffer-live-p buffer)
+               (let ((window (get-buffer-window buffer t)))
+                 (when window
+                   (with-selected-window window
+                     (goto-char start)
+                     (recenter 0)  ;; Put at top of window
+                     (symex--update-overlay)))))))))
 
 (progn :mouse-support
 
@@ -370,7 +421,6 @@
 
        (defun tree-browser/node-tree (node)
          (when node
-
            (let* ((type (treesit-node-type node))
                   (start (treesit-node-start node))
                   (end (treesit-node-end node))
@@ -393,12 +443,18 @@
                                                             3))))))
                    ((member type (list "special_form" "list" "function_definition"))
                     (let* ((name-node (treesit-node-child node 2))
+                           (verb-node (treesit-node-child node 1))
+                           (verb (when verb-node (intern (treesit-node-text verb-node t))))
                            (name (when (string= "symbol" (treesit-node-type name-node))
-                                   (treesit-node-text name-node t))))
+                                   (treesit-node-text name-node t)))
+                           (is-var-def (member verb '(defvar defvar-local)))
+                           (is-fun-def (eq verb 'defun)))
                       (km/put base
-                              :verb (intern (treesit-node-text (treesit-node-child node 1) t))
+                              :verb verb
                               :name name
-                              :short-name (tree-browser/remove-package-prefix name))))
+                              :short-name (tree-browser/remove-package-prefix name)
+                              :var-def is-var-def
+                              :fun-def is-fun-def)))
                    (t base)))))
 
        (pb/comment
@@ -472,12 +528,18 @@
                   (insert prefix)
 
                   ;; Display different symbols based on node type
-                  (let ((type (km/get node-data :type)))
+                  (let ((type (km/get node-data :type))
+                        (is-var-def (km/get node-data :var-def))
+                        (is-fun-def (km/get node-data :fun-def)))
                     (cond
                      ((string= type "source_file")
                       (insert "  "))
                      ((string= type "section")
-                      (insert (propertize "* " 'face 'font-lock-keyword-face)))
+                      (insert (propertize "■ " 'face 'font-lock-keyword-face)))
+                     (is-var-def
+                      (insert (propertize "• " 'face 'font-lock-variable-name-face)))
+                     (is-fun-def
+                      (insert (propertize "λ " 'face 'font-lock-function-name-face)))
                      ((member type (list "special_form" "list" "function_definition"))
                       (insert (propertize "• " 'face 'font-lock-doc-face)))
                      (t
@@ -537,6 +599,26 @@
 
        (progn :utils
 
+              (defun tree-browser/place-node-at-top ()
+                "Place the current node at the top of the source buffer window.
+                 When centered-mode is enabled, center the node instead."
+                (interactive)
+                (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                            (start (plist-get node-data :start))
+                            (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+                  (when (buffer-live-p buffer)
+                    (let ((window (get-buffer-window buffer t)))
+                      (if window
+                          (with-selected-window window
+                            (goto-char start)
+                            (if tree-browser/centered-mode
+                                (recenter)
+                              (recenter 0))
+                            (symex--update-overlay))
+                        (with-current-buffer buffer
+                          (goto-char start)))
+                      (message "Node positioned in window")))))
+
               (defun tree-browser/position-cursor-at-node (current-pos)
                 "Position cursor at the node that contains CURRENT-POS in the source buffer."
                 (when current-pos
@@ -553,8 +635,8 @@
                           (setq found-line (line-number-at-pos))
                           ;; Remember the most specific (smallest) node that contains the point
                           (if (not best-match)
-           (setq best-match (cons start end))
-         (when (< (- end start) (- (cdr best-match) (car best-match)))
+                              (setq best-match (cons start end))
+                            (when (< (- end start) (- (cdr best-match) (car best-match)))
                               (setq best-match (cons start end)
                                     found-line (line-number-at-pos))))))
                       (forward-line 1))
@@ -567,7 +649,7 @@
 
               (defun tree-browser/get-node-depth (node current-pos depth)
                 "Calculate the depth of the node containing CURRENT-POS in the tree starting from NODE.
-        Returns the depth as a number, or nil if the position is not in this subtree."
+                 Returns the depth as a number, or nil if the position is not in this subtree."
                 (when (and node (km? node))
                   (let ((start (km/get node :start))
                         (end (km/get node :end))
@@ -660,6 +742,7 @@
            (kbd "r") 'tree-browser/refresh
            (kbd "n") 'tree-browser/toggle-narrow-mode
            (kbd "f") 'tree-browser/toggle-follow-mode
+           (kbd "c") 'tree-browser/toggle-centered-mode
            (kbd "g g") 'beginning-of-buffer
            (kbd "G") 'end-of-buffer
            (kbd "/") 'isearch-forward)))
