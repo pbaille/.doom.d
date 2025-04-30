@@ -255,23 +255,36 @@
       (org-forward-element)))
 
 (defun pb-org/move-down ()
-  "Move down through visible nodes."
+  "Move down through visible nodes.
+   Going to the next visible node from the current position,
+   skipping over empty lines."
   (interactive)
   (if (pb-org/folded-p)
       (org-next-visible-heading 1)
-    (pb-org/walk-forward)))
+    (forward-line)
+    (if (org-at-heading-p)
+        (point)
+      (progn (when (not (bolp))
+               (backward-char))
+             (pb-org/walk-forward)))))
 
 (defun pb-org/move-up ()
-  "Move up through visible nodes."
+  "Move up through visible nodes, skipping empty lines."
   (interactive)
   (let ((p (point)))
     (cond ((org-at-heading-p)
            (evil-previous-line)
-           (if (org--line-empty-p 1)
-               (org-backward-element)))
+           (org-backward-element)
+           (if (org--line-empty-p 0)
+               (while (and (not (bobp))
+                           (save-excursion
+                             (evil-previous-line)
+                             (org--line-empty-p 0)))
+                 (evil-previous-line))))
           (t (org-backward-element)))
-    (if (= p (point))
-        (org-previous-visible-heading 1))))
+    ;; If we didn't actually move, try moving to previous visible heading
+    (when (= p (point))
+      (org-previous-visible-heading 1))))
 
 (defun pb-org/walk-backward ()
   "Go to first child or to next node."
