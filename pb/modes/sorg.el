@@ -177,6 +177,19 @@
  [escape] #'sorg--enter-from-normal-mode
  "C-w" #'pb-misc/insert-open-paren)
 
+(defun sorg--after-gptel-send-advice (&rest _)
+  "Return to SORG mode after sending a request to GPT from an org buffer."
+  (when (eq major-mode 'org-mode)
+    (run-at-time 0.1 nil
+                 (lambda ()
+                   (when (and (eq major-mode 'org-mode)
+                              (not (evil-sorg-state-p)))
+                     (evil-sorg-state 1))))))
+
+(with-eval-after-load 'gptel
+  (advice-add 'gptel-send :after #'sorg--after-gptel-send-advice))
+
+
 (progn :theming
 
        (setq evil-sorg-state-cursor `(box "orange"))
