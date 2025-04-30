@@ -194,6 +194,9 @@
           (:desc "chat: current buffer"
                  "b" #'pb-gptel/current-buffer-chat)
 
+          (:desc "chat: current buffer"
+                 "b" (lambda () (interactive) (pb-gptel/current-buffer-chat (km :pop-window t))))
+
           (:desc "chat: directory"
                  "s-d" #'pb-gptel/directory-chat)
 
@@ -373,7 +376,8 @@
        :i "C-p" #'pb-elisp/insert-package-prefix
        :n "s-j e" #'eval-buffer
        :n "s-j b" #'tree-browser/navigate-buffer
-       :n "s-l" #'evil-pb-lisp-state)
+       :n "s-l" #'evil-pb-lisp-state
+       :n "s-i s-i" #'tree-browser/navigate-buffer)
 
       (:map clojure-mode-map
        :n "s-l" #'evil-pb-lisp-state)
