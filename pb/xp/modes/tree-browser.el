@@ -67,7 +67,7 @@
 
 (progn :following
 
-       (defvar-local tree-browser/follow-mode nil
+       (defvar-local tree-browser/follow-mode t
          "When non-nil, navigating in the tree browser will update the source buffer position.")
 
        (defun tree-browser/toggle-follow-mode ()
@@ -114,6 +114,30 @@
                (when tree-browser/narrow-mode
                  (tree-browser/apply-narrowing-at-point))
                (message "Tree browser position updated"))))))
+
+(progn :mouse-support
+
+       (defun tree-browser/mouse-click (event)
+         "Handle mouse click EVENT in the tree browser.
+          When a node is clicked, focus that node in the source buffer."
+         (interactive "e")
+         (let ((pos (posn-point (event-end event))))
+           (when pos
+             (goto-char pos)
+             (back-to-indentation)
+             ;; Sync with source buffer
+             (when tree-browser/narrow-mode
+               (tree-browser/apply-narrowing-at-point))
+             (tree-browser/sync-source-with-tree)
+             ;; Focus the window with the source buffer
+             (when-let ((buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer)))
+                        (window (get-buffer-window buffer t)))
+               (select-window window)))))
+
+       ;; Add mouse bindings
+       (define-key tree-browser/mode-map [mouse-1] 'tree-browser/mouse-click)
+       (define-key tree-browser/mode-map [down-mouse-1] nil)) ;; Prevent text selection
+
 
 (progn :actions
 
@@ -224,13 +248,18 @@
            (kill-buffer buf)
            (widen)))
 
-       (defun tree-browser/goto-source ()
-         "Go to the source location of the node at point."
-         (interactive)
+       (defun tree-browser/goto-source (&optional close-browser)
+         "Go to the source location of the node at point.
+          With prefix argument CLOSE-BROWSER, close the tree browser after navigation."
+         (interactive "P")
          (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
                      (start (plist-get node-data :start))
                      (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
-           (let ((should-recenter (not (or tree-browser/follow-mode tree-browser/narrow-mode))))
+           (let ((should-recenter (not (or tree-browser/follow-mode tree-browser/narrow-mode)))
+                 (browser-buffer (current-buffer)))
+             (when close-browser
+               (with-current-buffer browser-buffer
+                 (kill-buffer-and-window)))
              (when (buffer-live-p buffer)
                (pop-to-buffer buffer)
                (goto-char start)
@@ -251,7 +280,8 @@
 
        (defun tree-browser/decrease-depth ()
          "Decrease the maximum depth of the tree display.
-          If the current node would become invisible, move to its visible parent."
+          If the current node would become invisible, move to its visible parent.
+          Syncs with source buffer after decreasing depth."
          (interactive)
          (when (> tree-browser/max-depth 0)
            (let* ((current-path (get-text-property (line-beginning-position) 'tree-path))
@@ -267,7 +297,12 @@
              (tree-browser/refresh)
              (when visible-path
                (tree-browser/goto-path visible-path))
-             (back-to-indentation))))
+             (back-to-indentation)
+             ;; Sync with source buffer after decreasing depth
+             (when tree-browser/narrow-mode
+               (tree-browser/apply-narrowing-at-point))
+             (when tree-browser/follow-mode
+               (tree-browser/sync-source-with-tree)))))
 
        (defun tree-browser/goto-path (path)
          "Go to the line containing PATH in the tree browser.
@@ -325,7 +360,11 @@
          (if-let ((file-name (when (buffer-file-name)
                                (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))))
              (if (string-prefix-p file-name name)
-                 (substring name (1+ (length file-name)))
+                 (if (and file-name
+                          (> (length name) (length file-name))
+                          (string-prefix-p file-name name))
+                     (substring name (1+ (length file-name)))
+                   name)
                name)
            name))
 
@@ -409,7 +448,7 @@
 
               (defun tree-browser/render-node (node depth path current-depth)
                 "Render NODE at DEPTH with PATH prefix as the key path at CURRENT-DEPTH level.
-        This function is designed to work with tree structures produced by tree-browser/node-tree."
+                 This function is designed to work with tree structures produced by tree-browser/node-tree."
                 (when-let ((name (and (<= current-depth tree-browser/max-depth)
                                       (km? node)
                                       (or (km/get node :short-name)
@@ -427,7 +466,7 @@
 
               (defun tree-browser/insert-line (name depth path node-data)
                 "Insert a line for DISP-NAME at DEPTH with PATH.
-        Indicate if it HAS-CHILDREN and store NODE-DATA as properties."
+                 Indicate if it HAS-CHILDREN and store NODE-DATA as properties."
                 (let ((start (point))
                       (prefix (make-string depth ? )))
                   (insert prefix)
@@ -444,24 +483,28 @@
                      (t
                       (insert (propertize "- " 'face 'font-lock-comment-face))))
 
-                    ;; Insert the name with appropriate face
+                    ;; Insert the name with appropriate face and make it look clickable
                     (insert (propertize (format "%s" name)
                                         'face (cond
                                                ((string= type "source_file") 'font-lock-constant-face)
                                                ((string= type "section") 'font-lock-keyword-face)
                                                ((member type (list "function_definition" "special_form" "list"))
                                                 'font-lock-comment-face)
-                                               (t 'font-lock-comment-face))))
+                                               (t 'font-lock-comment-face))
+                                        'mouse-face 'highlight
+                                        'help-echo "Click to navigate to this node"))
 
                     (insert "\n")
 
-                    ;; Store path and node data as text properties
+                    ;; Store path and node data as text properties for the whole line
                     (put-text-property start (point) 'tree-path path)
-                    (put-text-property start (point) 'node-data node-data))))
+                    (put-text-property start (point) 'node-data node-data)
+                    ;; Add clickable property to entire line
+                    '(put-text-property start (point) 'mouse-face 'highlight))))
 
               (defun tree-browser/refresh ()
                 "Refresh the tree browser display while preserving current position.
-        Maintains selection and expanded state of nodes where possible."
+                 Maintains selection and expanded state of nodes where possible."
                 (interactive)
                 (let* ((inhibit-read-only t)
                        (current-line (line-number-at-pos))
@@ -613,9 +656,7 @@
            (kbd "h") 'tree-browser/decrease-depth
            (kbd "l") 'tree-browser/increase-depth
            (kbd "q") 'tree-browser/quit
-           (kbd "RET") 'tree-browser/goto-source
-           (kbd ">") 'tree-browser/increase-depth
-           (kbd "<") 'tree-browser/decrease-depth
+           (kbd "RET") (lambda () (interactive) (tree-browser/goto-source t))
            (kbd "r") 'tree-browser/refresh
            (kbd "n") 'tree-browser/toggle-narrow-mode
            (kbd "f") 'tree-browser/toggle-follow-mode
