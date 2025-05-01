@@ -31,6 +31,7 @@
           (symex-mode-interface)
         (evil-normal-state))
     (progn
+      (forward-char)
       (evil-normal-state)
       (pb-symex/select-nearest-in-line)
       (symex-mode-interface))))
@@ -43,7 +44,7 @@
   (when (eq (point)
             (save-excursion (pb-symex/select-nearest-in-line)
                             (point)))
-     (symex-mode-interface)))
+    (symex-mode-interface)))
 
 (defun pb-symex/mark ()
   "Activate mark at current position, then enter symex mode."
