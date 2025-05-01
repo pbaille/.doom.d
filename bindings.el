@@ -194,8 +194,8 @@
           (:desc "chat: current buffer"
                  "b" #'pb-gptel/current-buffer-chat)
 
-          (:desc "chat: current buffer"
-                 "b" (lambda () (interactive) (pb-gptel/current-buffer-chat (km :pop-window t))))
+          (:desc "chat: current buffer (new window)"
+                 "s-b" (lambda () (interactive) (pb-gptel/current-buffer-chat (km :pop-window t))))
 
           (:desc "chat: directory"
                  "s-d" #'pb-gptel/directory-chat)
