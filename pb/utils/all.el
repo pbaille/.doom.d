@@ -10,6 +10,7 @@
 (require 'pb-text-properties)
 (require 'pb-udp)
 (require 'pb-format)
+(require 'pb-meta)
 
 (print "pb-utils loaded")
 
