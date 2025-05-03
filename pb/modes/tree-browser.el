@@ -297,7 +297,8 @@
          (let ((buf (current-buffer)))
            (quit-window)
            (kill-buffer buf)
-           (widen)))
+           (widen)
+           (balance-windows)))
 
        (defun tree-browser/goto-source (&optional close-browser)
          "Go to the source location of the node at point.
@@ -315,7 +316,8 @@
                (pop-to-buffer buffer)
                (goto-char start)
                (when should-recenter
-                 (recenter)))))))
+                 (recenter)))
+             (balance-windows)))))
 
 (progn :depth
 
@@ -738,7 +740,7 @@
            (kbd "h") 'tree-browser/decrease-depth
            (kbd "l") 'tree-browser/increase-depth
            (kbd "q") 'tree-browser/quit
-           (kbd "RET") (lambda () (interactive) (tree-browser/goto-source t))
+           (kbd "RET")  (lambda () (interactive) (tree-browser/goto-source t))
            (kbd "r") 'tree-browser/refresh
            (kbd "n") 'tree-browser/toggle-narrow-mode
            (kbd "f") 'tree-browser/toggle-follow-mode
