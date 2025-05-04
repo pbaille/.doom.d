@@ -121,6 +121,30 @@
   (interactive)
   (sorg-enter-mode))
 
+(defun sorg--scroll-top ()
+  (interactive)
+  (evil-scroll-line-to-top nil))
+
+(defun sorg--goto-next-sibling-scrolling ()
+  "Go to next sibling node, maintaining cursor's vertical position in window."
+  (interactive)
+  (let* ((win-start (window-start))
+         (pos-in-win (- (point) win-start))
+         (line-pos (count-screen-lines win-start (point))))
+    (when (pb-org/move-down)
+      ;; Adjust scroll position to keep cursor at approximately the same screen line
+      (recenter line-pos))))
+
+(defun sorg--goto-prev-sibling-scrolling ()
+  "Go to previous sibling node, maintaining cursor's vertical position in window."
+  (interactive)
+  (let* ((win-start (window-start))
+         (pos-in-win (- (point) win-start))
+         (line-pos (count-screen-lines win-start (point))))
+    (when (pb-org/move-up)
+      ;; Adjust scroll position to keep cursor at approximately the same screen line
+      (recenter line-pos))))
+
 ;; bindings and init
 
 (defvar sorg-bindings
@@ -134,6 +158,8 @@
         "f" #'pb-org/walk-forward
         "C-k" #'pb-org/move-up
         "C-j" #'pb-org/move-down
+        "C-S-k" #'sorg--goto-prev-sibling-scrolling
+        "C-S-j" #'sorg--goto-next-sibling-scrolling
         "t" #'pb-org/toggle-fold
         ";" #'pb-org/toggle-fold
         "n" #'pb-org/toggle-narrow
@@ -160,7 +186,8 @@
         "S-<return>" #'pb-org/shift-one-line-up
         "<mouse-1>" #'sorg--click
         ;; misc
-        "?" #'pb-org/print-context))
+        "?" #'pb-org/print-context
+        "g j" #'sorg--scroll-top))
 
 (dolist (binding (sq/partition 2 2 sorg-bindings))
   (define-key evil-sorg-state-map
@@ -214,6 +241,46 @@
        (advice-add 'doom-modeline--modal-icon
                    :around
                    #'sorg-doom-modeline-modal-icon))
+
+(progn :request
+
+       (defun pb-gptel/current-sorg-request-handler (res info)
+         "Replace current org node with GPT model response.
+          This function handles the response from a GPT model request and replaces
+          the current org node with that response.
+
+          The function performs the following steps:
+          1. Delete the content of the current org node
+          2. Insert the model's response text in place of the original content
+          3. Ensure proper formatting and indentation of the edited node
+
+          Parameters:
+          - RES: The response text from the language model
+          - INFO: A plist containing metadata about the request (provided by gptel)"
+
+         ;; Get the current node bounds
+         (let* ((bounds (pb-org/node-bounds))
+                (start (car bounds))
+                (end (cdr bounds)))
+
+           ;; Delete the current node content
+           (delete-region start end)
+
+           ;; Insert the response or show error message
+           (if res
+               (progn
+                 (goto-char start)
+                 (insert res))
+             (message (km/pp (km :status (km/get info :http-status)
+                                 :error (km/get info :error)))))
+
+           ;; Update the overlay to highlight the new content
+           (sorg--flash-overlay)
+
+           ;; Clean up any formatting issues
+           (when (eq major-mode 'org-mode)
+             (org-indent-region start (point))
+             (org-fix-tags-on-the-fly)))))
 
 (provide 'sorg)
 ;;; sorg.el ends here
