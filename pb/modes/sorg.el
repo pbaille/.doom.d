@@ -145,6 +145,10 @@
       ;; Adjust scroll position to keep cursor at approximately the same screen line
       (recenter line-pos))))
 
+(defun sorg--query-replace ()
+  (interactive)
+  (pb-prompt/buffer-request))
+
 ;; bindings and init
 
 (defvar sorg-bindings
@@ -187,7 +191,8 @@
         "<mouse-1>" #'sorg--click
         ;; misc
         "?" #'pb-org/print-context
-        "g j" #'sorg--scroll-top))
+        "g j" #'sorg--scroll-top
+        "q r" #'sorg--query-replace))
 
 (dolist (binding (sq/partition 2 2 sorg-bindings))
   (define-key evil-sorg-state-map
@@ -202,6 +207,7 @@
  :states 'insert
  :keymaps (list 'evil-org-mode-map)
  [escape] #'sorg--enter-from-normal-mode
+ [return] #'newline-and-indent
  "C-w" #'pb-misc/insert-open-paren)
 
 (defun sorg--after-gptel-send-advice (&rest _)
