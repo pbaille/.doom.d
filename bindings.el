@@ -2,284 +2,290 @@
 
 (setq which-key-sort-order 'which-key-description-order)
 
-(map!
- (:prefix ("s-w" . "windows")
-          (:desc "delete window" "d" #'evil-window-delete)
-          (:desc "quit window" "q" #'quit-window)
-          (:desc "kill buffer & window" "s-d" #'kill-buffer-and-window)
-
-          ;; moving
-          (:desc "move left" "h" #'windmove-left)
-          (:desc "move right" "l" #'windmove-right)
-          (:desc "move down" "j" #'windmove-down)
-          (:desc "move up" "k" #'windmove-up)
+(map! (:prefix ("s-w" . "windows")
+               (:desc "delete window" "d" #'evil-window-delete)
+               (:desc "quit window" "q" #'quit-window)
+               (:desc "kill buffer & window" "s-d" #'kill-buffer-and-window)
 
-          ;; resizing
-          (:desc "width +" "M-l" #'pb-misc/increase-window-width)
-          (:desc "width -" "M-h" #'pb-misc/shrink-window-width)
-          (:desc "height +" "M-j" #'pb-misc/increase-window-height)
-          (:desc "height -" "M-k" #'pb-misc/shrink-window-height)
+               ;; moving
+               (:desc "move left" "h" #'windmove-left)
+               (:desc "move right" "l" #'windmove-right)
+               (:desc "move down" "j" #'windmove-down)
+               (:desc "move up" "k" #'windmove-up)
 
-          ;; splitting
-          (:desc "split down" "C-j" (lambda () (interactive) (evil-window-split) (windmove-down)))
-          (:desc "split right" "C-l" (lambda () (interactive) (evil-window-vsplit) (windmove-right)))
-          (:desc "split up" "C-h" #'evil-window-vsplit)
-          (:desc "split left" "C-k" #'evil-window-split)
+               ;; resizing
+               (:desc "width +" "M-l" #'pb-misc/increase-window-width)
+               (:desc "width -" "M-h" #'pb-misc/shrink-window-width)
+               (:desc "height +" "M-j" #'pb-misc/increase-window-height)
+               (:desc "height -" "M-k" #'pb-misc/shrink-window-height)
 
-          ;; swapping
-          (:desc "swap up" "K" #'+evil/window-move-up)
-          (:desc "swap right" "L" #'+evil/window-move-right)
-          (:desc "swap left" "H" #'+evil/window-move-left)
-          (:desc "swap down" "J" #'+evil/window-move-down)
+               ;; splitting
+               (:desc "split down" "C-j" (lambda () (interactive) (evil-window-split) (windmove-down)))
+               (:desc "split right" "C-l" (lambda () (interactive) (evil-window-vsplit) (windmove-right)))
+               (:desc "split up" "C-h" #'evil-window-vsplit)
+               (:desc "split left" "C-k" #'evil-window-split)
 
-          ;; misc
-          (:desc "flash current position" "s-w" #'+nav-flash/blink-cursor)
-          (:desc "new window" "n" #'pb-misc/dwim-split)
-          (:desc "split open buffer" "b" #'pb-misc/window-split-consult-buffer)
-          (:desc "delete other windows" "D" #'delete-other-windows))
+               ;; swapping
+               (:desc "swap up" "K" #'+evil/window-move-up)
+               (:desc "swap right" "L" #'+evil/window-move-right)
+               (:desc "swap left" "H" #'+evil/window-move-left)
+               (:desc "swap down" "J" #'+evil/window-move-down)
 
- (:prefix ("s-p" . "project")
+               ;; misc
+               (:desc "flash current position" "s-w" #'+nav-flash/blink-cursor)
+               (:desc "new window" "n" #'pb-misc/dwim-split)
+               (:desc "split open buffer" "b" #'pb-misc/window-split-consult-buffer)
+               (:desc "delete other windows" "D" #'delete-other-windows)))
 
-          (:desc "switch persp"
-                 "s-p" #'persp-switch)
+(map! (:prefix ("s-p" . "project")
 
-          (:desc "project buffers"
-                 "p" #'projectile-ibuffer)
+               (:desc "switch persp"
+                  "s-p" #'persp-switch)
 
-          (:desc "find file"
-                 "f" #'projectile-find-file)
+               (:desc "project buffers"
+                  "p" #'projectile-ibuffer)
 
-          (:desc "recent file"
-                 "r" #'projectile-recentf)
+               (:desc "find file"
+                  "f" #'projectile-find-file)
 
-          (:desc "add buffer"
-                 "a" #'persp-add-buffer)
+               (:desc "recent file"
+                  "r" #'projectile-recentf)
 
-          (:desc "search in project"
-                 "s" #'+default/search-project)
+               (:desc "add buffer"
+                  "a" #'persp-add-buffer)
 
-          (:desc "kill buffer"
-                 "k" #'persp-kill-buffer)
+               (:desc "search in project"
+                  "s" #'+default/search-project)
 
-          (:desc "remove buffer"
-                 "d" #'persp-remove-buffer)
+               (:desc "kill buffer"
+                  "k" #'persp-kill-buffer)
 
-          (:desc "project dired"
-                 "s-d" #'project-dired)
+               (:desc "remove buffer"
+                  "d" #'persp-remove-buffer)
 
-          (:desc "kill persp"
-                 "s-k" #'+workspace/kill)
+               (:desc "project dired"
+                  "s-d" #'project-dired)
 
-          (:desc "new persp"
-                 "n" #'+workspace/new-named)
+               (:desc "kill persp"
+                  "s-k" #'+workspace/kill)
 
-          (:desc "next persp"
-                 "l" #'+workspace/switch-right)
+               (:desc "new persp"
+                  "n" #'+workspace/new-named)
 
-          (:desc "prev persp"
-                 "h" #'+workspace/switch-left)
+               (:desc "next persp"
+                  "l" #'+workspace/switch-right)
 
-          (:desc "move right"
-                 "M-l" #'+workspace/swap-right)
+               (:desc "prev persp"
+                  "h" #'+workspace/switch-left)
 
-          (:desc "move left"
-                 "M-h" #'+workspace/swap-left))
+               (:desc "move right"
+                  "M-l" #'+workspace/swap-right)
 
- (:prefix ("s-o" . "open")
-          (:desc "vterm here" "t" #'+vterm/here)
-          (:desc "project sidebar" "s-p" #'+dired/dirvish-side-and-follow))
+               (:desc "move left"
+                  "M-h" #'+workspace/swap-left)))
 
- (:prefix ("s-i" . "info/help")
-          (:desc "doom help menu" "h" help-map)
-          (:desc "imenu" "s-i" #'consult-imenu)
-          (:desc "describe function" "f" #'helpful-callable)
-          (:desc "describe face" "F" #'describe-face)
-          (:desc "describe variable" "v" #'helpful-variable)
-          (:desc "describe symbol" "o" #'describe-symbol)
-          (:desc "describe command" "x" #'helpful-command)
-          (:desc "describe key" "k" #'helpful-key)
-          (:desc "describe mode" "m" #'describe-mode)
-          (:desc "describe active minor mode" "M" #'doom/describe-active-minor-mode))
+(map! (:prefix ("s-o" . "open")
+               (:desc "vterm here" "t" #'+vterm/here)
+               (:desc "project sidebar" "s-p" #'+dired/dirvish-side-and-follow)))
 
- (:prefix ("s-j" . "buffers")
+(map! (:prefix ("s-i" . "info/help")
+               (:desc "doom help menu" "h" help-map)
+               (:desc "imenu" "s-i" #'consult-imenu)
+               (:desc "describe function" "f" #'helpful-callable)
+               (:desc "describe face" "F" #'describe-face)
+               (:desc "describe variable" "v" #'helpful-variable)
+               (:desc "describe symbol" "o" #'describe-symbol)
+               (:desc "describe command" "x" #'helpful-command)
+               (:desc "describe key" "k" #'helpful-key)
+               (:desc "describe mode" "m" #'describe-mode)
+               (:desc "describe active minor mode" "M" #'doom/describe-active-minor-mode)))
 
-          (:desc "project buffer"
-                 "j" #'consult-project-buffer)
+(map! (:prefix ("s-j" . "buffers")
 
-          (:desc "consult buffer"
-                 "s-j" #'consult-buffer)
+               (:desc "project buffer"
+                       "j" #'consult-project-buffer)
 
-          (:desc "ibuffer"
-                 "s-i" #'ibuffer)
+               (:desc "consult buffer"
+                       "s-j" #'consult-buffer)
 
-          (:desc "*messages*"
-                 "M" #'pb-misc/switch-to-message-buffer)
+               (:desc "ibuffer"
+                       "s-i" #'ibuffer)
 
-          (:desc "meta buffers"
-                 "m" #'pb-misc/switch-to-meta-buffer)
+               (:desc "*messages*"
+                       "M" #'pb-misc/switch-to-message-buffer)
 
-          (:desc "terminals"
-                 "t" #'pb-misc/select-vterm-buffer)
+               (:desc "meta buffers"
+                       "m" #'pb-misc/switch-to-meta-buffer)
 
-          (:desc "project ibuffer"
-                 "i" #'projectile-ibuffer)
+               (:desc "terminals"
+                       "t" #'pb-misc/select-vterm-buffer)
 
-          (:desc "kill buffer"
-                 "k" #'kill-current-buffer)
+               (:desc "project ibuffer"
+                       "i" #'projectile-ibuffer)
 
-          (:desc "kill buffer and window"
-                 "s-k" #'kill-buffer-and-window)
+               (:desc "kill buffer"
+                       "k" #'kill-current-buffer)
 
-          (:desc "reload buffer"
-                 "r" #'revert-buffer)
+               (:desc "kill buffer and window"
+                       "s-k" #'kill-buffer-and-window)
 
-          (:desc "rename buffer"
-                 "R" #'rename-buffer)
+               (:desc "reload buffer"
+                       "r" #'revert-buffer)
 
-          (:desc "consult flycheck"
-                 "w" #'consult-flycheck)
+               (:desc "rename buffer"
+                       "R" #'rename-buffer)
 
-          (:desc "scratch buffer"
-                 "s-n" #'pb-misc/scratch-buffer)
+               (:desc "consult flycheck"
+                       "w" #'consult-flycheck)
 
-          (:desc "scratch buffer"
-                 "n" (lambda ()
-                       (interactive)
-                       (pb-misc/scratch-buffer 'split)))
+               (:desc "scratch buffer"
+                       "s-n" #'pb-misc/scratch-buffer)
 
-          (:desc "new buffer"
-                 "N" #'pb-misc/new-buffer)
+               (:desc "scratch buffer"
+                       "n" (lambda ()
+         (interactive)
+         (pb-misc/scratch-buffer 'split)))
 
-          (:desc "next"
-                 "l" #'next-buffer)
+               (:desc "new buffer"
+                       "N" #'pb-misc/new-buffer)
 
-          (:desc "previous"
-                 "h" #'previous-buffer)
+               (:desc "next"
+                       "l" #'next-buffer)
 
-          (:desc "elisp eval" "C-e" (lambda ()
-                                      (interactive)
-                                      (pb-misc/elisp-eval 'split))))
+               (:desc "previous"
+                       "h" #'previous-buffer)
 
- (:prefix ("s-q" . "LLMs")
+               (:desc "elisp eval" "C-e" (lambda ()
+         (interactive)
+         (pb-misc/elisp-eval 'split)))))
 
-          ;; gptel
+(map! (:prefix ("s-q" . "LLMs")
 
-          (:desc "gptel: goto chat"
-                 "s-q" #'gptel)
+               ;; gptel
 
-          (:desc "gptel: menu"
-                 "m" #'gptel-menu)
+               (:desc "gptel: goto chat"
+                       "s-q" #'gptel)
 
-          (:desc "gptel: change model"
-                 "s-m" #'pb-gptel/change-model)
+               (:desc "gptel: menu"
+                       "m" #'gptel-menu)
 
-          (:desc "gptel: add file to context"
-                 "f" #'gptel-context-add-file)
+               (:desc "gptel: change model"
+                       "s-m" #'pb-gptel/change-model)
 
-          (:desc "gptel: remove all context"
-                 "D" #'gptel-context-remove-all)
+               (:desc "gptel: add file to context"
+                       "f" #'gptel-context-add-file)
 
-          (:desc "gptel: remove files from context"
-                 "d" #'pb-gptel/remove-context-files)
+               (:desc "gptel: remove all context"
+                       "D" #'gptel-context-remove-all)
 
-          (:prefix ("t" . "gptel: tools")
-                   (:desc "enable" "e" (lambda () (interactive) (setq-local gptel-use-tools t)))
-                   (:desc "disable" "d" (lambda () (interactive) (setq-local gptel-use-tools nil))))
+               (:desc "gptel: remove files from context"
+                       "d" #'pb-gptel/remove-context-files)
 
-          ;; chat
+               (:prefix ("t" . "gptel: tools")
+                         (:desc "enable" "e" (lambda () (interactive) (setq-local gptel-use-tools t)))
+                         (:desc "disable" "d" (lambda () (interactive) (setq-local gptel-use-tools nil))))
 
-          (:desc "chat: current expression"
-                 "e" #'pb-gptel/current-symex-chat)
+               ;; chat
 
-          (:desc "chat: current buffer"
-                 "b" #'pb-gptel/current-buffer-chat)
+               (:desc "chat: current expression"
+                       "e" #'pb-gptel/current-symex-chat)
 
-          (:desc "chat: current buffer (new window)"
-                 "s-b" (lambda () (interactive) (pb-gptel/current-buffer-chat (km :pop-window t))))
+               (:desc "chat: current buffer"
+                       "b" #'pb-gptel/current-buffer-chat)
 
-          (:desc "chat: directory"
-                 "s-d" #'pb-gptel/directory-chat)
+               (:desc "chat: current buffer (new window)"
+                       "s-b" (lambda () (interactive) (pb-gptel/current-buffer-chat (km :pop-window t))))
 
-          ;; pb-prompt
+               (:desc "chat: directory"
+                       "s-d" #'pb-gptel/directory-chat)
 
-          (:desc "prompt: consult-context"
-                 "s-c" #'pb-prompt/browse-context-item)
+               ;; pb-prompt
 
-          (:desc "prompt: simple request"
-                 "r" #'pb-prompt/simple-request)
+               (:desc "prompt: consult-context"
+                       "s-c" #'pb-prompt/browse-context-item)
 
-          (:desc "prompt: browse saved contexts"
-                 "s-i" #'pb-prompt/browse-saved-contexts)
+               (:desc "prompt: simple request"
+                       "r" #'pb-prompt/simple-request)
 
-          (:desc "prompt: browse current context"
-                 "i" #'pb-prompt/browse-current-context)
+               (:desc "prompt: browse saved contexts"
+                       "s-i" #'pb-prompt/browse-saved-contexts)
 
-          ;; git
-          (:prefix ("g" . "git:")
-                   (:desc "generate commit message" "m" #'pb-prompt/generate-commit-message))
-          )
+               (:desc "prompt: browse current context"
+                       "i" #'pb-prompt/browse-current-context)
 
- (:prefix ("s-c" . "prompt: context")
-          (:desc "browse" "c" #'pb-prompt/browse-context)
-          (:desc "display" "C-e" #'pb-prompt/display-context)
-          (:desc "saved contexts" "s-c" #'pb-prompt/browse-saved-contexts)
-          (:prefix ("a" . "add")
-                   (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
-                   (:desc "add file to context" "f" #'pb-prompt/add-path)
-                   (:desc "add function to context" "l" #'pb-prompt/add-function)
-                   (:desc "add selection to context" "s" #'pb-prompt/add-selection)
-                   (:desc "add saved context" "c" #'pb-prompt/add-saved-context))
+               ;; git
+               (:prefix ("g" . "git:")
+                         (:desc "generate commit message" "m" #'pb-prompt/generate-commit-message))
+               ))
 
-          (:desc "delete item" "d" #'pb-prompt/remove-context-item)
+(map! (:prefix ("s-c" . "prompt: context")
+               (:desc "browse" "c" #'pb-prompt/browse-context)
+               (:desc "display" "C-e" #'pb-prompt/display-context)
+               (:desc "saved contexts" "s-c" #'pb-prompt/browse-saved-contexts)
+               (:prefix ("a" . "add")
+                         (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
+                         (:desc "add file to context" "f" #'pb-prompt/add-path)
+                         (:desc "add function to context" "l" #'pb-prompt/add-function)
+                         (:desc "add selection to context" "s" #'pb-prompt/add-selection)
+                         (:desc "add saved context" "c" #'pb-prompt/add-saved-context))
 
-          (:desc "save" "s" #'pb-prompt/save-context)
-          (:desc "load" "l" #'pb-prompt/load-context))
+               (:desc "delete item" "d" #'pb-prompt/remove-context-item)
 
- (:prefix ("s-g" . "git")
-          (:desc "git status" "s-g" #'magit-status)
-          (:prefix ("d" . "diff")
-                   (:desc "diff file" "f" #'magit-diff-buffer-file)
-                   (:desc "diff root" "s" #'magit-diff-staged)
-                   (:desc "diff root" "b" #'pb-prompt/diff-branch))
-          (:prefix ("c" . "commit")
-                   (:desc "commit" "c" #'pb-prompt/commit)
-                   (:desc "amend" "a" #'pb-prompt/commit-amend))
-          (:desc "save & stage" "s" #'pb-git/stage-file)
-          (:desc "save, stage, commit" "s-s" (lambda () (interactive) (pb-git/stage-file) (pb-prompt/commit))))
+               (:desc "save" "s" #'pb-prompt/save-context)
+               (:desc "load" "l" #'pb-prompt/load-context)))
 
- (:prefix ("s-s" . "search")
-          (:desc "search file" "s-s" #'+default/search-buffer)
-          (:desc "search symbol at point" "s" #'+vertico/search-symbol-at-point)
-          (:desc "search project" "p" #'+default/search-project)
-          (:desc "search replace thing at point" "r" #'pb-misc/query-replace-thing-at-point)
-          (:desc "search replace" "s-r" #'query-replace)
-          (:desc "search google" "g" (lambda () (interactive) (browse-url "https://www.google.com/?autofocus=1")))
-          (:desc "search mark" "m" #'consult-mark))
+(map! (:prefix ("s-g" . "git")
+               (:desc "git status" "s-g" #'magit-status)
+               (:prefix ("d" . "diff")
+                         (:desc "diff file" "f" #'magit-diff-buffer-file)
+                         (:desc "diff root" "s" #'magit-diff-staged)
+                         (:desc "diff root" "b" #'pb-prompt/diff-branch))
+               (:prefix ("c" . "commit")
+                         (:desc "commit" "c" #'pb-prompt/commit)
+                         (:desc "amend" "a" #'pb-prompt/commit-amend))
+               (:desc "save & stage" "s" #'pb-git/stage-file)
+               (:desc "save, stage, commit" "s-s" (lambda () (interactive) (pb-git/stage-file) (pb-prompt/commit)))))
 
- (:prefix ("s-f" . "file")
-          (:desc "find file" "s-f" #'find-file)
-          (:desc "recent file" "r" #'consult-recent-file)
-          (:desc "copy file" "C" #'doom/copy-this-file)
-          (:desc "move file" "R" #'doom/move-this-file)
-          (:desc "find project file" "p" #'projectile-find-file)
-          (:desc "save file" "s-s" #'pb-misc/save-buffer)
-          (:desc "delete file" "D" #'doom/delete-this-file))
+(map! (:prefix ("s-s" . "search")
+               (:desc "search file" "s-s" #'+default/search-buffer)
+               (:desc "search symbol at point" "s" #'+vertico/search-symbol-at-point)
+               (:desc "search project" "p" #'+default/search-project)
+               (:desc "search replace thing at point" "r" #'pb-misc/query-replace-thing-at-point)
+               (:desc "search replace" "s-r" #'query-replace)
+               (:desc "search google" "g" (lambda () (interactive) (browse-url "https://www.google.com/?autofocus=1")))
+               (:desc "search mark" "m" #'consult-mark)))
 
- (:prefix ("s-d" . "dired")
-          (:desc "dired" "d" #'dired-jump)
-          (:desc "dirvish" "s-d" (lambda () (interactive) (dirvish (projectile-project-root))))
-          (:desc "sidebar" "s" #'dired-sidebar-toggle-sidebar)
-          (:desc "dired kill all" "s-k" #'pb-misc/kill-all-dired-buffers))
+(map! (:prefix ("s-f" . "file")
+               (:desc "find file" "s-f" #'find-file)
+               (:desc "recent file" "r" #'consult-recent-file)
+               (:desc "copy file" "C" #'doom/copy-this-file)
+               (:desc "move file" "R" #'doom/move-this-file)
+               (:desc "find project file" "p" #'projectile-find-file)
+               (:desc "save file" "s-s" #'pb-misc/save-buffer)
+               (:desc "delete file" "D" #'doom/delete-this-file)))
 
- (:prefix ("s-t" . "toggle")
-          (:desc "folding" "s-t" #'pb-fold/toggle-fold)
-          (:desc "fold level" "t l" #'hs-hide-level)
-          (:desc "fold show block" "t o" #'hs-show-block)
-          (:desc "flycheck" "f" #'flycheck-mode)
-          (:desc "line numbers" "l" #'doom/toggle-line-numbers)
-          (:desc "highlight line" "h" #'hl-line-mode)
-          (:desc "word wrap" "w" #'visual-line-mode)
-          (:desc "read only" "r" #'read-only-mode)))
+(map! (:prefix ("s-d" . "dired")
+               (:desc "dired" "d" #'dired-jump)
+               (:desc "dirvish" "s-d" (lambda () (interactive) (dirvish (projectile-project-root))))
+               (:desc "sidebar" "s" #'dired-sidebar-toggle-sidebar)
+               (:desc "dired kill all" "s-k" #'pb-misc/kill-all-dired-buffers)))
+
+(map! (:prefix ("s-t" . "toggle")
+               (:desc "folding" "s-t" #'pb-fold/toggle-fold)
+               (:desc "fold level" "t l" #'hs-hide-level)
+               (:desc "fold show block" "t o" #'hs-show-block)
+               (:desc "flycheck" "f" #'flycheck-mode)
+               (:desc "line numbers" "l" #'doom/toggle-line-numbers)
+               (:desc "highlight line" "h" #'hl-line-mode)
+               (:desc "word wrap" "w" #'visual-line-mode)
+               (:desc "read only" "r" #'read-only-mode)))
+
+(map! (:prefix ("s-m" . "meta")
+               (:desc "find meta file" "s-m" #'pb-meta/find-meta-file)
+               (:desc "find project meta file" "p" #'pb-meta/find-all-meta-files)
+               (:prefix ("n" . "create")
+                        (:desc "org file" "o" #'pb-meta/create-org-file)
+                        (:desc "scratch file" "s" #'pb-meta/create-scratch-file))))
 
 (progn :misc
 
