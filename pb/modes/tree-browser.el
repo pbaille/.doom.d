@@ -1,5 +1,7 @@
 ;;; pb/xp/modes/tree-browser.el -*- lexical-binding: t; -*-
 
+(require 'evil)
+
 ;; Define the maximum depth visible in the browser when first created
 (defvar-local tree-browser/max-depth 1
   "Maximum depth of the tree to display initially.")
@@ -166,30 +168,6 @@
                      (recenter 0)  ;; Put at top of window
                      (symex--update-overlay)))))))))
 
-(progn :mouse-support
-
-       (defun tree-browser/mouse-click (event)
-         "Handle mouse click EVENT in the tree browser.
-          When a node is clicked, focus that node in the source buffer."
-         (interactive "e")
-         (let ((pos (posn-point (event-end event))))
-           (when pos
-             (goto-char pos)
-             (back-to-indentation)
-             ;; Sync with source buffer
-             (when tree-browser/narrow-mode
-               (tree-browser/apply-narrowing-at-point))
-             (tree-browser/sync-source-with-tree)
-             ;; Focus the window with the source buffer
-             (when-let ((buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer)))
-                        (window (get-buffer-window buffer t)))
-               (select-window window)))))
-
-       ;; Add mouse bindings
-       (define-key tree-browser/mode-map [mouse-1] 'tree-browser/mouse-click)
-       (define-key tree-browser/mode-map [down-mouse-1] nil)) ;; Prevent text selection
-
-
 (progn :actions
 
        ;; Replace the navigation functions to support follow mode
@@ -317,7 +295,31 @@
                (goto-char start)
                (when should-recenter
                  (recenter)))
-             (balance-windows)))))
+             (balance-windows))))) ;; Prevent text selection
+
+
+(progn :mouse-support
+
+       (defun tree-browser/mouse-click (event)
+         "Handle mouse click EVENT in the tree browser.
+          When a node is clicked, focus that node in the source buffer."
+         (interactive "e")
+         (let ((pos (posn-point (event-end event))))
+           (when pos
+             (goto-char pos)
+             (back-to-indentation)
+             ;; Sync with source buffer
+             (when tree-browser/narrow-mode
+               (tree-browser/apply-narrowing-at-point))
+             (tree-browser/sync-source-with-tree)
+             ;; Focus the window with the source buffer
+             (when-let ((buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer)))
+                        (window (get-buffer-window buffer t)))
+               (select-window window)))))
+
+       ;; Add mouse bindings
+       (define-key tree-browser/mode-map [mouse-1] 'tree-browser/mouse-click)
+       (define-key tree-browser/mode-map [down-mouse-1] nil))
 
 (progn :depth
 
@@ -496,6 +498,54 @@
               ;; Add hook for window configuration changes
               (add-hook 'window-configuration-change-hook 'tree-browser/enforce-window-width))
 
+       (defun tree-browser/help ()
+         "Display help for tree browser mode, or kill the help buffer if visible."
+         (interactive)
+         (if-let ((help-buf (get-buffer "*Tree Browser Help*"))
+                  (help-win (get-buffer-window help-buf)))
+             ;; If help buffer is already visible, close it
+             (quit-window nil help-win)
+           ;; Otherwise, create and display help
+           (let ((help-buffer (get-buffer-create "*Tree Browser Help*")))
+             (with-current-buffer help-buffer
+               (let ((inhibit-read-only t))
+                 (erase-buffer)
+                 (insert "Tree Browser Mode Commands\n")
+                 (insert "========================\n\n")
+                 (insert "Navigation:\n")
+                 (insert "  j, down   - Move to next line\n")
+                 (insert "  k, up     - Move to previous line\n")
+                 (insert "  h         - Decrease tree depth\n")
+                 (insert "  l         - Increase tree depth\n")
+                 (insert "  g g       - Go to beginning of buffer\n")
+                 (insert "  G         - Go to end of buffer\n")
+                 (insert "  /         - Search forward\n")
+                 (insert "  RET       - Go to source and close browser\n")
+                 (insert "  p         - Go to source without closing browser\n")
+                 (insert "  q         - Quit tree browser\n\n")
+                 (insert "View Settings:\n")
+                 (insert "  f         - Toggle follow mode (cursor follows tree selection)\n")
+                 (insert "  n         - Toggle narrow mode (source narrows to selection)\n")
+                 (insert "  c         - Toggle centered mode (center node in source window)\n")
+                 (insert "  a         - Toggle auto-refresh mode (refresh on save)\n")
+                 (insert "  r         - Manually refresh tree\n\n")
+                 (insert "Mode status:\n")
+                 (insert (format "  Follow mode:   %s\n" (if (bound-and-true-p tree-browser/follow-mode) "On" "Off")))
+                 (insert (format "  Narrow mode:   %s\n" (if (bound-and-true-p tree-browser/narrow-mode) "On" "Off")))
+                 (insert (format "  Centered mode: %s\n" (if (bound-and-true-p tree-browser/centered-mode) "On" "Off")))
+                 (insert (format "  Auto-refresh:  %s\n" (if (bound-and-true-p tree-browser/auto-refresh-mode) "On" "Off")))
+                 (insert "\nPress q to close this help window"))
+               (special-mode)
+               (local-set-key (kbd "q") 'quit-window))
+             ;; Use display-buffer in the source window instead of switch-to-buffer-other-window
+             (when-let ((source-buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer)))
+                        (source-window (get-buffer-window source-buffer)))
+               (with-selected-window source-window
+                 (switch-to-buffer help-buffer)))
+             ;; Fallback to the regular behavior if no source window found
+             (unless (get-buffer-window help-buffer)
+               (switch-to-buffer-other-window help-buffer)))))
+
        (progn :render
 
               (defun tree-browser/render (tree)
@@ -598,6 +648,47 @@
                     (when (and window-start-pos
                                (< window-start-pos (point-max)))
                       (set-window-start (selected-window) window-start-pos))))))
+
+       (progn :mode-line
+
+              (defun tree-browser/update-mode-line ()
+                "Update the mode line to show active modes."
+                (setq mode-line-format
+                      (list
+                       "%e"
+                       mode-line-front-space
+                       '(:eval (propertize (buffer-name (buffer-local-value 'tree-browser/source-buffer (current-buffer)))
+                                           'face 'font-lock-function-name-face))
+                       " ["
+                       '(:eval (propertize (if tree-browser/follow-mode "F" "-")
+                                           'face (if tree-browser/follow-mode 'font-lock-keyword-face 'shadow)
+                                           'help-echo "Follow mode"))
+                       '(:eval (propertize (if tree-browser/narrow-mode "N" "-")
+                                           'face (if tree-browser/narrow-mode 'font-lock-keyword-face 'shadow)
+                                           'help-echo "Narrow mode"))
+                       '(:eval (propertize (if tree-browser/centered-mode "C" "-")
+                                           'face (if tree-browser/centered-mode 'font-lock-keyword-face 'shadow)
+                                           'help-echo "Centered mode"))
+                       '(:eval (propertize (if tree-browser/auto-refresh-mode "A" "-")
+                                           'face (if tree-browser/auto-refresh-mode 'font-lock-keyword-face 'shadow)
+                                           'help-echo "Auto-refresh mode"))
+                       "] "
+                       mode-line-end-spaces))
+                (force-mode-line-update))
+
+              ;; Update mode line whenever toggling a mode
+              (advice-add 'tree-browser/toggle-follow-mode :after #'tree-browser/update-mode-line)
+              (advice-add 'tree-browser/toggle-narrow-mode :after #'tree-browser/update-mode-line)
+              (advice-add 'tree-browser/toggle-centered-mode :after #'tree-browser/update-mode-line)
+              (advice-add 'tree-browser/toggle-auto-refresh-mode :after #'tree-browser/update-mode-line)
+
+              ;; Add to mode initialization
+              (defun tree-browser/initialize-mode-line ()
+                "Initialize the mode line format for tree browser."
+                (tree-browser/update-mode-line))
+
+              ;; Set up mode line during initialization
+              (add-hook 'tree-browser/mode-hook #'tree-browser/initialize-mode-line))
 
        (progn :utils
 
@@ -748,3 +839,5 @@
            (kbd "g g") 'beginning-of-buffer
            (kbd "G") 'end-of-buffer
            (kbd "/") 'isearch-forward)))
+
+(provide 'tree-browser)
