@@ -284,7 +284,8 @@
           (t (org-backward-element)))
     ;; If we didn't actually move, try moving to previous visible heading
     (when (= p (point))
-      (org-previous-visible-heading 1))))
+      (org-previous-visible-heading 1))
+    :ok))
 
 (defun pb-org/walk-backward ()
   "Go to first child or to next node."
