@@ -248,7 +248,7 @@
           Argument F should be a function that takes a context (list of items) and
           returns a modified context."
          (if pb-prompt/context-browser-focus
-           (when-let ((focused-context
+             (when-let ((focused-context
                          (gethash pb-prompt/context-browser-focus
                                   pb-prompt/saved-contexts)))
                (puthash pb-prompt/context-browser-focus
@@ -266,16 +266,16 @@
 
           Returns the updated context with the item added (if it wasn't a duplicate)."
          (let* ((item-with-id (if (km/get item :id)
-           item
-         (pb-prompt/with-id item)))
+                                  item
+                                (pb-prompt/with-id item)))
                 (item-id (km/get item-with-id :id)))
            (if (seq-find (lambda (ctx-item)
-         (equal (km/get ctx-item :id) item-id))
+                           (equal (km/get ctx-item :id) item-id))
                          context)
-           ;; If item with same ID exists, return unchanged context
-           context
-         ;; Otherwise, add the item to the context
-         (cons item-with-id context))))
+               ;; If item with same ID exists, return unchanged context
+               context
+             ;; Otherwise, add the item to the context
+             (cons item-with-id context))))
 
        (defun pb-prompt/add-item! (item)
          "Add ITEM to the focused context with a unique ID.
@@ -306,9 +306,19 @@
          (interactive)
          (let ((selection
                 (cond
+
+                 ((eq major-mode 'org-mode)
+                  (pb/let [(cons start end) (pb-org/node-bounds)]
+                    (buffer-substring-no-properties start end)))
+
                  ;; If region is active, use region
                  ((use-region-p)
                   (buffer-substring-no-properties (region-beginning) (region-end)))
+
+                 ;; If we're in pb-lisp mode, use current selection
+
+                 ((and (boundp 'evil-state) (eq evil-state 'pb-lisp))
+                  (pb-lisp/current-selection-as-string))
 
                  ;; If we're in symex-mode, use current symex
                  ((and (boundp 'symex-mode) symex-mode)
@@ -316,7 +326,7 @@
 
                  ;; Default fallback message
                  (t
-                  (user-error "No selection or symex available")))))
+                  (user-error "No selection, pb-lisp selection, or symex available")))))
            (when selection
              (km :type "selection"
                  :path (buffer-file-name)
@@ -357,7 +367,7 @@
          (interactive)
          (if-let* ((context-names (hash-table-keys pb-prompt/saved-contexts))
                    (selected-name (completing-read "Add saved context: " context-names nil t)))
-           (let ((saved-context (gethash selected-name pb-prompt/saved-contexts)))
+             (let ((saved-context (gethash selected-name pb-prompt/saved-contexts)))
                (pb-prompt/add-item!
                 (pb-prompt/with-id
                  (km :type "context"
@@ -456,7 +466,7 @@
             ((eq choice ?e)
              (let* ((obarray-functions
                      (seq-filter (lambda (sym)
-         (and (symbolp sym)
+                                   (and (symbolp sym)
                                         (fboundp sym)
                                         (not (special-form-p sym))
                                         (not (macrop sym))))
@@ -478,14 +488,14 @@
                 (km :name func-name
                     :code "(lambda ()\n (interactive)\n ())")
                 (lambda (func func-expr new-func-name)
-         (pb-prompt/add-item!
+                  (pb-prompt/add-item!
                    (km :type "function"
                        :name (or new-func-name func-name)
                        :code func-expr
                        :function func
                        :documentation (or (documentation func) "No documentation available")))))))))))
 
-(progn :simple-request
+(progn :request
 
        (defun pb-prompt/simple-request ()
          (interactive)
@@ -499,7 +509,76 @@
                                    :task (read-string "Edit current expression: "))))
 
            :system (pb-prompt/context-prompt)
-           :callback #'pb-gptel/current-symex-request-handler)))
+           :callback #'pb-gptel/current-symex-request-handler))
+
+       (defun pb-prompt/buffer-request-handler (res info)
+         (if res
+             (progn
+               (cond ((eq major-mode 'org-mode) (pb-org/delete))
+                     (symex-mode (symex-change 1)))
+               (insert res)
+               (cond ((eq major-mode 'org-mode)
+                      (insert "\n\n")
+                      (evil-sorg-state 1))
+                     (symex-mode
+                      (symex-mode-interface)
+                      (symex-tidy))))
+           (message (km/pp (km :status (km/get info :http-status)
+                               :error (km/get info :error)))))
+         (setq evil-sorg-state-cursor `("gold" box) )
+         (setq evil-symex-state-cursor `("cyan" box) )
+         (evil-refresh-cursor))
+
+       (defun pb-prompt/buffer-request-base-instruction ()
+         (cond ((eq 'org-mode major-mode)
+                (km :base "You are editing an org-mode buffer, you are very aware its tree structure."
+                    :response-format ["Your response should be valid org content, intended to replace the current node or subtree in the org file."
+                                      "Don't use markdown code block syntax or any non-valid org in your output."]))
+               (symex-mode
+                (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+                    :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
+                                      "Don't use markdown code block syntax or any non-valid code in your output."
+                                      "If you have to write prose, use appropriate comment syntax."]))))
+
+       (defun pb-prompt/buffer-request ()
+         "Send a GPT request with the current buffer context.
+          In Org mode, uses the current Org node as selection.
+          Otherwise uses current selection or expression at point."
+         (interactive)
+         (let ((selection (pb-prompt/current-selection)))
+           (gptel-request
+               (pb-prompt/mk (km :instructions
+                                 (km/merge
+                                  (pb-prompt/buffer-request-base-instruction)
+                                  (km :buffer-info (km :name (buffer-name)
+                                                       :file-path (buffer-file-name)
+                                                       :major-mode (symbol-name major-mode)
+                                                       :point (point)
+                                                       :line-number (line-number-at-pos))
+                                      :buffer-content (buffer-substring-no-properties (point-min) (point-max))
+                                      :selection selection
+                                      :task (read-string "Edit current selection: ")))))
+
+             :system (pb-prompt/context-prompt)
+             :callback #'pb-prompt/buffer-request-handler)
+
+           (let ((start (km/get selection :at))
+                 (end (+ (km/get selection :at)
+                         (length (km/get selection :content)))))
+             (symex--delete-overlay)
+             (let ((overlay (make-overlay start end)))
+               (overlay-put overlay 'face (km :background pb-gptel/overlay-color))))
+
+           (run-at-time 0.1 nil
+                        (lambda ()
+                          (cond ((and (eq major-mode 'org-mode)
+                                      (not (evil-sorg-state-p)))
+                                 (evil-sorg-state 1))
+                                (symex-mode
+                                 (symex-mode-interface)))
+                          (setq evil-sorg-state-cursor `("green" box) )
+                          (setq evil-symex-state-cursor `("green" box) )
+                          (evil-refresh-cursor))))))
 
 (progn :item-navigation
 
@@ -513,8 +592,8 @@
                        (not found))
              (beginning-of-line)
              (if (looking-at "^•")
-           (setq found t)
-         (forward-line 1)))
+                 (setq found t)
+               (forward-line 1)))
            (when (not found)
              (goto-char orig-point)
              (message "No next context found"))))
@@ -529,8 +608,8 @@
                        (not found))
              (beginning-of-line)
              (if (looking-at "^•")
-           (setq found t)
-         (forward-line -1)))
+                 (setq found t)
+               (forward-line -1)))
            (when (not found)
              (goto-char orig-point)
              (message "No previous context found"))))
@@ -847,7 +926,7 @@
                             (type (km/get item :type))
                             (name (km/get item :name)))
                   (if (equal type "context")
-           (let ((parent-name (or pb-prompt/context-browser-focus "current"))
+                      (let ((parent-name (or pb-prompt/context-browser-focus "current"))
                             (child-buffer (concat "*Context Browser " name "*")))
                         (pb-prompt/browse-context name)
                         (with-current-buffer child-buffer
@@ -858,7 +937,7 @@
 
               (defun pb-prompt/back-to-saved-contexts ()
                 "Return to the saved contexts listing view from the context browser.
-          This function closes the current context browser and opens the saved contexts list."
+                 This function closes the current context browser and opens the saved contexts list."
                 (interactive)
                 (when (eq major-mode 'pb-prompt/context-browser-mode)
                   (let ((buffer (current-buffer))
@@ -1215,16 +1294,16 @@
                  (inhibit-read-only t))
              (erase-buffer)
              (if (null contexts)
-           (insert (propertize "No saved contexts found.\n" 'face 'font-lock-comment-face))
-         ;; Header with custom face
-         (insert (propertize "Saved Contexts:\n\n" 'face 'font-lock-keyword-face))
-         (dolist (name (sort contexts #'string<))
+                 (insert (propertize "No saved contexts found.\n" 'face 'font-lock-comment-face))
+               ;; Header with custom face
+               (insert (propertize "Saved Contexts:\n\n" 'face 'font-lock-keyword-face))
+               (dolist (name (sort contexts #'string<))
                  (let* ((context (gethash name pb-prompt/saved-contexts))
                         (count (length context))
                         (types (mapcar (lambda (item) (pb/keyword (km/get item :type))) context))
                         (type-counts (seq-reduce
                                       (lambda (acc type)
-         (km/upd acc type (pb/fn [c] (1+ (or c 0)))))
+                                        (km/upd acc type (pb/fn [c] (1+ (or c 0)))))
                                       types
                                       nil)))
                    ;; Context name with bullet and count
@@ -1250,8 +1329,8 @@
                                    'face 'header-line))
            (switch-to-buffer (current-buffer))
            (if focus-name
-           (pb-prompt/focus-item-by-name focus-name)
-         (pb-prompt/goto-next-item))))
+               (pb-prompt/focus-item-by-name focus-name)
+             (pb-prompt/goto-next-item))))
 
        (defun pb-prompt/exit-saved-contexts ()
          "Exit the saved contexts buffer, kill the buffer, and quit the window."
@@ -1459,11 +1538,11 @@
 
            ;; Send the request to generate a commit message
            (gptel-request
-           prompt
-         :callback
-         (lambda (response _info)
-         ;; Find the magit commit message buffer
-         (when-let ((commit-buffer (pb-git/magit-commit-buffer)))
+               prompt
+             :callback
+             (lambda (response _info)
+               ;; Find the magit commit message buffer
+               (when-let ((commit-buffer (pb-git/magit-commit-buffer)))
                  (with-current-buffer commit-buffer
                    ;; Insert the generated message at the beginning of the buffer
                    (goto-char (point-min))
@@ -1496,7 +1575,7 @@
           buffer with the diff content to analyze changes using GPT."
          (interactive)
          (with-temp-buffer
-         (let* ((current-branch (magit-get-current-branch))
+           (let* ((current-branch (magit-get-current-branch))
                   (branches (magit-list-branch-names))
                   (selected-branch (completing-read
                                     (format "Compare %s with branch: " current-branch)
@@ -1533,10 +1612,10 @@
 
                ;; Add key bindings similar to other chat buffers
                (evil-define-key nil 'local (kbd "s-q <return>")
-         (lambda () (interactive)
-         (call-interactively #'gptel-send)
-         (evil-insert-newline-below)
-         (goto-char (point-max))))
+                 (lambda () (interactive)
+                   (call-interactively #'gptel-send)
+                   (evil-insert-newline-below)
+                   (goto-char (point-max))))
 
                ;; Insert the header content
                (insert (format "* Diff: %s..%s\n\n" current-branch selected-branch))
@@ -1584,7 +1663,7 @@
  (pb/comment
   (pb-tree/get-path-values pb-prompt/tree [:code :lisp :context]))
 
-]
+ ]
 
 
 
@@ -1604,7 +1683,7 @@
 
  (defun pb-gptel/select-paths (prompt m)
    "Select paths from a map M using PROMPT with aligned annotations.
-       Provides completion with vertically aligned hints showing each path's content."
+    Provides completion with vertically aligned hints showing each path's content."
    (interactive)
    (let* ((flatten-tree
            (seq-reduce (pb/fn [m (cons path content)]
