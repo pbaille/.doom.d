@@ -801,7 +801,7 @@
          (let* ((end (pb-lisp/selection-end)))
            (goto-char end)
            (insert "\n")
-           (indent-according-to-mode)
+           (back-to-indentation)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-before-with-new-line ()
@@ -813,7 +813,7 @@
              (beginning-of-line)
              (insert "\n"))
            (forward-line -1)
-           (indent-according-to-mode)
+           (back-to-indentation)
            (evil-insert-state)))
 
        (defun pb-lisp/insert-at-begining ()
