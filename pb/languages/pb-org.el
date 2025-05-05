@@ -506,6 +506,10 @@
             (forward-line 1)
             (cons (point) (+ (point) (length value)))))))))
 
+(defun pb-org/copy-code-block-content ()
+  (when-let ((bounds (pb-org/code-block-content-bounds)))
+    (kill-new (buffer-substring (car bounds) (cdr bounds)))))
+
 (defun pb-org/in-code-block-p ()
   "Return non-nil if point is inside a code block.
    More specifically, return the language of the code block."
