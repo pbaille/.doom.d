@@ -75,7 +75,7 @@ org file clojure namespace."
 
 (advice-add 'org-edit-src-code :around #'pb-org-clojure/edit-src-code-hook)
 
-(advice-add 'org-edit-src-exit :after #'sorg-enter-mode)
+(advice-add 'org-edit-src-exit :after #'sorg/enter-mode)
 
 (defun pb-org-clojure/set-local-vars ()
   (interactive)

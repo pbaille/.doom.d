@@ -195,7 +195,7 @@ which is tranformed to:
                                                     (pb-modus-get-color 'cyan-faint-lighter)
                                                     .9))
 
-    (set-face-attribute 'sorg--current-node-face nil
+    (set-face-attribute 'sorg/current-node-face nil
                         :inherit nil
                         :background (pb-modus-get-color 'bg-dim))
 
@@ -227,7 +227,7 @@ which is tranformed to:
     (set-face-attribute 'doom-modeline-evil-symex-state nil
                         :foreground (pb-modus-get-color 'azure-warmer-darker))
 
-    (set-face-attribute 'sorg-doom-modeline-evil-state nil
+    (set-face-attribute 'sorg/doom-modeline-evil-state nil
                         :foreground (pb-modus-get-color 'orange-lighter))
 
     (set-face-attribute 'doom-modeline-evil-insert-state nil

@@ -365,7 +365,7 @@
        :i "C-j" #'evil-next-line
        :i "C-k" #'evil-previous-line
        ;; trigger sorg mode
-       :n "<return>" #'sorg--enter-from-normal-mode
+       :n "<return>" #'sorg/enter-from-normal-mode
        :ni "s-l" #'symex-mode-interface
        :n "<mouse-1>" (lambda () (interactive) (evil-normal-state 1)))
 
