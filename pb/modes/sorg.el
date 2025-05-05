@@ -149,6 +149,30 @@
   (interactive)
   (pb-prompt/buffer-request))
 
+(defun sorg--edit-block ()
+  "Edit the source block at point."
+  (interactive)
+  (when (pb-org/at-code-block-p)
+    (org-edit-src-code)
+    (symex-mode-interface)))
+
+(defun sorg--context-aware-return ()
+  "Handle RETURN key intelligently based on context.
+   - In source blocks in insert mode: create a new line with proper indentation
+   - In normal insert mode: use the default org behavior"
+  (interactive)
+  (cond
+   ;; In a source block in insert state
+   ((and (org-in-src-block-p)
+         (evil-insert-state-p))
+    ;; Get current indentation and preserve it
+    (let ((col (current-indentation)))
+      (newline)
+      (indent-to col)))
+
+   ;; Default behavior - shift down one line
+   (t (pb-org/shift-one-line-down))))
+
 ;; bindings and init
 
 (defvar sorg-bindings
@@ -168,6 +192,7 @@
         ";" #'pb-org/toggle-fold
         "n" #'pb-org/toggle-narrow
         "e" #'pb-org/eval-block
+        "C-l" #'sorg--edit-block
         ;; edition
         "x" #'pb-org/delete
         "y" #'pb-org/copy
@@ -203,11 +228,12 @@
   (advice-add (cadr binding) :after #'sorg--flash-overlay))
 
 
+;; Update the general-define-key binding
 (general-define-key
  :states 'insert
  :keymaps (list 'evil-org-mode-map)
  [escape] #'sorg--enter-from-normal-mode
- [return] #'newline-and-indent
+ [return] #'sorg--context-aware-return
  "C-w" #'pb-misc/insert-open-paren)
 
 (defun sorg--after-gptel-send-advice (&rest _)
