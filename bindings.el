@@ -268,7 +268,11 @@
 
        (map! (:prefix ("s-d" . "dired")
                       (:desc "dired" "d" #'dired-jump)
-                      (:desc "dirvish" "s-d" (lambda () (interactive) (dirvish (projectile-project-root))))
+                      (:desc "dirvish" "s-d" (lambda ()
+                                               (interactive)
+                                               (let ((file buffer-file-name))
+                                                 (dirvish (file-name-directory file))
+                                                 (dirvish-find-entry-a file))))
                       (:desc "sidebar" "s" #'dired-sidebar-toggle-sidebar)
                       (:desc "dired kill all" "s-k" #'pb-misc/kill-all-dired-buffers)))
 
@@ -283,8 +287,9 @@
                       (:desc "read only" "r" #'read-only-mode)))
 
        (map! (:prefix ("s-m" . "meta")
-                      (:desc "find meta file" "s-m" #'pb-meta/find-meta-file)
+                      (:desc "find meta file" "s-m" #'pb-meta/change-or-create-meta-file)
                       (:desc "find project meta file" "p" #'pb-meta/find-all-meta-files)
+                      (:desc "goto main file" "m" #'pb-meta/goto-main-file)
                       (:prefix ("n" . "create")
                                (:desc "org file" "o" #'pb-meta/create-org-file)
                                (:desc "scratch file" "s" #'pb-meta/create-scratch-file)))))
