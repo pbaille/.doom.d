@@ -150,13 +150,36 @@
                 (setq pb-lisp/overlays nil))
 
               (defun pb-lisp/update-overlay ()
-                "Update the highlight overlay to match the start/end position of NODE."
+                "Update the highlight overlay to match the start/end position of the selected nodes."
                 (interactive)
                 (pb-lisp/delete-overlay)
                 (let* ((bounds (pb-lisp/selection-bounds))
-                       (overlay (make-overlay (car bounds) (cdr bounds))))
-                  (overlay-put overlay 'face 'pb-lisp/overlay-face)
-                  (push overlay pb-lisp/overlays)))))
+                       (start (car bounds))
+                       (end (cdr bounds))
+                       (column (current-column)))
+                  (save-excursion
+                    (goto-char start)
+                    (let* ((end-of-line (save-excursion (goto-char (line-end-position)) (point)))
+                           (main-overlay (make-overlay start (min end end-of-line))))
+                      ;; Add the main overlay for the entire selection, but skip the indentation
+                      (overlay-put main-overlay 'face 'pb-lisp/overlay-face)
+                      (push main-overlay pb-lisp/overlays)
+                      ;;
+                      ;; Create separate indentation overlays for each line except the first
+                      (when (> (count-lines start end) 1)
+                        (forward-line 1)
+                        ;; Process each line except the first
+                        (while (< (point) end)
+                          (let* ((line-start (+ column (line-beginning-position)))
+                                 (line-end (min (line-end-position) end))
+                                 (line-empty (looking-at-p "[ \t]*$"))
+                                 (line-overlay (when (and (not line-empty) (< line-start line-end))
+                                                 (make-overlay line-start line-end))))
+                            ;; Only add overlay for non-empty parts after indentation
+                            (when line-overlay
+                              (overlay-put line-overlay 'face 'pb-lisp/overlay-face)
+                              (push line-overlay pb-lisp/overlays)))
+                          (forward-line 1)))))))))
 
 (progn :fringe
 
