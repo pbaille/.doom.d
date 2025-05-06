@@ -171,7 +171,7 @@
       (indent-to col)))
 
    ;; Default behavior - shift down one line
-   (t (pb-org/shift-one-line-down))))
+   (t (newline-and-indent))))
 
 (progn :eval
 

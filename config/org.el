@@ -97,36 +97,36 @@
 
 (use-package org-bullets
   :config
-  (setq org-bullets-bullet-list '("⁖")) ; "◉" "○"
+  (setq org-bullets-bullet-list '("■")) ; "◉" "○"
   (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
 
 
 ;; for some reason putting this into use-package org-gtd :config do not work, trying this...
 '(use-package org-gtd
-  :after org
-  :custom
-  (org-gtd-directory "~/org/gtd")
-  (org-edna-use-inheritance t)
-  :config
-  (org-edna-mode)
-  ;; avoid to delete windows when processing inbox
-  (defun org-gtd-process-inbox ()
-    "Process the GTD inbox."
-    (interactive)
-    (set-buffer (org-gtd--inbox-file))
-    (display-buffer-same-window (org-gtd--inbox-file) '())
-    ;; (delete-other-windows)
+   :after org
+   :custom
+   (org-gtd-directory "~/org/gtd")
+   (org-edna-use-inheritance t)
+   :config
+   (org-edna-mode)
+   ;; avoid to delete windows when processing inbox
+   (defun org-gtd-process-inbox ()
+     "Process the GTD inbox."
+     (interactive)
+     (set-buffer (org-gtd--inbox-file))
+     (display-buffer-same-window (org-gtd--inbox-file) '())
+     ;; (delete-other-windows)
 
-    (org-gtd-process-mode t)
+     (org-gtd-process-mode t)
 
-    (condition-case err
-        (progn
-          (widen)
-          (goto-char (point-min))
-          (org-next-visible-heading 1)
-          (org-back-to-heading)
-          (org-narrow-to-subtree))
-      (user-error (org-gtd--stop-processing)))))
+     (condition-case err
+         (progn
+           (widen)
+           (goto-char (point-min))
+           (org-next-visible-heading 1)
+           (org-back-to-heading)
+           (org-narrow-to-subtree))
+       (user-error (org-gtd--stop-processing)))))
 
 (use-package org-modern
   :after org
@@ -134,6 +134,7 @@
   (add-hook 'org-mode-hook #'org-modern-mode)
   (add-hook 'org-agenda-finalize-hook #'org-modern-agenda)
   (setq org-modern-star ["●" "◉" "⦾" "○" "◆" "◈" "◇" "•" "◦" "◦" "◦"])
+  (setq org-modern-star nil)
   (setq org-modern-replace-stars
         (mapconcat #'identity org-modern-star)))
 

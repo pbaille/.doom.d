@@ -507,6 +507,11 @@
             (cons (point) (+ (point) (length value)))))))))
 
 (defun pb-org/copy-code-block-content ()
+  "Copy the content of the source block at point to the kill ring.
+   This function extracts just the code content (not including the block delimiters)
+   and adds it to the kill ring, making it available for pasting elsewhere.
+   Returns nil if point is not at a source block."
+  (interactive)
   (when-let ((bounds (pb-org/code-block-content-bounds)))
     (kill-new (buffer-substring (car bounds) (cdr bounds)))))
 
