@@ -265,13 +265,8 @@
                    (let* ((initial-point (point))
                           (result (sorg/eval-block body))
                           (block-end (org-element-property :end element))
-                          (result-str (format "#+RESULTS:\n#+begin_src emacs-lisp :no-eval\n%S\n#+end_src\n"
+                          (result-str (format "#+RESULTS:\n#+begin_src emacs-lisp :eval no\n%S\n#+end_src\n"
                                               result)))
-                     ;; Insert result after the source block
-                     (goto-char block-end)
-                     (skip-chars-backward "\n")
-                     (insert "\n\n" result-str)
-
                      ;; Remove previous results block if it exists
                      (let ((current-pos (point)))
                        (save-excursion
@@ -289,6 +284,11 @@
                                  (delete-region (match-beginning 0) (match-end 0)))))))
                        ;; Return to original position
                        (goto-char current-pos))
+
+                     ;; Insert result after the source block
+                     (goto-char block-end)
+                     (skip-chars-backward "\n")
+                     (insert "\n\n" result-str)
 
                      ;; Restore cursor position and return result data
                      (goto-char initial-point)
