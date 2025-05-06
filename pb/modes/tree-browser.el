@@ -251,6 +251,25 @@
                                                                (plist-get node-data :type)
                                                                "region"))))))))
 
+       (defun tree-browser/yank-node ()
+         "Copy the current node's content to the kill ring.
+          This function extracts the text of the node at point from the source buffer
+          and adds it to the kill ring, making it available for pasting elsewhere."
+         (interactive)
+         (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                     (start (plist-get node-data :start))
+                     (end (plist-get node-data :end))
+                     (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+           (when (buffer-live-p buffer)
+             (with-current-buffer buffer
+               (let ((text (buffer-substring-no-properties start end)))
+                 (kill-new text)
+                 (message "Copied %s to kill ring (%d characters)"
+                          (or (plist-get node-data :name)
+                              (plist-get node-data :type)
+                              "node")
+                          (length text)))))))
+
        (defun tree-browser/scroll-to-node-at-point ()
          "Scroll source buffer to node at point (first line of window)."
          (interactive)
@@ -830,6 +849,7 @@
            (kbd "k") 'tree-browser/prev-line
            (kbd "h") 'tree-browser/decrease-depth
            (kbd "l") 'tree-browser/increase-depth
+           (kbd "y") 'tree-browser/yank-node
            (kbd "q") 'tree-browser/quit
            (kbd "RET")  (lambda () (interactive) (tree-browser/goto-source t))
            (kbd "r") 'tree-browser/refresh
