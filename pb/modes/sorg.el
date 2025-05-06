@@ -241,7 +241,20 @@
 
        (defun sorg/eval-current-block ()
          "Evaluate the current org source block if it contains Emacs Lisp code.
-          Returns a formatted result for display or further processing."
+          Displays formatted results below the source block and returns evaluation data.
+
+          When executed on an elisp source block:
+          1. Evaluates the code and collects results/output/errors
+          2. Inserts formatted results after the block
+          3. Removes any previous results from the same block
+          4. Returns a keyword map with evaluation details
+
+          The returned keyword map includes:
+          :success - t/nil indicating whether evaluation succeeded
+          :result  - the actual return value from evaluation
+          :output  - any messages generated during evaluation
+          :error   - details if an error occurred
+          :duration - time taken to evaluate in milliseconds"
          (interactive)
          (if (org-in-src-block-p)
              (let* ((info (org-babel-get-src-block-info))
@@ -249,16 +262,36 @@
                     (body (nth 1 info))
                     (element (org-element-at-point)))
                (if (member lang '("emacs-lisp" "elisp"))
-                   (let* ((result (sorg/eval-block body))
+                   (let* ((initial-point (point))
+                          (result (sorg/eval-block body))
                           (block-end (org-element-property :end element))
-                          (result-str (format "#+RESULTS:\n#+begin_src emacs-lisp\n%S\n#+end_src\n"
+                          (result-str (format "#+RESULTS:\n#+begin_src emacs-lisp :no-eval\n%S\n#+end_src\n"
                                               result)))
-                     ;; Insert result after the source block - trimming trailing newlines
-                     (save-excursion
-                       (goto-char block-end)
-                       (skip-chars-backward "\n")
-                       (insert "\n\n" result-str))
-                     ;; Return the result for programmatic usage
+                     ;; Insert result after the source block
+                     (goto-char block-end)
+                     (skip-chars-backward "\n")
+                     (insert "\n\n" result-str)
+
+                     ;; Remove previous results block if it exists
+                     (let ((current-pos (point)))
+                       (save-excursion
+                         (let* ((block-end (org-element-property :end element)))
+                           ;; Move to block end and search for RESULTS section
+                           (goto-char block-end)
+                           (skip-chars-backward "\n")
+                           (when (re-search-forward "^[ \t]*#\\+RESULTS:.*\n\\(\\(?:.*\n\\)*?\\)[ \t]*#\\+end_src" nil t)
+                             ;; Delete the entire results section
+                             (let ((results-start (match-beginning 0))
+                                   (results-end (match-end 0)))
+                               (delete-region results-start results-end)
+                               ;; Clean up extra newlines
+                               (when (looking-at "\\(\n\\)+")
+                                 (delete-region (match-beginning 0) (match-end 0)))))))
+                       ;; Return to original position
+                       (goto-char current-pos))
+
+                     ;; Restore cursor position and return result data
+                     (goto-char initial-point)
                      result)
                  (message "Not an Emacs Lisp source block")))
            (message "Not in a source block")))
