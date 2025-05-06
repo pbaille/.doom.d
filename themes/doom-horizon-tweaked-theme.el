@@ -33,7 +33,7 @@
 
 ;;
 (def-doom-theme doom-horizon-tweaked
-  "A port of the port of the Visual Studio Code theme Horizon"
+    "A port of the port of the Visual Studio Code theme Horizon"
 
   ;; name       default    256       16
   ((bg         '("#232530" nil       nil            ))
@@ -269,7 +269,7 @@
    (org-checkbox-statistics-todo :inherit 'org-todo)
    (org-cite                     :foreground (doom-blend teal fg 0.9))
    (org-cite-key                 :foreground (doom-blend teal fg 0.6) :underline t)
-   (org-code                     :inherit 'org-block :foreground orange)
+   (org-code                     :inherit 'org-block :foreground (doom-lighten dark-blue 0.2))
    (org-date                     :foreground yellow)
    (org-default                  :inherit 'variable-pitch)
    (org-document-info            :foreground builtin)
