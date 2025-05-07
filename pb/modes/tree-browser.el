@@ -480,6 +480,169 @@
                               :fun-def is-fun-def)))
                    (t base)))))
 
+       (progn :org
+
+              (defun tree-browser/org-node-tree ()
+                "Create a tree structure from the current org-mode buffer.
+                 Returns a hierarchical representation suitable for tree-browser."
+                (when (eq major-mode 'org-mode)
+                  (save-excursion
+                    (save-restriction
+                      (widen)
+                      (goto-char (point-min))
+                      (let* ((file-name (when (buffer-file-name)
+                                          (file-name-nondirectory (buffer-file-name))))
+                             (root-node (km :type "org-file"
+                                            :name (or file-name "Org Buffer")
+                                            :start (point-min)
+                                            :end (point-max)
+                                            :children (tree-browser/org-collect-top-level-elements))))
+                        root-node)))))
+
+              (defun tree-browser/org-collect-top-level-elements ()
+                "Collect top-level elements in the current org buffer.
+                 Returns a list of node structures representing the elements."
+                (let ((elements '())
+                      (top-headlines '())
+                      (parsed-buffer (org-element-parse-buffer)))
+
+                  ;; First, find all top-level (level 1) headlines
+                  (org-element-map parsed-buffer 'headline
+                    (lambda (headline)
+                      (when (= (org-element-property :level headline) 1)
+                        (push headline top-headlines))))
+
+                  ;; Convert each top-level headline to a node
+                  (dolist (headline top-headlines)
+                    (push (tree-browser/org-element-to-node headline) elements))
+
+                  ;; Also collect elements outside of any headline (if any)
+                  (org-element-map parsed-buffer '(src-block plain-list drawer property-drawer keyword paragraph table)
+                    (lambda (element)
+                      (when (not (org-element-property :parent element))
+                        (push (tree-browser/org-element-to-node element) elements))))
+
+                  (nreverse elements)))
+
+              (defun tree-browser/org-element-to-node (element)
+                "Convert an org-element ELEMENT to a node structure for the tree browser."
+                (let* ((type (org-element-type element))
+                       (begin (org-element-property :begin element))
+                       (end (org-element-property :end element))
+                       (base-node (km :type (symbol-name type)
+                                      :start begin
+                                      :end end)))
+                  (pcase type
+                    ('headline
+                     (let* ((title (org-element-property :title element))
+                            (title-str (substring-no-properties (org-element-interpret-data title)))
+                            (level (org-element-property :level element))
+                            (todo-keyword (org-element-property :todo-keyword element))
+                            (tags (org-element-property :tags element))
+                            (children '()))
+
+                       ;; Collect child elements (both headlines and non-headline elements)
+                       (dolist (child-type '(headline src-block plain-list drawer property-drawer keyword paragraph table))
+                         (org-element-map element child-type
+                           (lambda (child)
+                             ;; For headlines, only include direct children (next level down)
+                             (when (or (and (eq child-type 'headline)
+                                            (= (org-element-property :level child) (1+ level))
+                                            (not (eq child element)))
+                                       ;; For non-headlines, check if this element is a direct child
+                                       (and (not (eq child-type 'headline))
+                                            (not (eq child element))
+                                            (org-element-property :parent child)
+                                            (eq (org-element-property :parent child) element)))
+                               (push (tree-browser/org-element-to-node child) children)))))
+
+                       (km/put base-node
+                               :name (if todo-keyword
+                                         (format "%s %s" todo-keyword title-str)
+                                       title-str)
+                               :level level
+                               :todo-keyword todo-keyword
+                               :tags tags
+                               :children (nreverse children))))
+
+                    ('src-block
+                     (let ((language (org-element-property :language element))
+                           (parameters (org-element-property :parameters element))
+                           (value (org-element-property :value element)))
+                       (km/put base-node
+                               :name (format "SRC: %s" (or language "unknown"))
+                               :language language
+                               :parameters parameters
+                               :value value)))
+
+                    ('drawer
+                     (let ((drawer-name (org-element-property :drawer-name element)))
+                       (km/put base-node
+                               :name (format "DRAWER: %s" drawer-name)
+                               :drawer-name drawer-name)))
+
+                    ('property-drawer
+                     (km/put base-node
+                             :name "PROPERTIES"))
+
+                    ('keyword
+                     (let ((key (org-element-property :key element))
+                           (value (org-element-property :value element)))
+                       (km/put base-node
+                               :name (format "#+%s: %s" key value)
+                               :key key
+                               :value value)))
+
+                    ('plain-list
+                     (let ((list-type (org-element-property :type element))
+                           (items '()))
+                       (org-element-map element 'item
+                         (lambda (item)
+                           (push (tree-browser/org-item-to-node item) items)))
+                       (km/put base-node
+                               :name (format "List (%s)" list-type)
+                               :list-type list-type
+                               :children (nreverse items))))
+
+                    ('paragraph
+                     (let ((content (org-element-interpret-data element)))
+                       (km/put base-node
+                               :name (format "Paragraph: %s"
+                                             (substring content 0 (min (length content) 30))))))
+
+                    ('table
+                     (km/put base-node
+                             :name "Table"))
+
+                    (_ (km/put base-node
+                               :name (format "%s" type))))))
+
+              (defun tree-browser/org-item-to-node (item)
+                "Convert an org list ITEM to a node structure."
+                (let* ((begin (org-element-property :begin item))
+                       (end (org-element-property :end item))
+                       (bullet (org-element-property :bullet item))
+                       (checkbox (org-element-property :checkbox item))
+                       (tag (org-element-property :tag item))
+                       (raw-text (buffer-substring-no-properties begin end))
+                       (display-text (if (and tag (not (equal tag "")))
+                                         (format "%s :: %s" tag
+                                                 (if checkbox
+                                                     (pcase checkbox
+                                                       ('on "[X]")
+                                                       ('off "[ ]")
+                                                       ('trans "[-]")
+                                                       (_ ""))
+                                                   ""))
+                                       (substring raw-text 0 (min (length raw-text) 40)))))
+                  (km :type "item"
+                      :start begin
+                      :end end
+                      :name display-text
+                      :bullet bullet
+                      :checkbox checkbox
+                      :tag tag))))
+
        (pb/comment
         (with-current-buffer "pb-prompt.el"
           (tree-browser/node-tree (tree-browser/get-treesit-root)))))
@@ -605,7 +768,7 @@
                     (cond
                      ((string= type "source_file")
                       (insert "  "))
-                     ((string= type "section")
+                     ((member type (list "section" "headline"))
                       (insert (propertize "■ " 'face 'font-lock-keyword-face)))
                      (is-var-def
                       (insert (propertize "• " 'face 'font-lock-variable-name-face)))
@@ -620,7 +783,7 @@
                     (insert (propertize (format "%s" name)
                                         'face (cond
                                                ((string= type "source_file") 'font-lock-constant-face)
-                                               ((string= type "section") 'font-lock-keyword-face)
+                                               ((member type (list "section" "headline")) 'font-lock-keyword-face)
                                                ((member type (list "function_definition" "special_form" "list"))
                                                 'font-lock-comment-face)
                                                (t 'font-lock-comment-face))
@@ -817,10 +980,25 @@
 
            buf))
 
-       (defun tree-browser/navigate-buffer ()
-         "Analyze current buffer with treesitter and display as tree.
-          Sets the tree's max depth based on the node at point's depth and positions the cursor at that node."
+       (defun tree-browser/org-navigate-buffer ()
+         "Create and display a tree browser for the current org buffer structure."
          (interactive)
+         (when (eq major-mode 'org-mode)
+           (let* ((tree (tree-browser/org-node-tree))
+                  (current-pos (point))
+                  (browser-buffer (tree-browser/create
+                                   tree
+                                   (format "*Org Tree: %s*" (buffer-name))
+                                   (current-buffer))))
+             (with-current-buffer browser-buffer
+               (setq-local tree-browser/max-depth 3) ;; Show more depth by default for org
+               (tree-browser/refresh)
+               (tree-browser/position-cursor-at-node current-pos)))))
+
+       (defun tree-browser/elisp-navigate-buffer ()
+         "Create a tree browser for elisp/treesitter-supported buffers.
+        Analyzes the buffer using treesitter, sets an appropriate depth,
+        and positions the cursor at the current node."
          (when-let ((root (tree-browser/get-treesit-root)))
            (let* ((tree (tree-browser/node-tree root))
                   (current-pos (point))
@@ -830,9 +1008,10 @@
                   (display-depth (+ node-depth 2)))
 
              ;; Create tree browser with the calculated depth
-             (let ((browser-buffer (tree-browser/create tree
-                                                        (format "*Tree Browser: %s*" (buffer-name))
-                                                        (current-buffer))))
+             (let ((browser-buffer (tree-browser/create
+                                    tree
+                                    (format "*Tree Browser: %s*" (buffer-name))
+                                    (current-buffer))))
 
                ;; Set the max depth to show the node and some context
                (with-current-buffer browser-buffer
@@ -840,7 +1019,26 @@
                  ;; Refresh to apply the new depth
                  (tree-browser/refresh)
                  ;; Position cursor at the node containing the current position
-                 (tree-browser/position-cursor-at-node current-pos)))))))
+                 (tree-browser/position-cursor-at-node current-pos))))))
+
+       (defun tree-browser/navigate-buffer ()
+         "Analyze current buffer and display as tree browser.
+          Handles different major modes appropriately:
+          - org-mode: Uses org-specific tree building
+          - Other modes: Uses treesitter-based parsing when available"
+         (interactive)
+         (cond
+          ;; For org-mode buffers
+          ((eq major-mode 'org-mode)
+           (tree-browser/org-navigate-buffer))
+
+          ;; For treesitter-supported buffers
+          ((tree-browser/get-treesit-root)
+           (tree-browser/elisp-navigate-buffer))
+
+          ;; Fallback for unsupported buffers
+          (t
+           (message "Tree browser is not supported for this buffer type")))))
 
 (progn :bindings
        (when (featurep 'evil)
