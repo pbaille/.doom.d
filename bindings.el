@@ -367,7 +367,8 @@
        ;; trigger sorg mode
        :n "<return>" #'sorg/enter-from-normal-mode
        :ni "s-l" #'symex-mode-interface
-       :n "<mouse-1>" (lambda () (interactive) (evil-normal-state 1)))
+       :n "<mouse-1>" (lambda () (interactive) (evil-normal-state 1))
+       :n "s-i s-i" #'tree-browser/navigate-buffer)
 
       (:map gptel-mode-map
        :i "C-e" #'gptel-send
