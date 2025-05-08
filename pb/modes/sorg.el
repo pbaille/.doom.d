@@ -94,7 +94,8 @@
          (evil-pb-lisp-state 1)
          '(pb-symex/enter))
 
-        (t (evil-sorg-state))))
+        ((evil-insert-state-p) (evil-normal-state))
+        ((evil-normal-state-p) (evil-sorg-state))))
 
 (progn :pb-lisp-outside-of-blocks
        (defun sorg/pb-lisp-entry-hook-function ()
