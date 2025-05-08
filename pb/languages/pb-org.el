@@ -449,9 +449,8 @@
                           "ruby" "html" "css" "plantuml" "dot"
                           "mermaid" "bash" "sh")))
          (lang (completing-read "Language: " langs)))
-    (print lang)
     (pb-org/insert-after)
-    (insert "#+begin_src " lang "\n")
+    (insert "\n#+begin_src " lang "\n")
     (save-excursion (insert "\n#+end_src\n"))
     (when (member lang pb-org/lisp-flavors)
       (insert "()")
