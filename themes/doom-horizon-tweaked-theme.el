@@ -77,7 +77,7 @@
    (builtin        violet)
    (comments       (if doom-horizon-tweaked-brighter-comments magenta (doom-darken teal 0.4)))
    (doc-comments   (if doom-horizon-tweaked-brighter-comments magenta (doom-darken teal 0.4)))
-   (constants      orange)
+   (constants      (doom-blend red violet 0.5))
    (functions      teal)
    (keywords       violet)
    (methods        magenta)
@@ -86,7 +86,9 @@
    (strings        (doom-blend (doom-lighten yellow 0.2)
                                bg
                                0.9))
-   (variables      (doom-lighten red 0.1))
+   (variables      (doom-blend (doom-lighten red 0.1)
+                               violet
+                               .9))
    (numbers        orange)
    (region         hor-highlight)
    (error          red)
@@ -116,6 +118,8 @@
   (((font-lock-comment-face &override)
     :slant 'italic
     :background (if doom-horizon-tweaked-comment-bg (doom-lighten bg 0.03)))
+   (highlight-quoted-symbol :foreground dark-blue)
+   (font-lock-function-definition-face :foreground (doom-lighten red 0.1) :weight 'bold)
    (fringe :background bg)
    (button :foreground (doom-blend fg yellow 0.7)
            :underline t)
