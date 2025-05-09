@@ -1488,6 +1488,67 @@
                 :type 'file
                 :group 'pb-prompt)
 
+              (defun pb-prompt/save-current-context-to-file (filename)
+                "Save the current context to FILENAME.
+                 This function serializes the current context into a file that can be loaded later.
+                 When called interactively, prompts for a filename to save to."
+                (interactive "FSave current context to file: ")
+                (with-temp-file filename
+                  (let ((print-length nil)
+                        (print-level nil))
+                    (insert ";; pb-prompt current context - automatically generated\n\n")
+                    (insert "(setq pb-prompt/context '(\n")
+                    (dolist (item pb-prompt/context)
+                      (insert (format "  %S\n" item)))
+                    (insert "))\n"))
+                  (message "Saved current context to %s" filename)))
+
+              (defun pb-prompt/load-context-from-file (filename)
+                "Load a context from FILENAME into the current context.
+                 This function reads a serialized context from the specified file and loads it,
+                 either replacing or merging with the current context depending on user choice.
+                 When called interactively, prompts for a filename to load from."
+                (interactive "FLoad context from file: ")
+                (if (not (file-exists-p filename))
+                    (user-error "File %s does not exist" filename)
+                  (when (file-readable-p filename)
+                    (let ((loaded-context nil)
+                          (buffer (find-file-noselect filename t)))
+                      (unwind-protect
+                          (with-current-buffer buffer
+                            (goto-char (point-min))
+                            (setq loaded-context (eval (read buffer)))
+                            (unless (and (listp loaded-context)
+                                         (cl-every #'km? loaded-context))
+                              (user-error "File does not contain a valid context structure")))
+                        (kill-buffer buffer))
+
+                      ;; Ask user what to do with the loaded context
+                      (if (and pb-prompt/context
+                               (not (seq-empty-p pb-prompt/context)))
+                          (let ((choice (read-char-choice
+                                         "What to do with loaded context? [r]eplace, [a]ppend, [m]erge, [c]ancel: "
+                                         '(?r ?a ?m ?c))))
+                            (cond
+                             ((eq choice ?r)
+                              (setq pb-prompt/context loaded-context)
+                              (message "Replaced current context with %d loaded items" (length loaded-context)))
+                             ((eq choice ?a)
+                              (setq pb-prompt/context (append pb-prompt/context loaded-context))
+                              (message "Appended %d items to current context" (length loaded-context)))
+                             ((eq choice ?m)
+                              ;; Merge by adding items that don't have duplicate IDs
+                              (let ((merged-count 0))
+                                (dolist (item loaded-context)
+                                  (when (pb-prompt/add-context-item pb-prompt/context item)
+                                    (setq merged-count (1+ merged-count))))
+                                (message "Merged %d unique items into current context" merged-count)))
+                             (t
+                              (message "Context loading cancelled"))))
+                        ;; No existing context, just load
+                        (setq pb-prompt/context loaded-context)
+                        (message "Loaded context with %d items" (length loaded-context)))))))
+
               (defun pb-prompt/save-contexts-to-file ()
                 "Save all contexts to `pb-prompt/contexts-file'."
                 (interactive)

@@ -81,6 +81,56 @@
              (save-buffer)
              (message "Created new org meta file for %s" basename))))
 
+       (defun pb-meta/create-context-file ()
+         "Save current prompt context to a meta file.
+
+          This function creates a 'context.el' file in the meta directory of the
+          current buffer's file, saving the current `pb-prompt/context` for later use.
+
+          The saved context can be loaded later with `pb-prompt/load-context-from-file`,
+          which is useful for:
+          - Preserving project or file-specific prompting context
+          - Maintaining consistent LLM interactions across multiple editing sessions
+          - Sharing prompt contexts with collaborators
+
+          This integration connects pb-meta's file organization with pb-prompt's
+          context management capabilities."
+         (interactive)
+         (when (buffer-file-name)
+           (let* ((file (buffer-file-name))
+                  (meta-dir (pb-meta/-ensure-file-meta-dir file))
+                  (context-file (f-join meta-dir "context.el")))
+             (pb-prompt/save-current-context-to-file context-file)
+             (message "Saved context to %s" context-file))))
+
+       (defun pb-meta/load-meta-context ()
+         "Load a prompt context from the current buffer's meta directory.
+
+          This function loads the context.el file from the meta directory associated
+          with the current buffer's file. If the file exists, it will load the context
+          using pb-prompt's context loading mechanism and display it in the context browser.
+
+          The function provides a convenient way to:
+          - Restore previously saved contexts specific to the current file
+          - Continue working with the same LLM interaction context across editing sessions
+          - Load shared prompt contexts created by collaborators
+
+          If the context file doesn't exist or the current buffer has no file,
+          a message will be displayed."
+         (interactive)
+         (if (buffer-file-name)
+             (let* ((file (buffer-file-name))
+                    (meta-dir (pb-meta/-get-file-meta-dir file))
+                    (context-file (f-join meta-dir "context.el")))
+               (if (f-exists-p context-file)
+                   (progn
+                     (pb-prompt/load-context-from-file context-file)
+                     (pb-prompt/browse-context)
+                     (message "Loaded context from %s" context-file))
+                 (message "No context file found at %s" context-file)))
+           (message "Current buffer has no associated file")))
+
+
        (defun pb-meta/create-scratch-file ()
          "Create a scratch file with same extension for the current buffer.
           The scratch file is created in the meta directory associated with

@@ -234,7 +234,10 @@
                       (:desc "delete item" "d" #'pb-prompt/remove-context-item)
 
                       (:desc "save" "s" #'pb-prompt/save-context)
-                      (:desc "load" "l" #'pb-prompt/load-context)))
+                      (:desc "load" "l" #'pb-prompt/load-context)
+                      (:prefix ("m" . "meta")
+                               (:desc "load" "l" #'pb-meta/load-meta-context)
+                               (:desc "save" "s" #'pb-meta/create-context-file))))
 
        (map! (:prefix ("s-g" . "git")
                       (:desc "git status" "s-g" #'magit-status)
