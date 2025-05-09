@@ -442,16 +442,18 @@
                name)
            name))
 
-       (defun tree-browser/node-tree (node)
+       (defun tree-browser/node-tree (node &optional level)
          (when node
            (let* ((type (treesit-node-type node))
                   (start (treesit-node-start node))
                   (end (treesit-node-end node))
-                  (base (km :type type :start start :end end)))
+                  (level (or level 1))
+                  (base (km :type type :start start :end end :level level)))
              (cond ((string= "source_file" type)
                     (km/put base
                             :name (file-name-nondirectory (buffer-file-name))
-                            :children (seq-keep #'tree-browser/node-tree
+                            :children (seq-keep (lambda (node)
+                                                  (tree-browser/node-tree node (1+ level)))
                                                 (treesit-node-children node))))
                    ((and (string= "special_form" type)
                          (string= "progn" (treesit-node-type (treesit-node-child node 1))))
@@ -460,7 +462,8 @@
                               :type "section"
                               :key (intern key)
                               :name (substring key 1)
-                              :children (seq-keep #'tree-browser/node-tree
+                              :children (seq-keep (lambda (node)
+                                                    (tree-browser/node-tree node (1+ level)))
                                                   (sq/butlast
                                                    (sq/drop (treesit-node-children node)
                                                             3))))))
@@ -537,12 +540,11 @@
                      (let* ((title (org-element-property :title element))
                             (title-str (substring-no-properties (org-element-interpret-data title)))
                             (level (org-element-property :level element))
-                            (todo-keyword (org-element-property :todo-keyword element))
                             (tags (org-element-property :tags element))
                             (children '()))
 
                        ;; Collect child elements (both headlines and non-headline elements)
-                       (dolist (child-type '(headline src-block plain-list drawer property-drawer keyword paragraph table))
+                       (dolist (child-type '(property-drawer paragraph src-block plain-list drawer keyword table headline))
                          (org-element-map element child-type
                            (lambda (child)
                              ;; For headlines, only include direct children (next level down)
@@ -550,72 +552,44 @@
                                             (= (org-element-property :level child) (1+ level))
                                             (not (eq child element)))
                                        ;; For non-headlines, check if this element is a direct child
+                                       ;; or is in the section of this headline
                                        (and (not (eq child-type 'headline))
                                             (not (eq child element))
-                                            (org-element-property :parent child)
-                                            (eq (org-element-property :parent child) element)))
+                                            (or
+                                             ;; Direct child check
+                                             (and (org-element-property :parent child)
+                                                  (eq (org-element-property :parent child) element))
+                                             ;; Section check - element is in the section of this headline
+                                             ;; (section appears right after headline and before sub-headings)
+                                             (when-let* ((parent (org-element-property :parent child))
+                                                         (grandparent (and parent (org-element-property :parent parent))))
+                                               (and (eq (org-element-type parent) 'section)
+                                                    (eq grandparent element))))))
                                (push (tree-browser/org-element-to-node child) children)))))
 
                        (km/put base-node
-                               :name (if todo-keyword
-                                         (format "%s %s" todo-keyword title-str)
-                                       title-str)
+                               :name (substring-no-properties title-str)
                                :level level
-                               :todo-keyword todo-keyword
                                :tags tags
                                :children (nreverse children))))
 
                     ('src-block
                      (let ((language (org-element-property :language element))
                            (parameters (org-element-property :parameters element))
-                           (value (org-element-property :value element)))
+                           (content (org-element-property :value element)))
                        (km/put base-node
-                               :name (format "SRC: %s" (or language "unknown"))
+                               :name language
                                :language language
                                :parameters parameters
-                               :value value)))
+                               :content content)))
 
-                    ('drawer
-                     (let ((drawer-name (org-element-property :drawer-name element)))
-                       (km/put base-node
-                               :name (format "DRAWER: %s" drawer-name)
-                               :drawer-name drawer-name)))
-
-                    ('property-drawer
-                     (km/put base-node
-                             :name "PROPERTIES"))
-
-                    ('keyword
-                     (let ((key (org-element-property :key element))
-                           (value (org-element-property :value element)))
-                       (km/put base-node
-                               :name (format "#+%s: %s" key value)
-                               :key key
-                               :value value)))
-
-                    ('plain-list
-                     (let ((list-type (org-element-property :type element))
-                           (items '()))
-                       (org-element-map element 'item
-                         (lambda (item)
-                           (push (tree-browser/org-item-to-node item) items)))
-                       (km/put base-node
-                               :name (format "List (%s)" list-type)
-                               :list-type list-type
-                               :children (nreverse items))))
-
-                    ('paragraph
-                     (let ((content (org-element-interpret-data element)))
-                       (km/put base-node
-                               :name (format "Paragraph: %s"
-                                             (substring content 0 (min (length content) 30))))))
-
-                    ('table
-                     (km/put base-node
-                             :name "Table"))
-
-                    (_ (km/put base-node
-                               :name (format "%s" type))))))
+                    (_ (let* ((content (org-element-interpret-data element))
+                              (ellipse-size 20)
+                              (ellipted (> (length content) ellipse-size)))
+                         (km/put base-node
+                                 :name (concat (substring-no-properties content 0 (min (length content) ellipse-size))
+                                               (if ellipted "..." ""))
+                                 :content (substring-no-properties content)))))))
 
               (defun tree-browser/org-item-to-node (item)
                 "Convert an org list ITEM to a node structure."
@@ -764,28 +738,36 @@
                   ;; Display different symbols based on node type
                   (let ((type (km/get node-data :type))
                         (is-var-def (km/get node-data :var-def))
-                        (is-fun-def (km/get node-data :fun-def)))
+                        (is-fun-def (km/get node-data :fun-def))
+                        (level (or (km/get node-data :level)
+                                   1)))
                     (cond
                      ((string= type "source_file")
                       (insert "  "))
                      ((member type (list "section" "headline"))
-                      (insert (propertize "■ " 'face 'font-lock-keyword-face)))
+                      (insert (propertize "■ " 'face (intern (format "org-level-%d" (min level 8))))))
                      (is-var-def
                       (insert (propertize "• " 'face 'font-lock-variable-name-face)))
                      (is-fun-def
                       (insert (propertize "λ " 'face 'font-lock-function-name-face)))
                      ((member type (list "special_form" "list" "function_definition"))
                       (insert (propertize "• " 'face 'font-lock-doc-face)))
+                     ((string= type "src-block")
+                      (insert (propertize "≡ " 'face 'font-lock-function-face)))
                      (t
                       (insert (propertize "- " 'face 'font-lock-comment-face))))
 
                     ;; Insert the name with appropriate face and make it look clickable
                     (insert (propertize (format "%s" name)
                                         'face (cond
+                                               ;; Use org-level-N faces for headline types with level info
+                                               ((and (member type (list "section" "headline")) level)
+                                                (intern (format "org-level-%d" (min level 8))))
                                                ((string= type "source_file") 'font-lock-constant-face)
                                                ((member type (list "section" "headline")) 'font-lock-keyword-face)
                                                ((member type (list "function_definition" "special_form" "list"))
                                                 'font-lock-comment-face)
+                                               ((string= type "src-block") 'font-lock-function-face)
                                                (t 'font-lock-comment-face))
                                         'mouse-face 'highlight
                                         'help-echo "Click to navigate to this node"))
@@ -991,6 +973,7 @@
                                    (format "*Org Tree: %s*" (buffer-name))
                                    (current-buffer))))
              (with-current-buffer browser-buffer
+               (setq-local tree-browser/window-width 45)
                (setq-local tree-browser/max-depth 3) ;; Show more depth by default for org
                (tree-browser/refresh)
                (tree-browser/position-cursor-at-node current-pos)))))
