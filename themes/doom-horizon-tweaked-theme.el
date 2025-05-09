@@ -235,10 +235,11 @@
 
 
 ;;;; outline <built-in>
-   ((outline-1 &override) :foreground blue :background nil)
-
-
-;;;; flycheck
+   ((outline-1 &override) :foreground red :background nil)
+   ((outline-2 &override) :foreground orange :background nil)
+   ((outline-3 &override) :foreground (doom-blend red green 0.7) :background nil)
+   ((outline-4 &override) :foreground dark-blue :background nil)
+   ;;;; flycheck
    (flycheck-fringe-error :foreground (doom-blend red bg 0.8))
    (flycheck-fringe-warning :foreground (doom-blend dark-blue bg 0.8))
    (flycheck-warning :underline (list :color (doom-blend fg bg 0.3)))
@@ -307,10 +308,10 @@
    (org-verbatim                 :foreground (doom-blend fg violet 0.5))
    (org-warning                  :foreground warning)
    ;; Omitted because we rely on style they inherit from the outline-N faces
-   (org-level-1 :inherit 'outline-1 :height 1.4 :foreground red)
-   (org-level-2 :inherit 'outline-2 :height 1.2 :foreground orange)
-   (org-level-3 :inherit 'outline-3 :height 1.1 :foreground (doom-blend red green 0.7))
-   (org-level-4 :inherit 'outline-4 :foreground dark-blue)
+   (org-level-1 :inherit 'outline-1 :height 1.4)
+   (org-level-2 :inherit 'outline-2 :height 1.2)
+   (org-level-3 :inherit 'outline-3 :height 1.1)
+   (org-level-4 :inherit 'outline-4)
    ;;(org-level-4)
    ;;(org-level-5)
    ;;(org-level-6)

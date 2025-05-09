@@ -745,7 +745,7 @@
                      ((string= type "source_file")
                       (insert "  "))
                      ((member type (list "section" "headline"))
-                      (insert (propertize "■ " 'face (intern (format "org-level-%d" (min level 8))))))
+                      (insert (propertize "■ " 'face (intern (format "outline-%d" (min level 8))))))
                      (is-var-def
                       (insert (propertize "• " 'face 'font-lock-variable-name-face)))
                      (is-fun-def
@@ -762,7 +762,7 @@
                                         'face (cond
                                                ;; Use org-level-N faces for headline types with level info
                                                ((and (member type (list "section" "headline")) level)
-                                                (intern (format "org-level-%d" (min level 8))))
+                                                (intern (format "outline-%d" (min level 8))))
                                                ((string= type "source_file") 'font-lock-constant-face)
                                                ((member type (list "section" "headline")) 'font-lock-keyword-face)
                                                ((member type (list "function_definition" "special_form" "list"))
