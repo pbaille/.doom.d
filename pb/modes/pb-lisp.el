@@ -1083,6 +1083,8 @@
        (defvar-local pb-lisp/header-line-format nil
          "Format string for the header line in pb-lisp narrow mode.")
 
+       (defvar-local pb-lisp/header-line-mode nil)
+
        ;; Function to get the keyword from a progn node
        (defun pb-lisp/get-progn-keyword (node)
          "Extract the keyword from a progn node if available."
@@ -1092,17 +1094,19 @@
                (match-string 1 node-text)))))
 
        ;; Function to format the header line
-       (defun pb-lisp/update-header-line ()
+       (defun pb-lisp/update-header-line (&rest _)
          "Update the header line to show the current position in the code tree."
-         (let* ((node (pb-lisp/get-current-node))
-                (path (pb-lisp/build-code-path node))
-                (path-str (if path
-                              (mapconcat #'identity path " > ")
-                            "Top level")))
-           ;; (print (kmq path node))
-           (setq-local pb-lisp/header-line-format
-                       (propertize path-str 'face 'outline-2))
-           (setq header-line-format pb-lisp/header-line-format)))
+         (interactive)
+         (when pb-lisp/header-line-mode
+           (let* ((node (pb-lisp/get-current-node))
+                  (path (pb-lisp/build-code-path node))
+                  (path-str (if path
+                                (mapconcat #'identity path " > ")
+                              "Top level")))
+             ;; (print (kmq path node))
+             (setq-local pb-lisp/header-line-format
+                         (propertize path-str 'face 'outline-2))
+             (setq header-line-format pb-lisp/header-line-format))))
 
        ;; Function to build the path from root to current node
        (defun pb-lisp/build-code-path (node)
