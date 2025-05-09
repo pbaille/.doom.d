@@ -90,6 +90,48 @@
    ("(\\(define-derived-mode\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
     (2 'font-lock-variable-name-face))))
 
+(progn :package-prefix
+
+       (defface pb-elisp/namespace-prefix-face
+         `((t
+            :foreground ,(pb-color (doom-color 'red) (desaturate .8) (darken 0))
+            :weight normal))
+         "Face for namespace prefixes in elisp (text before a slash in a symbol).")
+
+       (defun pb-elisp/prefix-matcher (limit)
+         "Match symbols like 'prefix/name' up to LIMIT, capturing prefix part."
+         (when (re-search-forward "\\<\\([a-zA-Z][a-zA-Z0-9-]*\\)\\(/\\)" limit t)
+           ;; We found a match - the \\< ensures we match at word boundaries
+           ;; We've added a second capture group for the slash
+           (let ((prefix-beginning (match-beginning 1))
+                 (prefix-end (match-end 1))
+                 (slash-beginning (match-beginning 2))
+                 (slash-end (match-end 2)))
+             ;; Set match data to highlight both the prefix and the slash
+             ;; The full match will be from prefix beginning to slash end
+             (set-match-data (list prefix-beginning slash-end  ;; full match
+                                   prefix-beginning prefix-end  ;; group 1 (prefix)
+                                   slash-beginning slash-end))  ;; group 2 (slash)
+             t)))
+
+       (font-lock-add-keywords
+        'emacs-lisp-mode
+        '((pb-elisp/prefix-matcher 1 'pb-elisp/namespace-prefix-face prepend)
+          (pb-elisp/prefix-matcher 2 'default prepend))
+        1)
+
+       (pb/comment
+        (font-lock-remove-keywords
+         'emacs-lisp-mode
+         '((pb-elisp/prefix-matcher 0 'pb-elisp/namespace-prefix-face prepend)
+           (pb-elisp/prefix-matcher 0 'pb-elisp/namespace-prefix-face append)
+           (pb-elisp/prefix-matcher 0 'pb-elisp/namespace-prefix-face keep)
+           (pb-elisp/prefix-matcher 0 'pb-elisp/namespace-prefix-face)))
+
+        (font-lock-flush))
+
+       font-lock-keywords-alist)
+
 (pb/comment
  (dolist (buffer (buffer-list))
    (with-current-buffer buffer
