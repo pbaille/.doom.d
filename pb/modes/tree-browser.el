@@ -997,8 +997,8 @@
 
        (defun tree-browser/elisp-navigate-buffer ()
          "Create a tree browser for elisp/treesitter-supported buffers.
-        Analyzes the buffer using treesitter, sets an appropriate depth,
-        and positions the cursor at the current node."
+          Analyzes the buffer using treesitter, sets an appropriate depth,
+          and positions the cursor at the current node."
          (when-let ((root (tree-browser/get-treesit-root)))
            (let* ((tree (tree-browser/node-tree root))
                   (current-pos (point))

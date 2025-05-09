@@ -17,3 +17,9 @@
   (:type "file" :path "~/.doom.d/pb/km.el" :id "b6645970"))
  pb-prompt/saved-contexts)
 
+(puthash "org-tree-browser" '(
+  (:type "file" :path "~/.doom.d/pb/modes/sorg.el" :id "236cf2a3")
+  (:type "file" :path "~/.doom.d/pb/languages/pb-org.el" :id "28482558")
+  (:type "file" :path "~/.doom.d/pb/modes/tree-browser.el" :id "611fe92a"))
+ pb-prompt/saved-contexts)
+
