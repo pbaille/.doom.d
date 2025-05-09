@@ -38,18 +38,30 @@
 
 (defun pb-clojure/gptel-replace ()
   "Evaluate the current Clojure expression and request GPT to analyze it.
-This function:
-1. Captures the current symbolic expression
-2. Evaluates it using the Clojure runtime
-3. Sends both the original expression and its evaluation result to GPT
-4. Replaces the current expression with GPT's improved version
+   This function:
+   1. Captures the current symbolic expression
+   2. Evaluates it using the Clojure runtime
+   3. Sends both the original expression and its evaluation result to GPT
+   4. Replaces the current expression with GPT's improved version
 
-Useful for debugging and improving Clojure code by letting the language model
-see both the code and its runtime behavior at once."
+   Useful for debugging and improving Clojure code by letting the language model
+   see both the code and its runtime behavior at once."
   (interactive)
   (pb-gptel/current-symex-request
    (km :prompt (concat "current expression evaluates to:\n"
                        (pb-clojure/eval-string (pb-symex/current-as-string))
                        "\nFix it if needed."))))
+
+(defun pb-clojure/setup-font-lock ()
+  "Setup custom font-lock for Clojure mode and its derivatives."
+  (font-lock-add-keywords
+   nil  ; Use nil to apply to the current buffer instead of a specific mode
+   '(("(\\(defn\\|defmacro\\|defprotocol\\|defrecord\\|deftype\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
+      (2 'font-lock-function-definition-face))))
+  (font-lock-mode 1))
+
+(add-hook 'clojure-mode-hook #'pb-clojure/setup-font-lock)
+(add-hook 'clojurec-mode-hook #'pb-clojure/setup-font-lock)
+(add-hook 'clojurescript-mode-hook #'pb-clojure/setup-font-lock)
 
 (provide 'pb-clojure)

@@ -44,10 +44,10 @@
 
 (defun pb-elisp/display-expression (expression &optional pp-fn)
   "Display EXPRESSION in a dedicated buffer with proper formatting.
-This function creates or switches to a buffer named by
-`pb-elisp/result-buffer-name`, clears its content, inserts the
-pretty-printed EXPRESSION, sets it to `emacs-lisp-mode', and disables
-flycheck-mode."
+   This function creates or switches to a buffer named by
+   `pb-elisp/result-buffer-name`, clears its content, inserts the
+   pretty-printed EXPRESSION, sets it to `emacs-lisp-mode', and disables
+   flycheck-mode."
   (with-current-buffer (get-buffer-create pb-elisp/result-buffer-name)
     (erase-buffer)
     (insert (funcall (or pp-fn #'pp) expression))
@@ -59,7 +59,7 @@ flycheck-mode."
 
 (defun pb-elisp/eval-pretty ()
   "Evaluate and pretty-print the current Lisp expression.
-Displays the result in a buffer named 'ELisp_eval'."
+   Displays the result in a buffer named 'ELisp_eval'."
   (interactive)
   ;; symex is moving cursor ar the end of current symex before calling this
   (backward-sexp)
@@ -77,6 +77,24 @@ Displays the result in a buffer named 'ELisp_eval'."
 
 (add-hook 'emacs-lisp-mode-hook
           #'pb-elisp/treesit-parser-setup)
+
+(defface font-lock-function-definition-face
+  '((t :inherit font-lock-function-name-face))
+  "Face used for function names in definition forms like defun, defmacro, etc."
+  :group 'font-lock-faces)
+
+(font-lock-add-keywords
+ 'emacs-lisp-mode
+ '(("(\\(def\\(?:un\\|macro\\|subst\\|advice\\|ine-\\w+\\)\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
+    (2 'font-lock-function-definition-face))
+   ("(\\(define-derived-mode\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
+    (2 'font-lock-variable-name-face))))
+
+(pb/comment
+ (dolist (buffer (buffer-list))
+   (with-current-buffer buffer
+     (when (derived-mode-p 'emacs-lisp-mode)
+       (font-lock-flush)))))
 
 (provide 'pb-elisp)
 ;;; pb-elisp.el ends here.

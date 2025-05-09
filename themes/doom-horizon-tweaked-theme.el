@@ -74,7 +74,7 @@
    (highlight      red)
    (vertical-bar   base0)
    (selection      violet)
-   (builtin        violet)
+   (builtin        (doom-blend red violet 0.5))
    (comments       (if doom-horizon-tweaked-brighter-comments magenta (doom-darken teal 0.4)))
    (doc-comments   (if doom-horizon-tweaked-brighter-comments magenta (doom-darken teal 0.4)))
    (constants      (doom-blend red violet 0.5))
@@ -82,7 +82,8 @@
    (keywords       violet)
    (methods        magenta)
    (operators      teal)
-   (type           teal)
+   (type           (doom-lighten (doom-blend orange red 0.85)
+                                 0.1))
    (strings        (doom-blend (doom-lighten yellow 0.2)
                                bg
                                0.9))
@@ -119,6 +120,8 @@
     :slant 'italic
     :background (if doom-horizon-tweaked-comment-bg (doom-lighten bg 0.03)))
    (highlight-quoted-symbol :foreground dark-blue)
+   ;; (highlight-numbers-number :foreground dark-blue)
+
    (font-lock-function-definition-face :foreground (doom-lighten red 0.1) :weight 'bold)
    (fringe :background bg)
    (button :foreground (doom-blend fg yellow 0.7)
@@ -131,6 +134,10 @@
    (tooltip :background base0 :foreground fg)
 
    (marginalia-documentation :foreground violet)
+
+   (clojure-keyword-face :inherit 'font-lock-builtin-face)
+   (font-lock-regexp-grouping-backslash :foreground (doom-darken teal 0.4))
+   (font-lock-regexp-grouping-construct :foreground (doom-blend orange red .7) :weight 'bold)
 
 ;;;; fringe
    (cider-fringe-good-face :foreground (doom-darken dark-blue 0.3))
@@ -181,8 +188,6 @@
    (doom-modeline-urgent :foreground modeline-fg)
    (doom-modeline-info :foreground cyan)
 
-   (clojure-keyword-face :foreground (doom-lighten (doom-blend orange red 0.85)
-                                                   0.1))
    (internal-border :background base1)
    (vertico-current :background (doom-darken (doom-blend base1 violet 0.85)
                                              0.1))
