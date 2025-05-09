@@ -74,11 +74,12 @@
          "Indent each line of CONTENT with spaces if it contains newlines.
           If CONTENT is a single line, return it unchanged.
           Optional argument INDENT-SIZE specifies the number of spaces to use (defaults to 2)."
-         (if (string-match-p "\n" content)
-             (let ((spaces (make-string (or indent-size 2) ?\s)))
-               (replace-regexp-in-string
-                "^\\(.\\)" (concat spaces "\\1") content))
-           content))
+         (when content
+           (if (string-match-p "\n" content)
+               (let ((spaces (make-string (or indent-size 2) ?\s)))
+                 (replace-regexp-in-string
+                  "^\\(.\\)" (concat spaces "\\1") content))
+             content)))
 
        (defun pb-prompt/mk (x)
          "Generate a formatted prompt based on input X.
