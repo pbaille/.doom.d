@@ -90,7 +90,11 @@
 (defun sorg/enter-from-normal-mode ()
   (interactive)
   (cond ((and (org-in-src-block-p)
-              (not (org-at-block-p)))
+              (not (org-at-block-p))
+              (< (point)
+                 (save-excursion
+                   (pb-org/code-block-goto-beg)
+                   (cdr (pb-org/code-block-content-bounds)))))
          (evil-pb-lisp-state 1)
          '(pb-symex/enter))
 
@@ -112,7 +116,8 @@
                        (lambda ()
                          (progn (evil-pb-lisp-state -1)
                                 (pb-org/code-block-goto-beg)
-                                (evil-pb-lisp-state 1))))))
+                                '(evil-pb-lisp-state 1) ;; other option, stay in pb lisp
+                                (evil-sorg-state 1))))))
 
        (add-hook 'evil-pb-lisp-state-entry-hook
                  #'sorg/pb-lisp-entry-hook-function))
@@ -374,8 +379,8 @@
         ">" #'pb-org/shift-one-line-down
         "<" #'pb-org/shift-one-line-up
         "s-l" #'sorg/enter-pb-lisp-state
-        "<return>" #'pb-org/shift-one-line-down
-        "S-<return>" #'pb-org/shift-one-line-up
+        "C-M-j" #'pb-org/shift-one-line-down
+        "C-M-k" #'pb-org/shift-one-line-up
         "<mouse-1>" #'sorg/click
         ;; misc
         "?" #'pb-org/print-context
