@@ -272,7 +272,7 @@
 
 ;;;; org <built-in> <modes:org-mode>
    (org-archived                 :foreground doc-comments)
-   (org-block                    :background base3    :extend t)
+   (org-block                    :background (doom-darken 'bg 0.1) :extend t)
    (org-block-background         :background base3    :extend t)
    (org-block-begin-line         :inherit 'org-block  :foreground comments)
    (org-block-end-line           :inherit 'org-block-begin-line)
@@ -307,9 +307,10 @@
    (org-verbatim                 :foreground (doom-blend fg violet 0.5))
    (org-warning                  :foreground warning)
    ;; Omitted because we rely on style they inherit from the outline-N faces
-   (org-level-1 :inherit 'outline-1 :height 1.4)
-   (org-level-2 :inherit 'outline-2 :height 1.2)
-   (org-level-3 :inherit 'outline-3 :height 1.1)
+   (org-level-1 :inherit 'outline-1 :height 1.4 :foreground red)
+   (org-level-2 :inherit 'outline-2 :height 1.2 :foreground orange)
+   (org-level-3 :inherit 'outline-3 :height 1.1 :foreground (doom-blend red green 0.7))
+   (org-level-4 :inherit 'outline-4 :foreground dark-blue)
    ;;(org-level-4)
    ;;(org-level-5)
    ;;(org-level-6)
