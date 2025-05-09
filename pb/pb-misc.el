@@ -360,9 +360,10 @@
 (defun pb-misc/save-buffer ()
   "Wraps save-buffer, handling lisp formatting stuff before doing it."
   (interactive)
-  (if (memq major-mode pb-format/lisp-modes)
-    (pb-format/save-lisp-buffer)
-    (save-buffer)))
+  (cond ((memq major-mode pb-format/lisp-modes)
+         (pb-format/save-lisp-buffer))
+        ((string-match-p "\\*Org Src" (buffer-name)) (org-edit-src-save))
+        (t (save-buffer))))
 
 (defun pb-misc/switch-to-meta-buffer ()
   "Switch between related meta buffers and their source buffer.
