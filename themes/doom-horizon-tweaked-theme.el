@@ -79,7 +79,7 @@
    (doc-comments   (if doom-horizon-tweaked-brighter-comments magenta (doom-darken teal 0.4)))
    (constants      (doom-lighten (doom-blend red green 0.7)
                                  0.1))
-   (functions      (doom-blend teal green 0.8))
+   (functions      (doom-darken teal 0.1))
    (keywords       violet)
    (methods        magenta)
    (operators      teal)
