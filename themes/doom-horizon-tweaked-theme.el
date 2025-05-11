@@ -235,10 +235,10 @@
 
 
 ;;;; outline <built-in>
-   ((outline-1 &override) :foreground red :background nil)
-   ((outline-2 &override) :foreground orange :background nil)
+   ((outline-1 &override) :foreground (doom-darken red 0.1) :background nil)
+   ((outline-2 &override) :foreground (doom-blend red green 0.85) :background nil)
    ((outline-3 &override) :foreground (doom-blend red green 0.7) :background nil)
-   ((outline-4 &override) :foreground dark-blue :background nil)
+   ((outline-4 &override) :foreground (doom-blend red green 0.55) :background nil)
    ;;;; flycheck
    (flycheck-fringe-error :foreground (doom-blend red bg 0.8))
    (flycheck-fringe-warning :foreground (doom-blend dark-blue bg 0.8))
@@ -402,12 +402,6 @@
 ;;;; web-mode
    (web-mode-html-tag-bracket-face :foreground red)
    (web-mode-html-tag-face         :foreground red)
-   (web-mode-html-attr-name-face   :foreground orange)
-
-
-
-
-
-   ))
+   (web-mode-html-attr-name-face   :foreground orange)))
 
 ;;; doom-horizon-tweaked-theme.el ends here
