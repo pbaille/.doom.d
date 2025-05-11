@@ -417,7 +417,9 @@
          "Close current tree-browser and open dired-sidebar focusing source file."
          (interactive)
          (tree-browser/quit)
-         (dired-sidebar-toggle-sidebar)))
+         (dired-sidebar-toggle-sidebar))
+
+       (defun tree-browser/query ()))
 
 (progn :mouse-support
 
@@ -696,6 +698,7 @@
                  (insert "  k, up     - Move to previous line\n")
                  (insert "  h         - Decrease tree depth\n")
                  (insert "  l         - Increase tree depth\n")
+                 (insert "  u         - Go to parent node\n")
                  (insert "  g g       - Go to beginning of buffer\n")
                  (insert "  G         - Go to end of buffer\n")
                  (insert "  /         - Search forward\n")
@@ -706,8 +709,13 @@
                  (insert "  f         - Toggle follow mode (cursor follows tree selection)\n")
                  (insert "  n         - Toggle narrow mode (source narrows to selection)\n")
                  (insert "  c         - Toggle centered mode (center node in source window)\n")
-                 (insert "  a         - Toggle auto-refresh mode (refresh on save)\n")
+                 (insert "  o         - Place node at top of source window\n")
+                 (insert "  s         - Sync tree with current source position\n")
+                 (insert "  ?         - Toggle help window\n")
                  (insert "  r         - Manually refresh tree\n\n")
+                 (insert "Actions:\n")
+                 (insert "  y         - Yank (copy) node content to kill ring\n")
+                 (insert "  d         - Close browser and open dired-sidebar\n\n")
                  (insert "Mode status:\n")
                  (insert (format "  Follow mode:   %s\n" (if (bound-and-true-p tree-browser/follow-mode) "On" "Off")))
                  (insert (format "  Narrow mode:   %s\n" (if (bound-and-true-p tree-browser/narrow-mode) "On" "Off")))
@@ -1065,6 +1073,7 @@
            (kbd "c") 'tree-browser/toggle-centered-mode
            (kbd "g g") 'beginning-of-buffer
            (kbd "G") 'end-of-buffer
-           (kbd "/") 'isearch-forward)))
+           (kbd "/") 'isearch-forward
+           (kbd "s-q") 'tree-browser/query)))
 
 (provide 'tree-browser)
