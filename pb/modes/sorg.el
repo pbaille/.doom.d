@@ -217,7 +217,7 @@
            ;; Evaluate the code string
            (condition-case err
                (progn
-                 (setq result (eval (read elisp-str)))
+                 (setq result (eval (read (concat "(progn " elisp-str ")"))))
                  (setq success t))
              (error
               (setq success nil)
@@ -270,9 +270,10 @@
                (if (member lang '("emacs-lisp" "elisp"))
                    (let* ((initial-point (point))
                           (result (sorg/eval-block body))
+                          (pretty-result (condition-case nil (km/pp result) (error (format "%S" result))))
                           (block-end (org-element-property :end element))
-                          (result-str (format "#+RESULTS:\n#+begin_src emacs-lisp :eval no\n%S\n#+end_src\n"
-                                              result)))
+                          (result-str (format "#+RESULTS:\n#+begin_src emacs-lisp :eval no\n%s\n#+end_src\n"
+                                              pretty-result)))
                      ;; Remove previous results block if it exists
                      (let ((current-pos (point)))
                        (save-excursion
