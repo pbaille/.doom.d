@@ -371,7 +371,8 @@
        :n "<return>" #'sorg/enter-from-normal-mode
        :ni "s-l" #'symex-mode-interface
        :n "<mouse-1>" (lambda () (interactive) (evil-normal-state 1))
-       :n "s-i s-i" #'tree-browser/navigate-buffer)
+       :n "s-i s-i" #'tree-browser/navigate-buffer
+       :n "s-s s-i" (lambda () (interactive) (tree-browser/navigate-buffer) (tree-browser/live-search)))
 
       (:map gptel-mode-map
        :i "C-e" #'gptel-send
@@ -394,7 +395,8 @@
        :n "s-j e" #'eval-buffer
        :n "s-j b" #'tree-browser/navigate-buffer
        :n "s-l" #'evil-pb-lisp-state
-       :n "s-i s-i" #'tree-browser/navigate-buffer)
+       :n "s-i s-i" #'tree-browser/navigate-buffer
+       :n "s-s s-i" (lambda () (interactive) (tree-browser/navigate-buffer) (tree-browser/live-search)))
 
       (:map clojure-mode-map
        :n "s-l" #'evil-pb-lisp-state)
