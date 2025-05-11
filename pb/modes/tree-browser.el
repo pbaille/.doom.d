@@ -318,7 +318,8 @@
 
        (defun tree-browser/live-search ()
          "Interactively search and filter tree browser nodes as you type.
-          Shows matching nodes and their ancestors in real-time."
+          Shows matching nodes and their ancestors in real-time.
+          If search is aborted with C-g, restores original tree state and closes tree browser."
          (interactive)
          (let ((minibuffer-setup-hook
                 (cons (lambda ()
@@ -329,22 +330,39 @@
                         ;; Setup live updating
                         (add-hook 'post-command-hook 'tree-browser/live-update-filter nil t))
                       minibuffer-setup-hook))
-               (current-term tree-browser/search-term))
+               (current-term tree-browser/search-term)
+               (was-aborted nil)
+               (source-buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
 
            ;; Read the search term with live updates
            (unwind-protect
-               (setq tree-browser/search-term
-                     (read-string "Filter nodes (live): " current-term))
+               (condition-case nil
+                   (setq tree-browser/search-term
+                         (read-string "Filter nodes (live): " current-term))
+                 (quit
+                  ;; Handle C-g abort case
+                  (setq was-aborted t)
+                  (when tree-browser/original-data
+                    (setq-local tree-browser/data tree-browser/original-data)
+                    (setq-local tree-browser/original-data nil)
+                    (setq-local tree-browser/search-term nil)
+                    (tree-browser/refresh)
+                    (message "Search aborted")
+                    ;; Use tree-browser/quit instead of manual buffer/window management
+                    (tree-browser/quit))))
 
-             ;; Cleanup hook when done
-             (with-current-buffer (window-buffer (active-minibuffer-window))
-               (remove-hook 'post-command-hook 'tree-browser/live-update-filter t)))
+             ;; Cleanup hook when done (happens regardless of completion or abort)
+             (when (active-minibuffer-window)
+               (with-current-buffer (window-buffer (active-minibuffer-window))
+                 (remove-hook 'post-command-hook 'tree-browser/live-update-filter t))))
 
-           ;; Handle empty search term (clear search)
-           (if (string-empty-p tree-browser/search-term)
-               (tree-browser/clear-search)
-             (message "Showing matches for \"%s\" (press / to change, ESC to clear)"
-                      tree-browser/search-term))))
+           ;; Only process search results if search wasn't aborted
+           (unless was-aborted
+             ;; Handle empty search term (clear search)
+             (if (string-empty-p tree-browser/search-term)
+                 (tree-browser/clear-search)
+               (message "Showing matches for \"%s\" (press / to change, ESC to clear)"
+                        tree-browser/search-term)))))
 
        (defun tree-browser/live-update-filter ()
          "Update the tree browser filter based on current minibuffer content.
