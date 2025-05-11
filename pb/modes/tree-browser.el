@@ -543,7 +543,116 @@
          (tree-browser/quit)
          (dired-sidebar-toggle-sidebar))
 
-       (defun tree-browser/query ()))
+       (defun tree-browser/eval ()
+         "Evaluate the node at point in the tree browser.
+          For Emacs Lisp nodes, evaluates the code and displays results.
+          For other languages or node types, attempts to use appropriate evaluation method.
+          Results are displayed in a results buffer or message area depending on size."
+         (interactive)
+         (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                     (start (plist-get node-data :start))
+                     (end (plist-get node-data :end))
+                     (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+           (when (buffer-live-p buffer)
+             (with-current-buffer buffer
+               (let* ((node-type (plist-get node-data :type)))
+
+                 ;; Handle evaluation based on node type or major mode
+                 (cond
+                  ;; For Emacs Lisp code
+                  ((eq major-mode 'emacs-lisp-mode)
+                   (symex--evaluate)
+                   (save-excursion
+                     (goto-char start)
+                     (symex--evaluate)))
+
+                  ;; For org-mode src blocks
+                  ((and (eq major-mode 'org-mode)
+                        (string= node-type "src-block"))
+                   (save-excursion
+                     (goto-char start)
+                     (sorg/eval-current-block)))
+
+                  ;; Default case - can't evaluate
+                  (t (message "Don't know how to evaluate node of type: %s" node-type))))))))
+
+       (progn :query
+
+              (require 'pb-prompt)
+              (require 'pb-meta)
+
+              (defun tree-browser/query ()
+                "Query LLM about the node at point using pb-prompt.
+                 Offers choice between inline response or creating an org-chat."
+                (interactive)
+                (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                            (start (plist-get node-data :start))
+                            (end (plist-get node-data :end))
+                            (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+                  (let* ((node-name (or (plist-get node-data :name)
+                                        (plist-get node-data :type)
+                                        "unnamed-node"))
+                         (source-content (with-current-buffer buffer
+                                           (buffer-substring-no-properties start end)))
+                         (query-text (read-string (format "Query about '%s': " node-name)))
+                         (mode (completing-read "Response mode: " '("inline" "org-chat") nil t)))
+                    (if (string= mode "inline")
+                        (progn (tree-browser/quit)
+                               (pb-prompt/buffer-request query-text))
+                      (tree-browser/query-org-chat buffer node-name source-content query-text)))))
+
+              (defun tree-browser/query-org-chat (buffer node-name source-content query-text)
+                "Create an org-chat for the query in a meta file."
+                (with-current-buffer buffer
+                  (let* ((file-name (buffer-file-name))
+                         (chat-file (pb-meta/-get-file-meta-dir file-name))
+                         (buffer-mode (symbol-name major-mode))
+                         (chat-filename (concat (file-name-sans-extension
+                                                 (concat (replace-regexp-in-string "[^a-zA-Z0-9-_.]" "-" node-name) "-chat-"
+                                                         (format-time-string "%Y%m%d-%H%M%S")))
+                                                ".org"))
+                         (full-path (expand-file-name chat-filename chat-file)))
+
+                    ;; Create meta directory if needed
+                    (unless (file-exists-p chat-file)
+                      (make-directory chat-file t))
+
+                    ;; Add original source buffer to context
+                    (pb-prompt/add-item!
+                     (km :type "buffer"
+                         :path file-name
+                         :buffer-name (buffer-name)
+                         :major-mode buffer-mode
+                         :content source-content))
+
+                    ;; Create and set up the chat file
+                    (with-current-buffer (find-file-noselect full-path)
+                      (erase-buffer)
+                      (org-mode)
+
+                      ;; Insert chat content
+                      (insert (format "#+TITLE: Chat about: %s\n\n" node-name))
+                      (insert "* Context\n\n")
+                      (insert "#+begin_src " (substring buffer-mode 0 (string-match "-mode$" buffer-mode)) "\n")
+                      (insert source-content)
+                      (insert "\n#+end_src\n\n")
+                      (insert "* Chat\n\n")
+                      (insert "** User\n\n")
+                      (insert query-text)
+                      (insert "\n\n** Assistant\n\n")
+
+                      ;; Show the buffer and position cursor on the Assistant header
+                      (pop-to-buffer (current-buffer))
+
+                      ;; Position cursor on Assistant header and enable sorg mode
+                      (goto-char (point-max))
+                      (evil-sorg-state 1)
+
+                      ;; Setup for sorg/query-replace
+                      (pb-prompt/buffer-request query-text)
+
+                      (message "Created org chat at %s" full-path))))))
+       )
 
 (progn :mouse-support
 
