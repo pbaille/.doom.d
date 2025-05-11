@@ -491,6 +491,30 @@
                               "node")
                           (length text)))))))
 
+       (defun tree-browser/insert-after-node ()
+         "Close the tree browser and position cursor for editing after the current node.
+          This function:
+          1. Gets the current node position data
+          2. Closes the tree browser
+          3. Navigates to the end of the node in the source buffer
+          4. Inserts a newline
+          5. Enters insert mode, positioning cursor for immediate editing"
+         (interactive)
+         (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                     (end (plist-get node-data :end))
+                     (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+           (when (buffer-live-p buffer)
+             (tree-browser/quit)
+             (let ((current-node-indent (save-excursion
+                                          (goto-char (km/get node-data :start))
+                                          (current-column))))
+               (with-current-buffer buffer
+                 (goto-char end)
+                 (insert "\n")
+                 (when (fboundp 'evil-insert-state)
+                   (evil-insert-state)
+                   (indent-to current-node-indent)))))))
+
        (defun tree-browser/scroll-to-node-at-point ()
          "Scroll source buffer to node at point (first line of window)."
          (interactive)
@@ -1293,6 +1317,7 @@
            (kbd "h") 'tree-browser/decrease-depth
            (kbd "l") 'tree-browser/increase-depth
            (kbd "y") 'tree-browser/yank-node
+           (kbd "o") 'tree-browser/insert-after-node
            (kbd "q") 'tree-browser/quit
            (kbd "d") 'tree-browser/open-dired-sidebar
            (kbd "RET")  (lambda () (interactive) (tree-browser/goto-source t))
