@@ -515,6 +515,31 @@
                    (evil-insert-state)
                    (indent-to current-node-indent)))))))
 
+       (defun tree-browser/delete-node ()
+         "Delete node at point with confirmation.
+          This function deletes the node at point from the source buffer after
+          confirming with the user. It updates both the tree browser and source buffer."
+         (interactive)
+         (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                     (start (plist-get node-data :start))
+                     (end (plist-get node-data :end))
+                     (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer)))
+                     (node-name (or (plist-get node-data :name)
+                                    (plist-get node-data :type)
+                                    "unnamed node")))
+           (when (and (buffer-live-p buffer)
+                      (yes-or-no-p (format "Delete %s? " node-name)))
+             (with-current-buffer buffer
+               (delete-region start end)
+               (when (looking-at "[ \t\n]+")
+                 (delete-region (point) (match-end 0))))
+             (when-let ((root (with-current-buffer buffer
+                                (tree-browser/get-treesit-root))))
+               (setq-local tree-browser/data (with-current-buffer buffer
+                                               (tree-browser/node-tree root))))
+             (tree-browser/refresh)
+             (message "Deleted %s" node-name))))
+
        (defun tree-browser/scroll-to-node-at-point ()
          "Scroll source buffer to node at point (first line of window)."
          (interactive)
@@ -558,7 +583,10 @@
                (pop-to-buffer buffer)
                (goto-char start)
                (when should-recenter
-                 (recenter)))
+                 (recenter))
+               (when (and (eq major-mode 'org-mode)
+                          (string= "src-block" (km/get node-data :type)))
+                 (org-edit-src-code)))
              (balance-windows))))
 
        (defun tree-browser/open-dired-sidebar ()
@@ -1220,11 +1248,11 @@
                                (with-current-buffer source-buffer
                                  (point)))))
            (with-current-buffer buf
+             (tree-browser/mode)
+             (setq-local tree-browser/data tree)
+             (setq-local tree-browser/source-buffer (or source-buffer (current-buffer)))
              (when (not buf-exist)
-               (tree-browser/mode)
-               (setq-local tree-browser/data tree)
-               (setq-local tree-browser/max-depth 1) ;; Default max depth
-               (setq-local tree-browser/source-buffer (or source-buffer (current-buffer))))
+               (setq-local tree-browser/max-depth 1))
              (tree-browser/render tree)
              (goto-char (point-min)))
 
@@ -1318,6 +1346,7 @@
            (kbd "l") 'tree-browser/increase-depth
            (kbd "y") 'tree-browser/yank-node
            (kbd "o") 'tree-browser/insert-after-node
+           (kbd "x") 'tree-browser/delete-node
            (kbd "q") 'tree-browser/quit
            (kbd "d") 'tree-browser/open-dired-sidebar
            (kbd "RET")  (lambda () (interactive) (tree-browser/goto-source t))
@@ -1327,7 +1356,6 @@
            (kbd "c") 'tree-browser/toggle-centered-mode
            (kbd "g g") 'beginning-of-buffer
            (kbd "G") 'end-of-buffer
-           (kbd "/") 'isearch-forward
            (kbd "s-q") 'tree-browser/query
            (kbd "/") 'tree-browser/live-search)))
 
