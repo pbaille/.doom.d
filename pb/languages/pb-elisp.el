@@ -132,6 +132,40 @@
 
        font-lock-keywords-alist)
 
+(progn :progn-section-keyword
+
+       (defface pb-elisp/progn-keyword-face
+         `((t
+            :foreground ,(pb-color (doom-color 'red) (desaturate .8) (darken 0.1))
+            :weight bold))
+         "Face for keywords in progn sections like (progn :keyword).")
+
+       (defun pb-elisp/progn-keyword-matcher (limit)
+         "Match keywords after a progn form up to LIMIT, like (progn :keyword)."
+         (when (re-search-forward "(\\s-*progn\\s-+\\(:[a-zA-Z][a-zA-Z0-9/-]*\\)" limit t)
+           (let ((keyword-beginning (match-beginning 1))
+                 (keyword-end (match-end 1)))
+             (set-match-data (list keyword-beginning keyword-end
+                                   keyword-beginning keyword-end))
+             t)))
+
+       (font-lock-add-keywords
+        'emacs-lisp-mode
+        '((pb-elisp/progn-keyword-matcher 1 'pb-elisp/progn-keyword-face prepend))
+        1)
+
+       (defun pb-elisp/highlight-progn-sections ()
+         "Refresh keyword highlighting in the current buffer."
+         (interactive)
+         (when (derived-mode-p 'emacs-lisp-mode)
+           (font-lock-flush)))
+
+       ;; Automatically apply highlighting to open buffers
+       (dolist (buffer (buffer-list))
+         (with-current-buffer buffer
+           (when (derived-mode-p 'emacs-lisp-mode)
+             (font-lock-flush)))))
+
 (pb/comment
  (dolist (buffer (buffer-list))
    (with-current-buffer buffer
