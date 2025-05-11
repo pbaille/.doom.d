@@ -541,7 +541,7 @@
                                       "Don't use markdown code block syntax or any non-valid code in your output."
                                       "If you have to write prose, use appropriate comment syntax."]))))
 
-       (defun pb-prompt/buffer-request ()
+       (defun pb-prompt/buffer-request (&optional instruction)
          "Send a GPT request with the current buffer context.
           In Org mode, uses the current Org node as selection.
           Otherwise uses current selection or expression at point."
@@ -558,7 +558,8 @@
                                                        :line-number (line-number-at-pos))
                                       :buffer-content (buffer-substring-no-properties (point-min) (point-max))
                                       :selection selection
-                                      :task (read-string "Edit current selection: ")))))
+                                      :task (or instruction
+                                                (read-string "Edit current selection: "))))))
 
              :system (pb-prompt/context-prompt)
              :callback #'pb-prompt/buffer-request-handler)
