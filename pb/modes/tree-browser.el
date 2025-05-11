@@ -70,6 +70,98 @@
 
                      (symex--update-overlay)))))))))
 
+(progn :depth
+
+       (defun tree-browser/increase-depth ()
+         "Increase the maximum depth of the tree display."
+         (interactive)
+         (let ((current-path (get-text-property (line-beginning-position) 'tree-path))
+               (current-line (line-number-at-pos))
+               (window-start-line (line-number-at-pos (window-start))))
+           (setq-local tree-browser/max-depth (1+ tree-browser/max-depth))
+           (tree-browser/refresh)
+           (when current-path
+             (tree-browser/goto-path current-path))
+           ;; Try to maintain the cursor's relative position in the visible window
+           (back-to-indentation)
+           '(evil-scroll-line-to-top (1- window-start-line))
+           ))
+
+       (defun tree-browser/decrease-depth ()
+         "Decrease the maximum depth of the tree display.
+          If the current node would become invisible, move to its visible parent.
+          Syncs with source buffer after decreasing depth."
+         (interactive)
+         (when (> tree-browser/max-depth 0)
+           (let* ((current-path (get-text-property (line-beginning-position) 'tree-path))
+                  ;; Calculate a visible parent path that won't exceed the new max depth
+                  (visible-path (when current-path
+                                  (let ((path-length (length current-path))
+                                        (new-depth (1- tree-browser/max-depth)))
+                                    (if (> path-length new-depth)
+                                        ;; Take only the elements that will be visible at new depth
+                                        (nthcdr (- path-length new-depth) current-path)
+                                      current-path)))))
+             (setq-local tree-browser/max-depth (1- tree-browser/max-depth))
+             (tree-browser/refresh)
+             (when visible-path
+               (tree-browser/goto-path visible-path))
+             (back-to-indentation)
+             ;; Sync with source buffer after decreasing depth
+             (when tree-browser/narrow-mode
+               (tree-browser/apply-narrowing-at-point))
+             (when tree-browser/follow-mode
+               (tree-browser/sync-source-with-tree)))))
+
+       (defun tree-browser/goto-path (path)
+         "Go to the line containing PATH in the tree browser.
+          If PATH is not visible due to depth limitations, find the nearest visible parent.
+          Ensures the line is scrolled into view."
+         (goto-char (point-min))
+         ;; Reverse the path since it's stored in reverse order (child to parent)
+         (let ((rev-path (reverse path))
+               (found nil)
+               (line-path nil)
+               (depth 0))
+           ;; Try to go through each level of the path
+           (while (and rev-path (not found) (< depth tree-browser/max-depth))
+             (let ((target-prefix (reverse (last rev-path (- (length rev-path) depth)))))
+               ;; Search through the buffer for a matching line
+               (while (and (not found) (not (eobp)))
+                 (setq line-path (get-text-property (line-beginning-position) 'tree-path))
+                 ;; Compare the current line's path with our target
+                 (when (and line-path
+                            (equal (reverse (last (reverse line-path) (length target-prefix)))
+                                   target-prefix))
+                   (setq found t)
+                   (beginning-of-line))
+                 (unless found
+                   (forward-line 1))))
+             ;; If not found, try with a shorter path (parent)
+             (unless found
+               (setq depth (1+ depth))
+               (goto-char (point-min))))
+
+           ;; If we still haven't found anything, just go to the top of the buffer
+           (unless found
+             (goto-char (point-min))
+             ;; Try to find any part of the path
+             (while (and (not found) (not (eobp)))
+               (setq line-path (get-text-property (line-beginning-position) 'tree-path))
+               (when (and line-path
+                          (member (car line-path) path))
+                 (setq found t)
+                 (beginning-of-line))
+               (unless found
+                 (forward-line 1)))
+             ;; If still nothing found, just stay at the top
+             (unless found
+               (goto-char (point-min))))
+
+           ;; Make sure the line is visible in the window
+           (when (get-buffer-window (current-buffer))
+             (recenter)))))
+
 (progn :following
 
        (defvar-local tree-browser/follow-mode t
@@ -97,17 +189,22 @@
          (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
                      (start (plist-get node-data :start))
                      (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
-           (let ((centered tree-browser/centered-mode))
+           (let ((centered tree-browser/centered-mode)
+                 (tree-browser-current-line (- (line-number-at-pos)
+                                               (line-number-at-pos (window-start)))))
              (when (buffer-live-p buffer)
                (let ((window (get-buffer-window buffer t)))
                  (if window
                      (with-selected-window window
                        (goto-char start)
+                       (symex--update-overlay)
                        ;; Always call evil-scroll-line-to-top first to ensure proper positioning
                        (evil-scroll-line-to-top nil)
                        ;; Apply centering only if centered mode is enabled
-                       (when centered (print "centered")(recenter))
-                       (symex--update-overlay))
+                       (when centered
+                         '(recenter) ;; try to center on the current tree-browser line
+                         (evil-scroll-line-to-top (1+ (- (line-number-at-pos)
+                                                         tree-browser-current-line)))))
                    (with-current-buffer buffer
                      (goto-char start)))
                  (message "Source buffer position updated"))))))
@@ -314,8 +411,13 @@
                (goto-char start)
                (when should-recenter
                  (recenter)))
-             (balance-windows))))) ;; Prevent text selection
+             (balance-windows))))
 
+       (defun tree-browser/open-dired-sidebar ()
+         "Close current tree-browser and open dired-sidebar focusing source file."
+         (interactive)
+         (tree-browser/quit)
+         (dired-sidebar-toggle-sidebar)))
 
 (progn :mouse-support
 
@@ -339,88 +441,6 @@
        ;; Add mouse bindings
        (define-key tree-browser/mode-map [mouse-1] 'tree-browser/mouse-click)
        (define-key tree-browser/mode-map [down-mouse-1] nil))
-
-(progn :depth
-
-       (defun tree-browser/increase-depth ()
-         "Increase the maximum depth of the tree display."
-         (interactive)
-         (let ((current-path (get-text-property (line-beginning-position) 'tree-path)))
-           (setq-local tree-browser/max-depth (1+ tree-browser/max-depth))
-           (tree-browser/refresh)
-           (when current-path
-             (tree-browser/goto-path current-path))
-           (back-to-indentation)))
-
-       (defun tree-browser/decrease-depth ()
-         "Decrease the maximum depth of the tree display.
-          If the current node would become invisible, move to its visible parent.
-          Syncs with source buffer after decreasing depth."
-         (interactive)
-         (when (> tree-browser/max-depth 0)
-           (let* ((current-path (get-text-property (line-beginning-position) 'tree-path))
-                  ;; Calculate a visible parent path that won't exceed the new max depth
-                  (visible-path (when current-path
-                                  (let ((path-length (length current-path))
-                                        (new-depth (1- tree-browser/max-depth)))
-                                    (if (> path-length new-depth)
-                                        ;; Take only the elements that will be visible at new depth
-                                        (nthcdr (- path-length new-depth) current-path)
-                                      current-path)))))
-             (setq-local tree-browser/max-depth (1- tree-browser/max-depth))
-             (tree-browser/refresh)
-             (when visible-path
-               (tree-browser/goto-path visible-path))
-             (back-to-indentation)
-             ;; Sync with source buffer after decreasing depth
-             (when tree-browser/narrow-mode
-               (tree-browser/apply-narrowing-at-point))
-             (when tree-browser/follow-mode
-               (tree-browser/sync-source-with-tree)))))
-
-       (defun tree-browser/goto-path (path)
-         "Go to the line containing PATH in the tree browser.
-          If PATH is not visible due to depth limitations, find the nearest visible parent."
-         (goto-char (point-min))
-         ;; Reverse the path since it's stored in reverse order (child to parent)
-         (let ((rev-path (reverse path))
-               (found nil)
-               (line-path nil)
-               (depth 0))
-           ;; Try to go through each level of the path
-           (while (and rev-path (not found) (< depth tree-browser/max-depth))
-             (let ((target-prefix (reverse (last rev-path (- (length rev-path) depth)))))
-               ;; Search through the buffer for a matching line
-               (while (and (not found) (not (eobp)))
-                 (setq line-path (get-text-property (line-beginning-position) 'tree-path))
-                 ;; Compare the current line's path with our target
-                 (when (and line-path
-                            (equal (reverse (last (reverse line-path) (length target-prefix)))
-                                   target-prefix))
-                   (setq found t)
-                   (beginning-of-line))
-                 (unless found
-                   (forward-line 1))))
-             ;; If not found, try with a shorter path (parent)
-             (unless found
-               (setq depth (1+ depth))
-               (goto-char (point-min))))
-
-           ;; If we still haven't found anything, just go to the top of the buffer
-           (unless found
-             (goto-char (point-min))
-             ;; Try to find any part of the path
-             (while (and (not found) (not (eobp)))
-               (setq line-path (get-text-property (line-beginning-position) 'tree-path))
-               (when (and line-path
-                          (member (car line-path) path))
-                 (setq found t)
-                 (beginning-of-line))
-               (unless found
-                 (forward-line 1)))
-             ;; If still nothing found, just stay at the top
-             (unless found
-               (goto-char (point-min)))))))
 
 (progn :buffer-to-tree
 
@@ -587,8 +607,8 @@
                               (ellipse-size 20)
                               (ellipted (> (length content) ellipse-size)))
                          (km/put base-node
-                                 :name (concat (substring-no-properties content 0 (min (length content) ellipse-size))
-                                               (if ellipted "..." ""))
+                                 :overview (concat (substring-no-properties content 0 (min (length content) ellipse-size))
+                                                   (if ellipted "..." ""))
                                  :content (substring-no-properties content)))))))
 
               (defun tree-browser/org-item-to-node (item)
@@ -643,13 +663,16 @@
               ;; Ensure window stays fixed after display changes
               (defun tree-browser/enforce-window-width (&rest _)
                 "Maintain tree browser window width after window configuration changes."
-                (dolist (buffer (buffer-list))
-                  (with-current-buffer buffer
-                    (when (derived-mode-p 'tree-browser/mode)
-                      (when-let ((window (get-buffer-window buffer)))
-                        (let ((width tree-browser/window-width))
-                          (unless (= (window-width window) width)
-                            (adjust-window-trailing-edge window (- width (window-width window)) t))))))))
+                (when nil
+                  (dolist (buffer (buffer-list))
+                    (with-current-buffer buffer
+                      (when (derived-mode-p 'tree-browser/mode)
+                        (when-let ((window (get-buffer-window buffer)))
+                          (let ((width tree-browser/window-width))
+                            (unless (= (window-width window) width)
+                              ;; this seems to only work correctly if the tree-browser is on the extreme left of the frame
+                              ;; we have to support other cases
+                              (adjust-window-trailing-edge window (- width (window-width window)) t)))))))))
 
               ;; Add hook for window configuration changes
               (add-hook 'window-configuration-change-hook 'tree-browser/enforce-window-width))
@@ -740,20 +763,22 @@
                         (is-var-def (km/get node-data :var-def))
                         (is-fun-def (km/get node-data :fun-def))
                         (level (or (km/get node-data :level)
-                                   1)))
+                                   1))
+                        (default-face (list :inherit 'default :foreground (doom-darken (doom-color 'fg) 0.1)))
+                        (code-face (list :inherit 'default :foreground (doom-color 'violet))))
                     (cond
                      ((string= type "source_file")
                       (insert "  "))
                      ((member type (list "section" "headline"))
                       (insert (propertize "■ " 'face (intern (format "outline-%d" (min level 8))))))
                      (is-var-def
-                      (insert (propertize "• " 'face 'font-lock-variable-name-face)))
+                      (insert (propertize "• " 'face default-face)))
                      (is-fun-def
-                      (insert (propertize "λ " 'face 'font-lock-function-name-face)))
+                      (insert (propertize "λ " 'face default-face)))
                      ((member type (list "special_form" "list" "function_definition"))
-                      (insert (propertize "• " 'face 'font-lock-doc-face)))
+                      (insert (propertize "• " 'face default-face)))
                      ((string= type "src-block")
-                      (insert (propertize "≡ " 'face 'font-lock-function-face)))
+                      (insert (propertize "≡ " 'face code-face)))
                      (t
                       (insert (propertize "- " 'face 'font-lock-comment-face))))
 
@@ -763,12 +788,12 @@
                                                ;; Use org-level-N faces for headline types with level info
                                                ((and (member type (list "section" "headline")) level)
                                                 (intern (format "outline-%d" (min level 8))))
-                                               ((string= type "source_file") 'font-lock-constant-face)
+                                               ((string= type "source_file") 'outline-1)
                                                ((member type (list "section" "headline")) 'font-lock-keyword-face)
                                                ((member type (list "function_definition" "special_form" "list"))
-                                                'font-lock-comment-face)
-                                               ((string= type "src-block") 'font-lock-function-face)
-                                               (t 'font-lock-comment-face))
+                                                (list :inherit 'default :foreground (doom-darken (doom-color 'fg) 0.1)))
+                                               ((string= type "src-block") code-face)
+                                               (t 'default))
                                         'mouse-face 'highlight
                                         'help-echo "Click to navigate to this node"))
 
@@ -1032,6 +1057,7 @@
            (kbd "l") 'tree-browser/increase-depth
            (kbd "y") 'tree-browser/yank-node
            (kbd "q") 'tree-browser/quit
+           (kbd "d") 'tree-browser/open-dired-sidebar
            (kbd "RET")  (lambda () (interactive) (tree-browser/goto-source t))
            (kbd "r") 'tree-browser/refresh
            (kbd "n") 'tree-browser/toggle-narrow-mode
