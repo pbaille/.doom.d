@@ -6,6 +6,9 @@
 (defvar-local tree-browser/max-depth 1
   "Maximum depth of the tree to display initially.")
 
+(defvar-local tree-browser/data nil
+  "The tree data structure being displayed in this browser instance.")
+
 (defvar tree-browser/mode-map
   (make-sparse-keymap)
   "Keymap for `tree-browser/mode'.")
@@ -15,60 +18,6 @@
    \\{tree-browser/mode-map}"
   (setq buffer-read-only t)
   (setq-local truncate-lines t))
-
-(progn :narrowing
-
-       (defvar-local tree-browser/narrow-mode nil
-         "When non-nil, moving the cursor in tree browser automatically narrows the source buffer.")
-
-       (defun tree-browser/toggle-narrow-mode ()
-         "Toggle narrow mode in the tree browser.
-          When enabled, navigating in the tree browser will automatically narrow
-          the source buffer to the node at point. When disabled, widen the source buffer."
-         (interactive)
-         (setq-local tree-browser/narrow-mode (not tree-browser/narrow-mode))
-         (if tree-browser/narrow-mode
-             (progn
-               (message "Narrow mode enabled")
-               ;; Apply narrowing immediately when turning the mode on
-               (tree-browser/apply-narrowing-at-point))
-           ;; Widen the source buffer when disabling narrow mode
-           (when-let ((buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
-             (when (buffer-live-p buffer)
-               (with-current-buffer buffer
-                 (widen)
-                 (hs-show-all)
-                 (when-let ((source-window (get-buffer-window buffer t)))
-                   (with-selected-window source-window
-                     (recenter)))
-                 (message "Source buffer widened"))))
-           (message "Narrow mode disabled")))
-
-       (defun tree-browser/apply-narrowing-at-point ()
-
-         "Apply narrowing to the source buffer based on the node at point."
-         (when (and tree-browser/narrow-mode
-                    (buffer-local-value 'tree-browser/source-buffer (current-buffer)))
-           (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
-                       (start (plist-get node-data :start))
-                       (end (plist-get node-data :end))
-                       (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
-             (when (buffer-live-p buffer)
-               (with-current-buffer buffer
-                 ;; First widen to ensure we're not nested narrowing
-                 (widen)
-                 ;; Then narrow to the new region
-                 (narrow-to-region (save-excursion (goto-char start)
-                                                   (beginning-of-line)
-                                                   (point))
-                                   end)
-                 (goto-char start)
-                 ;; Make the source buffer window redisplay to show the narrowing
-                 (when-let ((source-window (get-buffer-window buffer t)))
-                   (with-selected-window source-window
-                     ;; Apply recenter based on centered mode setting
-
-                     (symex--update-overlay)))))))))
 
 (progn :depth
 
@@ -161,6 +110,60 @@
            ;; Make sure the line is visible in the window
            (when (get-buffer-window (current-buffer))
              (recenter)))))
+
+(progn :narrowing
+
+       (defvar-local tree-browser/narrow-mode nil
+         "When non-nil, moving the cursor in tree browser automatically narrows the source buffer.")
+
+       (defun tree-browser/toggle-narrow-mode ()
+         "Toggle narrow mode in the tree browser.
+          When enabled, navigating in the tree browser will automatically narrow
+          the source buffer to the node at point. When disabled, widen the source buffer."
+         (interactive)
+         (setq-local tree-browser/narrow-mode (not tree-browser/narrow-mode))
+         (if tree-browser/narrow-mode
+             (progn
+               (message "Narrow mode enabled")
+               ;; Apply narrowing immediately when turning the mode on
+               (tree-browser/apply-narrowing-at-point))
+           ;; Widen the source buffer when disabling narrow mode
+           (when-let ((buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+             (when (buffer-live-p buffer)
+               (with-current-buffer buffer
+                 (widen)
+                 (hs-show-all)
+                 (when-let ((source-window (get-buffer-window buffer t)))
+                   (with-selected-window source-window
+                     (recenter)))
+                 (message "Source buffer widened"))))
+           (message "Narrow mode disabled")))
+
+       (defun tree-browser/apply-narrowing-at-point ()
+
+         "Apply narrowing to the source buffer based on the node at point."
+         (when (and tree-browser/narrow-mode
+                    (buffer-local-value 'tree-browser/source-buffer (current-buffer)))
+           (when-let* ((node-data (get-text-property (line-beginning-position) 'node-data))
+                       (start (plist-get node-data :start))
+                       (end (plist-get node-data :end))
+                       (buffer (buffer-local-value 'tree-browser/source-buffer (current-buffer))))
+             (when (buffer-live-p buffer)
+               (with-current-buffer buffer
+                 ;; First widen to ensure we're not nested narrowing
+                 (widen)
+                 ;; Then narrow to the new region
+                 (narrow-to-region (save-excursion (goto-char start)
+                                                   (beginning-of-line)
+                                                   (point))
+                                   end)
+                 (goto-char start)
+                 ;; Make the source buffer window redisplay to show the narrowing
+                 (when-let ((source-window (get-buffer-window buffer t)))
+                   (with-selected-window source-window
+                     ;; Apply recenter based on centered mode setting
+
+                     (symex--update-overlay)))))))))
 
 (progn :following
 
@@ -264,6 +267,109 @@
                      (goto-char start)
                      (recenter 0)  ;; Put at top of window
                      (symex--update-overlay)))))))))
+
+(progn :search
+
+       (defvar-local tree-browser/search-term nil
+         "Current search term used for filtering nodes in the tree browser.")
+
+       (defvar-local tree-browser/original-data nil
+         "Original tree data before filtering.")
+
+       (defun tree-browser/filter-tree (tree search-term)
+         "Filter TREE to include only nodes that match SEARCH-TERM or their ancestors.
+          Returns the filtered tree structure."
+         (when tree
+           (let ((matches-or-has-children nil)
+                 (filtered-children '())
+                 (node-text (or (and (km? tree) (or (km/get tree :name)
+                                                    (km/get tree :short-name)))
+                                "")))
+
+             ;; Check if this node matches
+             (let ((node-matches (and (stringp node-text)
+                                      (string-match-p (regexp-quote search-term)
+                                                      (downcase (substring-no-properties node-text))))))
+
+               ;; Process children if any
+               (when-let ((children (and (km? tree) (km/get tree :children))))
+                 (setq filtered-children
+                       (delq nil (mapcar (lambda (child)
+                                           (tree-browser/filter-tree child search-term))
+                                         children)))
+                 (when filtered-children
+                   (setq matches-or-has-children t)))
+
+               ;; Include this node if it matches or has matching descendants
+               (when (or node-matches matches-or-has-children)
+                 (if (km? tree)
+                     (km/put (copy-tree tree) :children filtered-children)
+                   tree))))))
+
+       (defun tree-browser/clear-search ()
+         "Clear the current search filter and restore the original tree view."
+         (interactive)
+         (when tree-browser/original-data
+           (setq-local tree-browser/data tree-browser/original-data)
+           (setq-local tree-browser/original-data nil)
+           (setq-local tree-browser/search-term nil)
+           (tree-browser/refresh)
+           (message "Search cleared")))
+
+       (defun tree-browser/live-search ()
+         "Interactively search and filter tree browser nodes as you type.
+          Shows matching nodes and their ancestors in real-time."
+         (interactive)
+         (let ((minibuffer-setup-hook
+                (cons (lambda ()
+                        ;; Save original data on first search
+                        (unless tree-browser/original-data
+                          (setq-local tree-browser/original-data tree-browser/data))
+
+                        ;; Setup live updating
+                        (add-hook 'post-command-hook 'tree-browser/live-update-filter nil t))
+                      minibuffer-setup-hook))
+               (current-term tree-browser/search-term))
+
+           ;; Read the search term with live updates
+           (unwind-protect
+               (setq tree-browser/search-term
+                     (read-string "Filter nodes (live): " current-term))
+
+             ;; Cleanup hook when done
+             (with-current-buffer (window-buffer (active-minibuffer-window))
+               (remove-hook 'post-command-hook 'tree-browser/live-update-filter t)))
+
+           ;; Handle empty search term (clear search)
+           (if (string-empty-p tree-browser/search-term)
+               (tree-browser/clear-search)
+             (message "Showing matches for \"%s\" (press / to change, ESC to clear)"
+                      tree-browser/search-term))))
+
+       (defun tree-browser/live-update-filter ()
+         "Update the tree browser filter based on current minibuffer content.
+          This function is called after each keystroke in the minibuffer."
+         (let ((current-input (minibuffer-contents)))
+           (with-selected-window (minibuffer-selected-window)
+             (when (derived-mode-p 'tree-browser/mode)
+               ;; Ensure we have original data to filter
+               (unless tree-browser/original-data
+                 (setq-local tree-browser/original-data tree-browser/data))
+
+               ;; Apply filter with current input
+               (if (string-empty-p current-input)
+                   ;; Show original data if search is empty
+                   (setq-local tree-browser/data tree-browser/original-data)
+                 ;; Otherwise filter the tree
+                 (let ((filtered-tree (tree-browser/filter-tree
+                                       tree-browser/original-data
+                                       current-input)))
+                   (when filtered-tree
+                     (setq-local tree-browser/data filtered-tree)
+                     (setq-local tree-browser/max-depth 99))))
+
+               ;; Refresh display
+               (tree-browser/refresh))))))
 
 (progn :actions
 
@@ -720,7 +826,6 @@
                  (insert (format "  Follow mode:   %s\n" (if (bound-and-true-p tree-browser/follow-mode) "On" "Off")))
                  (insert (format "  Narrow mode:   %s\n" (if (bound-and-true-p tree-browser/narrow-mode) "On" "Off")))
                  (insert (format "  Centered mode: %s\n" (if (bound-and-true-p tree-browser/centered-mode) "On" "Off")))
-                 (insert (format "  Auto-refresh:  %s\n" (if (bound-and-true-p tree-browser/auto-refresh-mode) "On" "Off")))
                  (insert "\nPress q to close this help window"))
                (special-mode)
                (local-set-key (kbd "q") 'quit-window))
@@ -866,9 +971,6 @@
                        '(:eval (propertize (if tree-browser/centered-mode "C" "-")
                                            'face (if tree-browser/centered-mode 'font-lock-keyword-face 'shadow)
                                            'help-echo "Centered mode"))
-                       '(:eval (propertize (if tree-browser/auto-refresh-mode "A" "-")
-                                           'face (if tree-browser/auto-refresh-mode 'font-lock-keyword-face 'shadow)
-                                           'help-echo "Auto-refresh mode"))
                        "] "
                        mode-line-end-spaces))
                 (force-mode-line-update))
@@ -1074,6 +1176,7 @@
            (kbd "g g") 'beginning-of-buffer
            (kbd "G") 'end-of-buffer
            (kbd "/") 'isearch-forward
-           (kbd "s-q") 'tree-browser/query)))
+           (kbd "s-q") 'tree-browser/query
+           (kbd "/") 'tree-browser/live-search)))
 
 (provide 'tree-browser)
