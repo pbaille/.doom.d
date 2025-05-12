@@ -17,8 +17,8 @@
 
 (defun pb-dired/sidebar-dwim ()
   "Visit the buffer on this line.
-If optional argument SINGLE is non-nil, then also ensure there is only
-one window."
+   If optional argument SINGLE is non-nil, then also ensure there is only
+   one window."
   (interactive)
   (let ((file (dired-get-file-for-visit)))
     (when file
@@ -28,7 +28,9 @@ one window."
                           (find-file-noselect file))))
           (when buffer
             (windmove-right)
-            (switch-to-buffer buffer)))))))
+            (switch-to-buffer buffer)
+            (dired-sidebar-toggle-sidebar)
+            (tree-browser/navigate-buffer)))))))
 
 (defun pb-dired/sidebar-mouse-dwim (event)
   "Perform an action on mouse click in dired-sidebar."
