@@ -586,7 +586,7 @@
                  (recenter))
                (when (and (eq major-mode 'org-mode)
                           (string= "src-block" (km/get node-data :type)))
-                 (org-edit-src-code)))
+                 (sorg/edit-block)))
              (balance-windows))))
 
        (defun tree-browser/open-dired-sidebar ()
