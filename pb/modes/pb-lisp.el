@@ -15,6 +15,8 @@
 (require 'evil)
 (require 'treesit)
 (require 'pb-elisp)
+(require 'doom-themes)
+(require 'pb-color)
 
 (progn :mode-definition
 
@@ -1240,6 +1242,121 @@
            evil-pb-lisp-state-map
            (car binding)
            (cadr binding))))
+
+(progn :font-lock
+
+       (progn :definition
+
+              (defface font-lock-function-definition-face
+                '((t :inherit font-lock-function-name-face))
+                "Face used for function names in definition forms like defun, defmacro, etc."
+                :group 'font-lock-faces)
+
+              ;; First, create a common face for all definition forms
+              (defface pb-lisp/definition-face
+                '((t :inherit font-lock-function-definition-face
+                   :weight semi-bold))
+                "Face used for symbols in definition forms (def* forms)."
+                :group 'font-lock-faces)
+
+              ;; Pattern for matching def* forms in Elisp and Clojure
+              (defconst pb-lisp/def-form-pattern
+                "\\(\\<def\\w*\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
+                "Regexp to match common Elisp definition forms and capture the defined symbol.
+                 Matches all symbols starting with 'def', like defun, defmacro, defsubst, defadvice, defn, defvar, etc.")
+
+              (quote
+               ;; this is working on elisp defun, unlike the def-form-pattern stuff
+               (font-lock-remove-keywords
+                'emacs-lisp-mode
+                '(("(\\(def\\(?:un\\|macro\\|subst\\|advice\\|ine-\\w+\\)\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
+                   (2 'font-lock-function-definition-face))
+                  ("(\\(define-derived-mode\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
+                   (2 'font-lock-variable-name-face)))))
+
+              (dolist (mode pb-lisp/modes)
+                (font-lock-add-keywords
+                 mode
+                 `((,pb-lisp/def-form-pattern (1 font-lock-keyword-face)
+                    (2 'pb-lisp/definition-face))))))
+
+       (progn :package-prefix
+
+              (defface pb-lisp/namespace-prefix-face
+                `((t
+                   :foreground ,(pb-color (doom-color 'red) (desaturate .8) (darken 0))
+                   :weight normal))
+                "Face for namespace prefixes in elisp (text before a slash in a symbol).")
+
+              (defun pb-lisp/prefix-matcher (limit)
+                "Match symbols like 'prefix/name' up to LIMIT, capturing prefix part."
+                (when (re-search-forward "\\<\\([a-zA-Z][a-zA-Z0-9-]*\\)\\(/\\)" limit t)
+                  ;; We found a match - the \\< ensures we match at word boundaries
+                  ;; We've added a second capture group for the slash
+                  (let ((prefix-beginning (match-beginning 1))
+                        (prefix-end (match-end 1))
+                        (slash-beginning (match-beginning 2))
+                        (slash-end (match-end 2)))
+                    ;; Set match data to highlight both the prefix and the slash
+                    ;; The full match will be from prefix beginning to slash end
+                    (set-match-data (list prefix-beginning slash-end ;; full match
+                                          prefix-beginning prefix-end ;; group 1 (prefix)
+                                          slash-beginning slash-end)) ;; group 2 (slash)
+                    t)))
+
+              (dolist (mode pb-lisp/modes)
+                (font-lock-add-keywords
+                 mode
+                 '((pb-lisp/prefix-matcher 1 'pb-lisp/namespace-prefix-face prepend)
+                   (pb-lisp/prefix-matcher 2 'default prepend))
+                 1))
+
+              (pb/comment
+               (font-lock-remove-keywords
+                'emacs-lisp-mode
+                '((pb-lisp/prefix-matcher 0 'pb-lisp/namespace-prefix-face prepend)
+                  (pb-lisp/prefix-matcher 0 'pb-lisp/namespace-prefix-face append)
+                  (pb-lisp/prefix-matcher 0 'pb-lisp/namespace-prefix-face keep)
+                  (pb-lisp/prefix-matcher 0 'pb-lisp/namespace-prefix-face)))
+
+               (font-lock-flush))
+
+              font-lock-keywords-alist)
+
+       (progn :progn-section-keyword
+
+              (defface pb-lisp/progn-keyword-face
+                `((t
+                   :foreground ,(pb-color (doom-color 'red) (desaturate .8) (darken 0.1))
+                   :weight bold))
+                "Face for keywords in progn sections like (progn :keyword).")
+
+              (defun pb-lisp/progn-keyword-matcher (limit)
+                "Match keywords after a progn form up to LIMIT, like (progn :keyword)."
+                (when (re-search-forward "(\\s-*\\(progn\\|do\\)\\s-+\\(:[a-zA-Z][a-zA-Z0-9/-]*\\)" limit t)
+                  (let ((keyword-beginning (match-beginning 2))
+                        (keyword-end (match-end 2)))
+                    (set-match-data (list keyword-beginning keyword-end
+                                          keyword-beginning keyword-end))
+                    t)))
+
+              (dolist (mode pb-lisp/modes)
+                (font-lock-add-keywords
+                 mode
+                 '((pb-lisp/progn-keyword-matcher 1 'pb-lisp/progn-keyword-face prepend))
+                 1))
+
+              (defun pb-lisp/highlight-progn-sections ()
+                "Refresh keyword highlighting in the current buffer."
+                (interactive)
+                (when (derived-mode-p 'emacs-lisp-mode)
+                  (font-lock-flush)))
+
+              ;; Automatically apply highlighting to open buffers
+              (dolist (buffer (buffer-list))
+                (with-current-buffer buffer
+                  (when (derived-mode-p 'emacs-lisp-mode)
+                    (font-lock-flush))))))
 
 (progn :gptel-current-node
 
