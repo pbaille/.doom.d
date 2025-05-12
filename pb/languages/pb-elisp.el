@@ -78,17 +78,31 @@
 (add-hook 'emacs-lisp-mode-hook
           #'pb-elisp/treesit-parser-setup)
 
-(defface font-lock-function-definition-face
-  '((t :inherit font-lock-function-name-face))
-  "Face used for function names in definition forms like defun, defmacro, etc."
-  :group 'font-lock-faces)
+(progn :definition
 
-(font-lock-add-keywords
- 'emacs-lisp-mode
- '(("(\\(def\\(?:un\\|macro\\|subst\\|advice\\|ine-\\w+\\)\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
-    (2 'font-lock-function-definition-face))
-   ("(\\(define-derived-mode\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
-    (2 'font-lock-variable-name-face))))
+       (defface font-lock-function-definition-face
+         '((t :inherit font-lock-function-name-face))
+         "Face used for function names in definition forms like defun, defmacro, etc."
+         :group 'font-lock-faces)
+
+       ;; First, create a common face for all definition forms
+       (defface pb-elisp/definition-face
+         '((t :inherit font-lock-function-definition-face
+            :weight semi-bold))
+         "Face used for symbols in definition forms (def* forms)."
+         :group 'font-lock-faces)
+
+       ;; Pattern for matching def* forms in Elisp and Clojure
+       (defconst pb-elisp/def-form-pattern
+         "(\\(def[^ \t\n(]*\\)\\_>[ \t\n']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
+         "Regexp to match any def* form and capture the defined symbol.")
+
+       (dolist (mode pb-lisp/modes)
+         (font-lock-add-keywords
+          mode
+          `((,pb-elisp/def-form-pattern (1 font-lock-keyword-face)
+             (2 'pb-elisp/definition-face)))
+          1)))
 
 (progn :package-prefix
 
@@ -114,11 +128,12 @@
                                    slash-beginning slash-end))  ;; group 2 (slash)
              t)))
 
-       (font-lock-add-keywords
-        'emacs-lisp-mode
-        '((pb-elisp/prefix-matcher 1 'pb-elisp/namespace-prefix-face prepend)
-          (pb-elisp/prefix-matcher 2 'default prepend))
-        1)
+       (dolist (mode pb-lisp/modes)
+         (font-lock-add-keywords
+          mode
+          '((pb-elisp/prefix-matcher 1 'pb-elisp/namespace-prefix-face prepend)
+            (pb-elisp/prefix-matcher 2 'default prepend))
+          1))
 
        (pb/comment
         (font-lock-remove-keywords
@@ -142,17 +157,18 @@
 
        (defun pb-elisp/progn-keyword-matcher (limit)
          "Match keywords after a progn form up to LIMIT, like (progn :keyword)."
-         (when (re-search-forward "(\\s-*progn\\s-+\\(:[a-zA-Z][a-zA-Z0-9/-]*\\)" limit t)
-           (let ((keyword-beginning (match-beginning 1))
-                 (keyword-end (match-end 1)))
+         (when (re-search-forward "(\\s-*\\(progn\\|do\\)\\s-+\\(:[a-zA-Z][a-zA-Z0-9/-]*\\)" limit t)
+           (let ((keyword-beginning (match-beginning 2))
+                 (keyword-end (match-end 2)))
              (set-match-data (list keyword-beginning keyword-end
                                    keyword-beginning keyword-end))
              t)))
 
-       (font-lock-add-keywords
-        'emacs-lisp-mode
-        '((pb-elisp/progn-keyword-matcher 1 'pb-elisp/progn-keyword-face prepend))
-        1)
+       (dolist (mode pb-lisp/modes)
+         (font-lock-add-keywords
+          mode
+          '((pb-elisp/progn-keyword-matcher 1 'pb-elisp/progn-keyword-face prepend))
+          1))
 
        (defun pb-elisp/highlight-progn-sections ()
          "Refresh keyword highlighting in the current buffer."
