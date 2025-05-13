@@ -1261,9 +1261,10 @@
 
               ;; Pattern for matching def* forms in Elisp and Clojure
               (defconst pb-lisp/def-form-pattern
-                "\\(\\<def\\w*\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
-                "Regexp to match common Elisp definition forms and capture the defined symbol.
-                 Matches all symbols starting with 'def', like defun, defmacro, defsubst, defadvice, defn, defvar, etc.")
+                "\\(\\<\\(?:def\\w*\\|ns\\)\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
+                "Regexp to match common Elisp and Clojure definition forms and capture the defined symbol.
+                 Matches all symbols starting with 'def', like defun, defmacro, defsubst, defadvice, defn, defvar, etc.,
+                 as well as Clojure's 'ns' namespace declarations.")
 
               (quote
                ;; this is working on elisp defun, unlike the def-form-pattern stuff
@@ -1278,7 +1279,14 @@
                 (font-lock-add-keywords
                  mode
                  `((,pb-lisp/def-form-pattern (1 font-lock-keyword-face)
-                    (2 'pb-lisp/definition-face))))))
+                    (2 'pb-lisp/definition-face)))))
+
+              (dolist (mode pb-lisp/modes)
+                (font-lock-add-keywords
+                 mode
+                 `((,pb-lisp/def-form-pattern (1 font-lock-keyword-face)
+                    (2 (list :weight 'bold))))
+                 1)))
 
        (progn :package-prefix
 
@@ -1290,7 +1298,7 @@
 
               (defun pb-lisp/prefix-matcher (limit)
                 "Match symbols like 'prefix/name' up to LIMIT, capturing prefix part."
-                (when (re-search-forward "\\<\\([a-zA-Z][a-zA-Z0-9-]*\\)\\(/\\)" limit t)
+                (when (re-search-forward "\\<\\([a-zA-Z][a-zA-Z0-9-.]*\\|:+[a-zA-Z][a-zA-Z0-9-.]*\\)\\(/\\)" limit t)
                   ;; We found a match - the \\< ensures we match at word boundaries
                   ;; We've added a second capture group for the slash
                   (let ((prefix-beginning (match-beginning 1))
@@ -1356,7 +1364,24 @@
               (dolist (buffer (buffer-list))
                 (with-current-buffer buffer
                   (when (derived-mode-p 'emacs-lisp-mode)
-                    (font-lock-flush))))))
+                    (font-lock-flush)))))
+
+       '(progn :re-frame
+               (defvar pb-lisp/re-frame-keyword-pattern
+                 "\\(::+\\)\\([a-zA-Z][a-zA-Z0-9/-]*\\)\\>"
+                 "Regexp to match re-frame style double-colon keywords without namespace.")
+
+               ;; Example keyword for testing
+               ::pouet
+
+               ;; Use a higher priority (2) to override potential conflicts
+               (dolist (mode pb-lisp/modes)
+                 (font-lock-add-keywords
+                  mode
+                  `((,pb-lisp/re-frame-keyword-pattern
+                     (1 (list :weight 'bold))
+                     (2 (list :weight 'bold))))
+                  2))))
 
 (progn :gptel-current-node
 
