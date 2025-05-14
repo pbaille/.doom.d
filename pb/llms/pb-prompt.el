@@ -303,6 +303,56 @@
                          (t "unknown"))
                   :path path)))))
 
+       (defun pb-prompt/add-project-file ()
+         "Add a file from the current project to the prompt context.
+          Uses projectile to select a file from the project."
+         (interactive)
+         (let ((project-root (projectile-project-root)))
+           (when-let* ((file-path (projectile-completing-read
+                                   "Add project file to context: "
+                                   (projectile-project-files project-root))))
+             (let ((full-path (concat project-root file-path)))
+               (pb-prompt/add-item!
+                (km :type "file"
+                    :path full-path))
+               (message "Added project file: %s" full-path)))))
+
+       (defun pb-prompt/add-project-directory ()
+         "Add a directory from the current project to the prompt context.
+          Allows selecting a directory within the project structure."
+         (interactive)
+         (let* ((project-root (projectile-project-root))
+                (project-dirs (cons project-root
+                                    (seq-filter #'file-directory-p
+                                                (directory-files-recursively
+                                                 project-root "^[^.]" t))))
+                (rel-dirs (mapcar (lambda (dir)
+                                    (if (string= dir project-root)
+                                        "/"
+                                      (substring dir (length project-root))))
+                                  project-dirs))
+                (selected (completing-read "Add project directory to context: "
+                                           rel-dirs nil t))
+                (full-dir-path (if (string= selected "/")
+                                   project-root
+                                 (concat project-root selected))))
+           (pb-prompt/add-item!
+            (km :type "dir"
+                :path full-dir-path))
+           (message "Added project directory: %s" full-dir-path)))
+
+       (defun pb-prompt/add-project-file-or-dir ()
+         "Add a file or directory from the current project to the prompt context.
+          Uses projectile to select a file from the project, or allows selecting
+          a directory within the project structure."
+         (interactive)
+         (let ((choice (read-char-choice
+                        "Select [f]ile or [d]irectory: "
+                        '(?f ?d))))
+           (cond
+            ((eq choice ?f) (pb-prompt/add-project-file))
+            ((eq choice ?d) (pb-prompt/add-project-directory)))))
+
        (defun pb-prompt/current-selection ()
          (interactive)
          (let ((selection
@@ -659,6 +709,9 @@
            (:key "a f" :desc "Add file/path to context"
             :category "edition"
             :function pb-prompt/add-path-to-focused-context)
+           (:key "a p" :desc "Add project file or dir to context"
+            :category "edition"
+            :function pb-prompt/add-project-file-or-dir-to-focused-context)
            (:key "q" :desc "Quit window"
             :category "navigation"
             :function quit-window)
@@ -1230,6 +1283,11 @@
               (defun pb-prompt/add-path-to-focused-context ()
                 (interactive)
                 (pb-prompt/add-path)
+                (pb-prompt/refresh-context-browser))
+
+              (defun pb-prompt/add-project-file-or-dir-to-focused-context ()
+                (interactive)
+                (pb-prompt/add-project-file-or-dir)
                 (pb-prompt/refresh-context-browser))
 
               (defun pb-prompt/toggle-context-item-disabled-at-point ()
