@@ -25,7 +25,7 @@
   "Options for pb-meta."
   :group 'files)
 
-(defcustom pb-meta/directory-name "_meta_"
+(defcustom pb-meta/directory-name "__"
   "Name of the directory where meta files are stored."
   :type 'string
   :group 'pb-meta)

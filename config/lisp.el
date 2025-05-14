@@ -64,6 +64,8 @@
          (require 'flycheck-clj-kondo)
          (add-hook 'clojure-mode-hook 'lsp)
          (add-hook 'clojure-mode-hook #'rainbow-delimiters-mode)
+         (add-hook 'clojurec-mode-hook #'rainbow-delimiters-mode)
+         (add-hook 'clojurescript-mode-hook #'rainbow-delimiters-mode)
          (setq lsp-lens-enable nil)
          (setq lsp-enable-symbol-highlighting nil)
          (setq lsp-headerline-breadcrumb-enable nil)
