@@ -227,6 +227,7 @@
                       (:prefix ("a" . "add")
                                (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
                                (:desc "add file to context" "f" #'pb-prompt/add-path)
+                               (:desc "add project file or dir" "p" #'pb-prompt/add-project-file-or-dir)
                                (:desc "add function to context" "l" #'pb-prompt/add-function)
                                (:desc "add selection to context" "s" #'pb-prompt/add-selection)
                                (:desc "add saved context" "c" #'pb-prompt/add-saved-context))
@@ -380,7 +381,9 @@
        "C-c C-k" #'kill-buffer-and-window)
 
       (:map dired-mode-map
-       :nv "H" #'dired-omit-mode)
+       :nv "H" #'dired-omit-mode
+       :nv "m" #'pb-meta/change-or-create-meta-file
+       :nv "C-d" #'dired-hide-details-mode)
 
       (:map messages-buffer-mode-map
             "s-k" #'pb-misc/clear-message-buffer)
