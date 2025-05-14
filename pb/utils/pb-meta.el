@@ -62,16 +62,27 @@
          (let ((file-meta-dir (pb-meta/-get-file-meta-dir file)))
            (unless (f-exists-p file-meta-dir)
              (f-mkdir-full-path file-meta-dir))
-           file-meta-dir)))
+           file-meta-dir))
+
+       (defun pb-meta/-get-current-file ()
+         "Get the current file or directory.
+          - In dired mode: the file at point or current directory
+          - In normal buffers: the buffer's file
+          - As fallback: the default directory"
+         (cond ((eq major-mode 'dired-mode)
+                (dired-get-filename))
+               ((buffer-file-name))
+               (t default-directory))))
 
 (progn :create
 
        (defun pb-meta/create-org-file ()
-         "Create an org meta file for the current buffer."
+         "Create an org meta file for the current buffer or file at point in dired."
          (interactive)
-         (let* ((file (buffer-file-name))
+         (let* ((file (pb-meta/-get-current-file))
                 (meta-dir (pb-meta/-ensure-file-meta-dir file))
                 (basename (pb-meta/-get-file-basename file))
+                (_ (print (kmq meta-dir basename file)))
                 (basename (read-string "Meta file name: " basename))
                 (org-file (f-join meta-dir (concat basename ".org"))))
            (if (f-exists-p org-file)
@@ -80,6 +91,39 @@
              (insert (format "* %s\n\n" basename))
              (save-buffer)
              (message "Created new org meta file for %s" basename))))
+
+       (defun pb-meta/create-meta-for-file-at-point ()
+         "Create meta file for the file or directory at point in dired."
+         (interactive)
+         (print "io")
+         (print major-mode)
+         (when (member major-mode '(dired-sidebar-mode dired-mode))
+           (print :poi)
+           (let ((file (or (dired-get-filename nil t) default-directory)))
+             (print file)
+             (if (not file)
+                 (message "No file at point")
+               (let ((meta-type (completing-read
+                                 "Create which type of meta file: "
+                                 '("Org Document" "Scratch File" "Context File" "Directory Meta")
+                                 nil t)))
+                 (cond ((string= meta-type "Org Document")
+                        (pb-meta/create-org-file))
+                       ((string= meta-type "Scratch File")
+                        (pb-meta/create-scratch-file))
+                       ((string= meta-type "Context File")
+                        (pb-meta/create-context-file))
+                       ((string= meta-type "Directory Meta")
+                        ;; Create directory meta entry
+                        (let* ((dir-name (f-filename (directory-file-name file)))
+                               (meta-dir (pb-meta/-ensure-meta-dir file))
+                               (org-file (f-join meta-dir (concat dir-name "-meta.org"))))
+                          (find-file org-file)
+                          (unless (f-size? org-file)
+                            (insert (format "#+TITLE: %s Directory\n\n* Overview\n\n* Contents\n\n* Notes\n\n" dir-name))
+                            (save-buffer))
+                          (message "Created directory meta file for %s" dir-name)))))
+               (message "Created meta file for %s" (file-name-nondirectory file))))))
 
        (defun pb-meta/create-context-file ()
          "Save current prompt context to a meta file.
@@ -171,9 +215,10 @@
 (progn :find
 
        (defun pb-meta/change-or-create-meta-file ()
-         "Find an existing meta file for the current buffer or create one if none exist."
+         "Find an existing meta file for the current buffer or create one if none exist.
+          Works with the current buffer's file or with file at point in dired."
          (interactive)
-         (let* ((file (buffer-file-name))
+         (let* ((file (pb-meta/-get-current-file))
                 (meta-dir (pb-meta/-get-file-meta-dir file)))
            (if (and (f-exists-p meta-dir)
                     (not (equal 0 (length (f-files meta-dir nil t)))))
