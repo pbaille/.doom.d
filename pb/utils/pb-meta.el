@@ -52,10 +52,13 @@
          (file-name-sans-extension (f-filename file)))
 
        (defun pb-meta/-get-file-meta-dir (file)
-         "Get the specific meta directory for FILE."
-         (let ((meta-dir (pb-meta/-get-meta-dir file))
-               (basename (pb-meta/-get-file-basename file)))
-           (f-join meta-dir basename)))
+         "Get the specific meta directory for FILE.
+          If FILE is a directory, return the meta directory without appending a basename."
+         (let ((meta-dir (pb-meta/-get-meta-dir file)))
+           (if (f-directory-p file)
+               meta-dir
+             (let ((basename (pb-meta/-get-file-basename file)))
+               (f-join meta-dir basename)))))
 
        (defun pb-meta/-ensure-file-meta-dir (file)
          "Ensure file-specific meta directory exists for FILE."
@@ -69,7 +72,7 @@
           - In dired mode: the file at point or current directory
           - In normal buffers: the buffer's file
           - As fallback: the default directory"
-         (cond ((eq major-mode 'dired-mode)
+         (cond ((member major-mode '(dired-mode dired-sidebar-mode))
                 (dired-get-filename))
                ((buffer-file-name))
                (t default-directory))))
@@ -92,39 +95,6 @@
              (save-buffer)
              (message "Created new org meta file for %s" basename))))
 
-       (defun pb-meta/create-meta-for-file-at-point ()
-         "Create meta file for the file or directory at point in dired."
-         (interactive)
-         (print "io")
-         (print major-mode)
-         (when (member major-mode '(dired-sidebar-mode dired-mode))
-           (print :poi)
-           (let ((file (or (dired-get-filename nil t) default-directory)))
-             (print file)
-             (if (not file)
-                 (message "No file at point")
-               (let ((meta-type (completing-read
-                                 "Create which type of meta file: "
-                                 '("Org Document" "Scratch File" "Context File" "Directory Meta")
-                                 nil t)))
-                 (cond ((string= meta-type "Org Document")
-                        (pb-meta/create-org-file))
-                       ((string= meta-type "Scratch File")
-                        (pb-meta/create-scratch-file))
-                       ((string= meta-type "Context File")
-                        (pb-meta/create-context-file))
-                       ((string= meta-type "Directory Meta")
-                        ;; Create directory meta entry
-                        (let* ((dir-name (f-filename (directory-file-name file)))
-                               (meta-dir (pb-meta/-ensure-meta-dir file))
-                               (org-file (f-join meta-dir (concat dir-name "-meta.org"))))
-                          (find-file org-file)
-                          (unless (f-size? org-file)
-                            (insert (format "#+TITLE: %s Directory\n\n* Overview\n\n* Contents\n\n* Notes\n\n" dir-name))
-                            (save-buffer))
-                          (message "Created directory meta file for %s" dir-name)))))
-               (message "Created meta file for %s" (file-name-nondirectory file))))))
-
        (defun pb-meta/create-context-file ()
          "Save current prompt context to a meta file.
 
@@ -140,12 +110,11 @@
           This integration connects pb-meta's file organization with pb-prompt's
           context management capabilities."
          (interactive)
-         (when (buffer-file-name)
-           (let* ((file (buffer-file-name))
-                  (meta-dir (pb-meta/-ensure-file-meta-dir file))
-                  (context-file (f-join meta-dir "context.el")))
-             (pb-prompt/save-current-context-to-file context-file)
-             (message "Saved context to %s" context-file))))
+         (let* ((file (pb-meta/-get-current-file))
+                (meta-dir (pb-meta/-ensure-file-meta-dir file))
+                (context-file (f-join meta-dir "context.el")))
+           (pb-prompt/save-current-context-to-file context-file)
+           (message "Saved context to %s" context-file)))
 
        (defun pb-meta/load-meta-context ()
          "Load a prompt context from the current buffer's meta directory.
@@ -255,13 +224,15 @@
                          (message "Created new file %s" selected)))))))
              ;; No meta directory or it's empty - prompt to create a file
              (let ((choice (completing-read "Create meta file: "
-                                            '("Org Document" "Scratch File")
+                                            '("Org Document" "Scratch File" "Context File")
                                             nil t)))
                (cond
                 ((string= choice "Org Document")
                  (pb-meta/create-org-file))
                 ((string= choice "Scratch File")
-                 (pb-meta/create-scratch-file)))))))
+                 (pb-meta/create-scratch-file))
+                ((string= choice "Context File")
+                 (pb-meta/create-context-file)))))))
 
        (defun pb-meta/goto-main-file ()
          "Navigate back to the main file from a meta file.
