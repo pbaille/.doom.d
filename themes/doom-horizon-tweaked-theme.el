@@ -238,7 +238,8 @@
    ((outline-1 &override) :foreground (doom-darken red 0.1) :background nil)
    ((outline-2 &override) :foreground (doom-blend red green 0.85) :background nil)
    ((outline-3 &override) :foreground (doom-blend red green 0.7) :background nil)
-   ((outline-4 &override) :foreground (doom-blend red green 0.55) :background nil)
+   ((outline-4 &override) :foreground (doom-blend red green 0.6) :background nil)
+   ((outline-5 &override) :foreground (doom-blend red green 0.5) :background nil)
    ;;;; flycheck
    (flycheck-fringe-error :foreground (doom-blend red bg 0.8))
    (flycheck-fringe-warning :foreground (doom-blend dark-blue bg 0.8))
@@ -312,6 +313,7 @@
    (org-level-2 :inherit 'outline-2 :height 1.2)
    (org-level-3 :inherit 'outline-3 :height 1.1)
    (org-level-4 :inherit 'outline-4)
+   (org-level-5 :inherit 'outline-5)
    ;;(org-level-4)
    ;;(org-level-5)
    ;;(org-level-6)
