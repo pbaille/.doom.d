@@ -584,32 +584,32 @@
          (cond ((eq 'org-mode major-mode)
                 (km :base "You are editing an org-mode buffer, you are very aware its tree structure."
                     :response-format ["Your response should be valid org content, intended to replace the current node or subtree in the org file."
-                                      "Don't use markdown code block syntax or any non-valid org in your output."]))
+                                      "For code snippets, use only org src block syntax, you should never use markdown."]))
                (symex-mode
                 (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
                     :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
                                       "Don't use markdown code block syntax or any non-valid code in your output."
                                       "If you have to write prose, use appropriate comment syntax."]))))
 
-       (defun pb-prompt/buffer-request (&optional instruction)
+       (defun pb-prompt/buffer-request (&optional options)
          "Send a GPT request with the current buffer context.
           In Org mode, uses the current Org node as selection.
           Otherwise uses current selection or expression at point."
          (interactive)
          (let ((selection (pb-prompt/current-selection)))
            (gptel-request
-               (pb-prompt/mk (km :instructions
-                                 (km/merge
-                                  (pb-prompt/buffer-request-base-instruction)
-                                  (km :buffer-info (km :name (buffer-name)
-                                                       :file-path (buffer-file-name)
-                                                       :major-mode (symbol-name major-mode)
-                                                       :point (point)
-                                                       :line-number (line-number-at-pos))
-                                      :buffer-content (buffer-substring-no-properties (point-min) (point-max))
-                                      :selection selection
-                                      :task (or instruction
-                                                (read-string "Edit current selection: "))))))
+               (pb-prompt/mk (km/merge
+                              (pb-prompt/buffer-request-base-instruction)
+                              (when (not (km/get options :node-only))
+                                (km :buffer-info (km :name (buffer-name)
+                                                     :file-path (buffer-file-name)
+                                                     :major-mode (symbol-name major-mode)
+                                                     :point (point)
+                                                     :line-number (line-number-at-pos))
+                                    :buffer-content (buffer-substring-no-properties (point-min) (point-max)) ))
+                              (km :selection selection
+                                  :task (or (km/get options :instructions)
+                                            (read-string "Edit current selection: ")))))
 
              :system (pb-prompt/context-prompt)
              :callback #'pb-prompt/buffer-request-handler)
