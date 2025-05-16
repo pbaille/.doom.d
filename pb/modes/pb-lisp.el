@@ -1261,7 +1261,7 @@
 
               ;; Pattern for matching def* forms in Elisp and Clojure
               (defconst pb-lisp/def-form-pattern
-                "\\(\\<\\(?:def\\w*\\|ns\\)\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
+                "(\\(\\<\\(?:def\\w*\\|ns\\)\\)\\_>[ \t']*\\(\\(?:\\sw\\|\\s_\\)+\\)"
                 "Regexp to match common Elisp and Clojure definition forms and capture the defined symbol.
                  Matches all symbols starting with 'def', like defun, defmacro, defsubst, defadvice, defn, defvar, etc.,
                  as well as Clojure's 'ns' namespace declarations.")
