@@ -441,7 +441,91 @@
 
        (advice-add 'doom-modeline--modal-icon
                    :around
-                   #'sorg/doom-modeline-modal-icon))
+                   #'sorg/doom-modeline-modal-icon)
+
+       (progn :default-face
+              (defface sorg/default-text
+                `((t :inherit 'default :foreground ,(doom-blend 'fg 'bg 0.8)))
+                "Face for default text in org buffers")
+
+              (defun sorg/setup-default-text-face ()
+                "Set face remapping for regular text in org buffers."
+                (face-remap-add-relative 'default 'sorg/default-text))
+
+              (add-hook 'org-mode-hook #'sorg/setup-default-text-face)))
+
+(progn :format
+
+       (defun sorg/format-buffer ()
+         "Format the current org buffer by ensuring proper spacing between elements.
+          Adds newlines between headings and paragraphs for better readability.
+          Preserves formatting inside code blocks."
+         (interactive)
+         (save-excursion
+           (goto-char (point-min))
+
+           ;; Save the current point and buffer modification state
+           (let ((modified-p (buffer-modified-p))
+                 (in-src-block nil))
+
+             ;; Iterate through the buffer
+             (while (< (point) (point-max))
+               ;; Check if we're entering or leaving a source block
+               (cond
+                ;; Entering source block
+                ((looking-at "^#\\+begin_src")
+                 (setq in-src-block t)
+                 (forward-line 1))
+
+                ;; Leaving source block
+                ((looking-at "^#\\+end_src")
+                 (setq in-src-block nil)
+                 (forward-line 1))
+
+                ;; Skip formatting inside source blocks
+                (in-src-block
+                 (forward-line 1))
+
+                ;; Format between headings
+                ((looking-at "^\\(\\*+\\s-+.*\\)\n\\(\\*+\\s-+\\)")
+                 (replace-match "\\1\n\n\\2")
+                 (forward-line 1))
+
+                ;; Format between paragraph and heading
+                ((looking-at "\\([^\n]\\)\n\\(\\*+\\s-+\\)")
+                 (replace-match "\\1\n\n\\2")
+                 (forward-line 1))
+
+                ;; Format between paragraph and heading (improved to catch more cases)
+                ((looking-at "\\(.+\\)\n\\(\\*+\\s-+\\)")
+                 (replace-match "\\1\n\n\\2")
+                 (forward-line 1))
+
+                ;; Format between heading and paragraph (non-heading content)
+                ((looking-at "^\\(\\*+\\s-+.*\\)\n\\([^\\*\n]\\)")
+                 (replace-match "\\1\n\n\\2")
+                 (forward-line 1))
+
+                ;; Format between paragraphs (blank line between text blocks)
+                ((looking-at "\\([^\n]\\)\n\\([^\\*\n]\\)")
+                 (unless (looking-back "^\n\\(.+\\)\n" nil)
+                   (replace-match "\\1\n\n\\2"))
+                 (forward-line 1))
+
+                ;; Move forward if no pattern matches
+                (t (forward-line 1))))
+
+             ;; Remove excess blank lines (more than 2 consecutive newlines)
+             (goto-char (point-min))
+             (while (re-search-forward "\n\n\n+" nil t)
+               (unless in-src-block
+                 (replace-match "\n\n")))
+
+             ;; Restore modification state if the buffer wasn't modified before
+             (unless modified-p
+               (set-buffer-modified-p nil))
+
+             (message "Org buffer formatted successfully")))))
 
 (progn :request
 
