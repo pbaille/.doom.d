@@ -650,7 +650,7 @@
                          (mode (completing-read "Response mode: " '("inline" "org-chat") nil t)))
                     (if (string= mode "inline")
                         (progn (tree-browser/quit)
-                               (pb-prompt/buffer-request query-text))
+                               (pb-prompt/buffer-request (km :instructions query-text)))
                       (tree-browser/query-org-chat buffer node-name source-content query-text)))))
 
               (defun tree-browser/query-org-chat (buffer node-name source-content query-text)
@@ -701,7 +701,7 @@
                       (evil-sorg-state 1)
 
                       ;; Setup for sorg/query-replace
-                      (pb-prompt/buffer-request query-text)
+                      (pb-prompt/buffer-request (km :instructions query-text))
 
                       (message "Created org chat at %s" full-path))))))
        )
@@ -932,22 +932,28 @@
 
        (progn :window-handling
 
-              (defvar-local tree-browser/window-width 30
+              (defvar-local tree-browser/window-width 35
                 "The width of the tree browser window.")
 
               (defun tree-browser/fix-window-size ()
                 "Fix the size of the tree browser window."
-                (interactive)
                 (when-let ((window (get-buffer-window (current-buffer))))
+                  ;; Set window parameters for proper behavior
                   (set-window-parameter window 'no-delete-other-windows t)
                   (set-window-parameter window 'no-other-window nil)
                   (set-window-dedicated-p window t)
-                  (window-preserve-size window t t) ; preserve width
+
+                  ;; More reliable way to set window width
                   (let ((width tree-browser/window-width))
                     (unless (= (window-width window) width)
-                      (adjust-window-trailing-edge window (- width (window-width window)) t)))))
+                      ;; First try with window-resize which is more reliable
+                      (window-resize window (- width (window-width window)) t)
 
-              ;; Ensure window stays fixed after display changes
+                      ;; Fallback to adjust-window-trailing-edge if needed
+                      (when (not (= (window-width window) width))
+                        (adjust-window-trailing-edge window (- width (window-width window)) t))))
+                  (window-preserve-size window t t)))
+
               (defun tree-browser/enforce-window-width (&rest _)
                 "Maintain tree browser window width after window configuration changes."
                 (when nil
@@ -1258,18 +1264,19 @@
 
            ;; Only create a new window if one doesn't exist for this buffer
            (unless existing-window
-             (let ((width tree-browser/window-width)) ; Width of the tree-browser sidebar
-               (let ((window (split-window (selected-window) (- width) 'left)))
-                 (select-window window)
-                 (switch-to-buffer buf)
-                 (set-window-parameter window 'no-delete-other-windows t)
-                 (window-preserve-size window t t)
-                 (set-window-dedicated-p window t)))) ; Make window dedicated
+             ;; Create window with exact width from the beginning
+             (let ((window (split-window (selected-window) tree-browser/window-width 'left t)))
+               (select-window window)
+               (switch-to-buffer buf)
+               (set-window-parameter window 'no-delete-other-windows t)
+               (set-window-dedicated-p window t)))
 
            ;; If window already exists, just switch to it
            (when existing-window
-             (select-window existing-window)
-             (tree-browser/fix-window-size))
+             (select-window existing-window))
+
+           ;; Make sure the width is correct
+           (tree-browser/fix-window-size)
 
            ;; Position cursor at the node containing the current position in source buffer
            (tree-browser/position-cursor-at-node current-pos)
@@ -1290,6 +1297,7 @@
                (setq-local tree-browser/window-width 45)
                (setq-local tree-browser/max-depth 3) ;; Show more depth by default for org
                (tree-browser/refresh)
+               (tree-browser/fix-window-size)
                (tree-browser/position-cursor-at-node current-pos)))))
 
        (defun tree-browser/elisp-navigate-buffer ()
@@ -1315,6 +1323,7 @@
                  (setq-local tree-browser/max-depth display-depth)
                  ;; Refresh to apply the new depth
                  (tree-browser/refresh)
+                 (tree-browser/fix-window-size)
                  ;; Position cursor at the node containing the current position
                  (tree-browser/position-cursor-at-node current-pos))))))
 
