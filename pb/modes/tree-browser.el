@@ -1358,6 +1358,7 @@
            (kbd "x") 'tree-browser/delete-node
            (kbd "q") 'tree-browser/quit
            (kbd "d") 'tree-browser/open-dired-sidebar
+           (kbd "C-h") 'tree-browser/open-dired-sidebar
            (kbd "RET")  (lambda () (interactive) (tree-browser/goto-source t))
            (kbd "r") 'tree-browser/refresh
            (kbd "n") 'tree-browser/toggle-narrow-mode
