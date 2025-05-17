@@ -574,7 +574,7 @@
            :system (pb-prompt/context-prompt)
            :callback #'pb-gptel/current-symex-request-handler))
 
-       (defun pb-prompt/buffer-request-handler (res info)
+       (defun pb-prompt/query-handler (res info)
          (if res
              (progn
                (cond ((eq major-mode 'org-mode) (pb-org/delete))
@@ -592,7 +592,7 @@
          (setq evil-symex-state-cursor `("cyan" box) )
          (evil-refresh-cursor))
 
-       (defun pb-prompt/buffer-request-base-instruction ()
+       (defun pb-prompt/query-base-instruction ()
          (cond ((eq 'org-mode major-mode)
                 (km :base "You are editing an org-mode buffer, you are very aware its tree structure."
                     :response-format ["Your response should be valid org content, intended to replace the current node or subtree in the org file."
@@ -603,7 +603,7 @@
                                       "Don't use markdown code block syntax or any non-valid code in your output."
                                       "If you have to write prose, use appropriate comment syntax."]))))
 
-       (defun pb-prompt/buffer-request (&optional options)
+       (defun pb-prompt/query (&optional options)
          "Send a GPT request with the current buffer context.
           In Org mode, uses the current Org node as selection.
           Otherwise uses current selection or expression at point."
@@ -611,7 +611,7 @@
          (let ((selection (pb-prompt/mk-selection-context-item)))
            (gptel-request
                (pb-prompt/mk (km/merge
-                              (pb-prompt/buffer-request-base-instruction)
+                              (pb-prompt/query-base-instruction)
                               (when (not (km/get options :node-only))
                                 (km :buffer-info (km :name (buffer-name)
                                                      :file-path (buffer-file-name)
@@ -624,7 +624,7 @@
                                             (read-string "Edit current selection: ")))))
 
              :system (pb-prompt/context-prompt)
-             :callback #'pb-prompt/buffer-request-handler)
+             :callback #'pb-prompt/query-handler)
 
            (let ((start (km/get selection :at))
                  (end (+ (km/get selection :at)

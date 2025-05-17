@@ -650,7 +650,7 @@
                          (mode (completing-read "Response mode: " '("inline" "org-chat") nil t)))
                     (if (string= mode "inline")
                         (progn (tree-browser/quit)
-                               (pb-prompt/buffer-request (km :instructions query-text)))
+                               (pb-prompt/query (km :instructions query-text)))
                       (tree-browser/query-org-chat buffer node-name source-content query-text)))))
 
               (defun tree-browser/query-org-chat (buffer node-name source-content query-text)
@@ -701,7 +701,7 @@
                       (evil-sorg-state 1)
 
                       ;; Setup for sorg/query-replace
-                      (pb-prompt/buffer-request (km :instructions query-text))
+                      (pb-prompt/query (km :instructions query-text))
 
                       (message "Created org chat at %s" full-path))))))
        )

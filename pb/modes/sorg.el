@@ -153,7 +153,7 @@
 
 (defun sorg/query-replace ()
   (interactive)
-  (pb-prompt/buffer-request))
+  (pb-prompt/query))
 
 (defun sorg/edit-block ()
   "Edit the source block at point."
