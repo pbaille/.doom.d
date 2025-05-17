@@ -132,7 +132,7 @@
           a message will be displayed."
          (interactive)
          (if (buffer-file-name)
-             (let* ((file (buffer-file-name))
+             (let* ((file (pb-meta/-get-current-file))
                     (meta-dir (pb-meta/-get-file-meta-dir file))
                     (context-file (f-join meta-dir "context.el")))
                (if (f-exists-p context-file)
@@ -149,7 +149,7 @@
           The scratch file is created in the meta directory associated with
           the current file. Prompts for a custom file name."
          (interactive)
-         (let* ((file (buffer-file-name))
+         (let* ((file (pb-meta/-get-current-file))
                 (meta-dir (pb-meta/-ensure-file-meta-dir file))
                 (basename (pb-meta/-get-file-basename file))
                 (basename (read-string "Scratch file name: " (concat basename "-scratch")))
