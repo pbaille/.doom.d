@@ -343,7 +343,7 @@
 
 ;; bindings and init
 
-(defvar sorg/bindings
+(defvar sorg/bindings_original
   (list "k" #'pb-org/parent
         "j" #'pb-org/down-element
         "h" #'pb-org/backward
@@ -379,6 +379,48 @@
         "c" #'pb-org/create-code-block
         ">" #'pb-org/shift-one-line-down
         "<" #'pb-org/shift-one-line-up
+        "s-l" #'sorg/enter-pb-lisp-state
+        "C-M-j" #'pb-org/shift-one-line-down
+        "C-M-k" #'pb-org/shift-one-line-up
+        "<mouse-1>" #'sorg/click
+        ;; misc
+        "?" #'pb-org/print-context
+        "g j" #'sorg/scroll-top
+        "q r" #'sorg/query-replace))
+
+(defvar sorg/bindings
+  (list "k" #'pb-org/move-up
+        "j" #'pb-org/move-down
+        "h" #'pb-org/walk-backward
+        "l" #'pb-org/walk-forward
+        "C-k" #'sorg/goto-prev-sibling-scrolling
+        "C-j" #'sorg/goto-next-sibling-scrolling
+        "C-h" #'tree-browser/org-navigate-buffer
+        "K" #'pb-org/parent
+        "J" #'pb-org/down-element
+        "H" #'pb-org/backward
+        "L" #'pb-org/forward
+        "t" #'pb-org/toggle-fold
+        ";" #'pb-org/toggle-fold
+        "n" #'pb-org/toggle-narrow
+        "e" #'sorg/eval-current-block
+        "C-l" #'sorg/edit-block
+        ;; edition
+        "x" #'pb-org/delete
+        "y" #'pb-org/copy
+        "C-y" #'pb-org/copy-code-block-content
+        "p" #'pb-org/paste-after
+        "P" #'pb-org/paste-before
+        "M-l" #'org-demote-subtree
+        "M-h" #'org-promote-subtree
+        "S" #'org-insert-structure-template
+        "M-j" #'pb-org/move-subtree-down
+        "M-k" #'pb-org/move-subtree-up
+        "o" #'pb-org/insert-after
+        "O" #'pb-org/insert-before
+        "a" #'pb-org/insert-at-end
+        "i" #'pb-org/insert-at-beginning
+        "c" #'pb-org/create-code-block
         "s-l" #'sorg/enter-pb-lisp-state
         "C-M-j" #'pb-org/shift-one-line-down
         "C-M-k" #'pb-org/shift-one-line-up
