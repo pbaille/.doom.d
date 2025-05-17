@@ -266,17 +266,19 @@
           pb-prompt/with-id before being added.
 
           Returns the updated context with the item added (if it wasn't a duplicate)."
-         (let* ((item-with-id (if (km/get item :id)
-                                  item
-                                (pb-prompt/with-id item)))
-                (item-id (km/get item-with-id :id)))
-           (if (seq-find (lambda (ctx-item)
-                           (equal (km/get ctx-item :id) item-id))
-                         context)
-               ;; If item with same ID exists, return unchanged context
-               context
-             ;; Otherwise, add the item to the context
-             (cons item-with-id context))))
+         (if (null item)
+             context
+           (let* ((item-with-id (if (km/get item :id)
+                                    item
+                                  (pb-prompt/with-id item)))
+                  (item-id (km/get item-with-id :id)))
+             (if (seq-find (lambda (ctx-item)
+                             (equal (km/get ctx-item :id) item-id))
+                           context)
+                 ;; If item with same ID exists, return unchanged context
+                 context
+               ;; Otherwise, add the item to the context
+               (cons item-with-id context)))))
 
        (defun pb-prompt/add-item! (item)
          "Add ITEM to the focused context with a unique ID.
@@ -292,68 +294,24 @@
          (pb-prompt/update-focused-context
           (lambda (ctx) (pb-prompt/add-context-item ctx item))))
 
-       (defun pb-prompt/add-path ()
+       (defun pb-prompt/mk-path-context-item ()
          (interactive)
          (let ((path (read-file-name "Select directory or file: " nil nil t)))
            (when path
-             (pb-prompt/add-item!
-              (km :type (cond
-                         ((file-directory-p path) "dir")
-                         ((file-regular-p path) "file")
-                         (t "unknown"))
-                  :path path)))))
+             (km :type (cond
+                        ((file-directory-p path) "dir")
+                        ((file-regular-p path) "file")
+                        (t "unknown"))
+                 :path path))))
 
-       (defun pb-prompt/add-project-file ()
-         "Add a file from the current project to the prompt context.
-          Uses projectile to select a file from the project."
+       (defun pb-prompt/mk-buffer-context-item ()
          (interactive)
-         (let ((project-root (projectile-project-root)))
-           (when-let* ((file-path (projectile-completing-read
-                                   "Add project file to context: "
-                                   (projectile-project-files project-root))))
-             (let ((full-path (concat project-root file-path)))
-               (pb-prompt/add-item!
-                (km :type "file"
-                    :path full-path))
-               (message "Added project file: %s" full-path)))))
+         (km :type "buffer"
+             :path (buffer-file-name)
+             :buffer-name (buffer-name)
+             :major-mode (symbol-name major-mode)))
 
-       (defun pb-prompt/add-project-directory ()
-         "Add a directory from the current project to the prompt context.
-          Allows selecting a directory within the project structure."
-         (interactive)
-         (let* ((project-root (projectile-project-root))
-                (project-dirs (cons project-root
-                                    (seq-filter #'file-directory-p
-                                                (directory-files-recursively
-                                                 project-root "^[^.]" t))))
-                (rel-dirs (mapcar (lambda (dir)
-                                    (if (string= dir project-root)
-                                        "/"
-                                      (substring dir (length project-root))))
-                                  project-dirs))
-                (selected (completing-read "Add project directory to context: "
-                                           rel-dirs nil t))
-                (full-dir-path (if (string= selected "/")
-                                   project-root
-                                 (concat project-root selected))))
-           (pb-prompt/add-item!
-            (km :type "dir"
-                :path full-dir-path))
-           (message "Added project directory: %s" full-dir-path)))
-
-       (defun pb-prompt/add-project-file-or-dir ()
-         "Add a file or directory from the current project to the prompt context.
-          Uses projectile to select a file from the project, or allows selecting
-          a directory within the project structure."
-         (interactive)
-         (let ((choice (read-char-choice
-                        "Select [f]ile or [d]irectory: "
-                        '(?f ?d))))
-           (cond
-            ((eq choice ?f) (pb-prompt/add-project-file))
-            ((eq choice ?d) (pb-prompt/add-project-directory)))))
-
-       (defun pb-prompt/current-selection ()
+       (defun pb-prompt/mk-selection-context-item ()
          (interactive)
          (let ((selection
                 (cond
@@ -386,12 +344,10 @@
                  :at (point)
                  :content selection))))
 
-       (defun pb-prompt/add-selection ()
-         "Add the current selection to the prompt context.
-          Adds either the active region or current symex if in symex-mode."
+       (defun pb-prompt/add-path ()
          (interactive)
-         (when-let ((selection (pb-prompt/current-selection)))
-           (pb-prompt/add-item! selection)))
+         (when-let ((path (pb-prompt/mk-path-context-item)))
+           (pb-prompt/add-item! path)))
 
        (defun pb-prompt/add-buffer ()
          "Add the current buffer to the prompt context.
@@ -399,10 +355,66 @@
           for inclusion in the prompt context."
          (interactive)
          (pb-prompt/add-item!
-          (km :type "buffer"
-              :path (buffer-file-name)
-              :buffer-name (buffer-name)
-              :major-mode (symbol-name major-mode))))
+          (pb-prompt/mk-buffer-context-item)))
+
+       (progn :project-files
+
+              (defun pb-prompt/add-project-file ()
+                "Add a file from the current project to the prompt context.
+        Uses projectile to select a file from the project."
+                (interactive)
+                (let ((project-root (projectile-project-root)))
+                  (when-let* ((file-path (projectile-completing-read
+                                          "Add project file to context: "
+                                          (projectile-project-files project-root))))
+                    (let ((full-path (concat project-root file-path)))
+                      (pb-prompt/add-item!
+                       (km :type "file"
+                           :path full-path))
+                      (message "Added project file: %s" full-path)))))
+
+              (defun pb-prompt/add-project-directory ()
+                "Add a directory from the current project to the prompt context.
+        Allows selecting a directory within the project structure."
+                (interactive)
+                (let* ((project-root (projectile-project-root))
+                       (project-dirs (cons project-root
+                                           (seq-filter #'file-directory-p
+                                                       (directory-files-recursively
+                                                        project-root "^[^.]" t))))
+                       (rel-dirs (mapcar (lambda (dir)
+         (if (string= dir project-root)
+           "/"
+         (substring dir (length project-root))))
+                                         project-dirs))
+                       (selected (completing-read "Add project directory to context: "
+                                                  rel-dirs nil t))
+                       (full-dir-path (if (string= selected "/")
+           project-root
+         (concat project-root selected))))
+                  (pb-prompt/add-item!
+                   (km :type "dir"
+                       :path full-dir-path))
+                  (message "Added project directory: %s" full-dir-path)))
+
+              (defun pb-prompt/add-project-file-or-dir ()
+                "Add a file or directory from the current project to the prompt context.
+        Uses projectile to select a file from the project, or allows selecting
+        a directory within the project structure."
+                (interactive)
+                (let ((choice (read-char-choice
+                               "Select [f]ile or [d]irectory: "
+                               '(?f ?d))))
+                  (cond
+                   ((eq choice ?f) (pb-prompt/add-project-file))
+                   ((eq choice ?d) (pb-prompt/add-project-directory))))))
+
+       (defun pb-prompt/add-selection ()
+         "Add the current selection to the prompt context.
+          Adds either the active region or current symex if in symex-mode."
+         (interactive)
+         (when-let ((selection (pb-prompt/mk-selection-context-item)))
+           (pb-prompt/add-item! selection)))
 
        (defun pb-prompt/add-url (url &optional description)
          (interactive)
@@ -556,7 +568,7 @@
                                    :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
                                                      "Don't use markdown code block syntax or any non-valid code in your output."
                                                      "If you have to write prose, use appropriate comment syntax."]
-                                   :selection (pb-prompt/current-selection)
+                                   :selection (pb-prompt/mk-selection-context-item)
                                    :task (read-string "Edit current expression: "))))
 
            :system (pb-prompt/context-prompt)
@@ -596,7 +608,7 @@
           In Org mode, uses the current Org node as selection.
           Otherwise uses current selection or expression at point."
          (interactive)
-         (let ((selection (pb-prompt/current-selection)))
+         (let ((selection (pb-prompt/mk-selection-context-item)))
            (gptel-request
                (pb-prompt/mk (km/merge
                               (pb-prompt/buffer-request-base-instruction)
