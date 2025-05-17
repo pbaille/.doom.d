@@ -204,6 +204,7 @@
           This function iterates through all existing buffers and kills any
           that are in either `dired-mode' or `dired-sidebar-mode'."
          (interactive)
+         (message "kill all dired buffer")
          (dolist (buffer (buffer-list))
            (with-current-buffer buffer
              (when (or (eq major-mode 'dired-mode)
@@ -412,6 +413,77 @@
                         :state (consult--buffer-state))))
         (when selected
           (switch-to-buffer selected))))))
+
+(progn :search-symbol
+
+       (defvar pb-misc/symbols-cache nil
+         "Cache for symbols to avoid rebuilding the list every time.")
+
+       (defvar pb-misc/symbols-cache-time 0
+         "Last time the symbols cache was updated.")
+
+       (defun pb-misc/build-symbols-list ()
+         "Build the list of symbols with category information."
+         (let ((functions '())
+               (variables '())
+               (features '()))
+           ;; Use mapatoms which is faster than all-completions for building lists
+           (mapatoms (lambda (symbol)
+                       (let ((name (symbol-name symbol)))
+                         (when (fboundp symbol)
+                           (push name functions))
+                         (when (and (boundp symbol)
+                                    (not (keywordp symbol)))
+                           (push name variables))
+                         (when (featurep symbol)
+                           (push name features)))))
+
+           (setq pb-misc/symbols-cache-time (float-time))
+           (setq pb-misc/symbols-cache
+                 `(("Functions" . ,functions)
+                   ("Variables" . ,variables)
+                   ("Features" . ,features)))))
+
+       (defun pb-misc/get-symbols ()
+         "Get symbols, using cache if available and not too old."
+         (when (or (not pb-misc/symbols-cache)
+                   (> (- (float-time) pb-misc/symbols-cache-time) 300)) ;; Cache for 5 minutes
+           (pb-misc/build-symbols-list))
+         pb-misc/symbols-cache)
+
+       (defun pb-misc/search-symbol (&optional refresh)
+         "Search for an elisp symbol, like describe-symbol does but jump to source if possible.
+          With prefix arg REFRESH, rebuild the symbols cache before searching."
+         (interactive "P")
+         (when refresh
+           (pb-misc/build-symbols-list))
+         (let* ((symbols-by-category (pb-misc/get-symbols))
+                (all-symbols (append (cdr (assoc "Functions" symbols-by-category))
+                                     (cdr (assoc "Variables" symbols-by-category))
+                                     (cdr (assoc "Features" symbols-by-category))))
+                (selected-name (consult--read
+                                all-symbols
+                                :prompt "Symbol: "
+                                :sort t
+                                :require-match t
+                                :category 'symbol
+                                :history 'pb-misc/search-symbol-history
+                                :group (lambda (cand transform)
+                                         (if transform
+                                             cand
+                                           (let ((sym (intern cand)))
+                                             (cond
+                                              ((fboundp sym) "Functions")
+                                              ((boundp sym) "Variables")
+                                              ((featurep sym) "Features")
+                                              (t "Other")))))))
+                (selected-symbol (intern selected-name)))
+           (if (fboundp 'xref-find-definitions)
+               (condition-case nil
+                   (xref-find-definitions selected-name)
+                 (error
+                  (describe-symbol selected-symbol)))
+             (describe-symbol selected-symbol)))))
 
 (provide 'pb-misc)
 ;;; pb-misc.el ends here.
