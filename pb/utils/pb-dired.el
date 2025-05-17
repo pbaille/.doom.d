@@ -66,46 +66,5 @@
 
 (advice-add #'dired-sidebar-mouse-subtree-cycle-or-find-file :override #'pb-dired/sidebar-mouse-dwim)
 
-(defvar pb-dired/file-renamings-alist nil
-  "An alist of all renamings made in Dired. In an attempt to repair broken links.")
-
-(defun pb-dired/create-or-open-dotorg-file ()
-  "Create or open .org in directory of current file or directory under cursor in Dired mode."
-  (interactive)
-  (let* ((path (dired-get-file-for-visit))
-         (focus (if (file-directory-p path)
-                    path
-                  (file-name-directory path))) ;; get directory of current file
-         (readme-file (expand-file-name ".org" focus)))
-
-    (unless (file-exists-p readme-file)
-      (with-temp-file readme-file
-        (insert (format "* %s\n\n" (file-name-base (directory-file-name focus))))))
-
-    ;; Add secondary header if path is a file
-
-    (with-current-buffer (find-file readme-file)
-      (goto-char (point-max))
-      (let ((p (point))
-            (beg-of-line (save-excursion (beginning-of-line) (point))))
-        (if (not (equal p beg-of-line))
-            (evil-insert-newline-above)))
-      (let ((header (if (file-directory-p path)
-                        ""
-                      (format "** [[%s][%s]]"
-                              path
-                              (file-name-nondirectory path)))))
-
-        (when (re-search-backward (format "^%s.*" header) nil t)
-          (goto-char (match-beginning 0)))
-        (unless (looking-at-p (format "^%s" header))
-          (insert header))))))
-
-(defun pb-dired/rename-file-advice (file destination ignored)
-  "Advice function to save all renamings to `pb-dired/file-renamings-alist`."
-  (push (cons file destination) pb-dired/file-renamings-alist))
-
-(advice-add 'dired-rename-file :after #'pb-dired/rename-file-advice)
-
 (provide 'pb-dired)
 ;;; pb-dired.el ends here.
