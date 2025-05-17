@@ -63,10 +63,12 @@
   "Toggle between show all and hide all using hs-minor-mode."
   (interactive)
   (if (and (boundp 'hs-minor-mode) hs-minor-mode)
-      (save-excursion
-        (if (hs-already-hidden-p)
-            (hs-show-all)
-          (hs-hide-all)))
+      (if (equal 'org-mode major-mode)
+          (org-show-all)
+        (save-excursion
+          (if (hs-already-hidden-p)
+              (hs-show-all)
+            (hs-hide-all))))
     (message "hs-minor-mode is not enabled in this buffer")))
 
 (provide 'pb-fold)
