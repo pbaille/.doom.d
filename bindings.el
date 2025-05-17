@@ -4,10 +4,14 @@
 
 (progn :main
 
+       ;; impossible to override s-w d, this commands closes the sidebar, which is annoying,
+       ;; I've tried many things but nothing worked, had to be brutal...
+       (advice-add '+workspace/close-window-or-workspace :override #'delete-window)
+
        (map! (:prefix ("s-w" . "windows")
-                      (:desc "delete window" "d" #'evil-window-delete)
+                      (:desc "delete window" "s-d" (lambda () (interactive) (delete-window)))
                       (:desc "quit window" "q" #'quit-window)
-                      (:desc "kill buffer & window" "s-d" #'kill-buffer-and-window)
+                      (:desc "kill buffer & window" "C-d" (lambda () (interactive) (kill-buffer-and-window)))
 
                       ;; moving
                       (:desc "move left" "h" #'windmove-left)
@@ -16,10 +20,10 @@
                       (:desc "move up" "k" #'windmove-up)
 
                       ;; resizing
-                      (:desc "width +" "M-l" #'pb-misc/increase-window-width)
-                      (:desc "width -" "M-h" #'pb-misc/shrink-window-width)
-                      (:desc "height +" "M-j" #'pb-misc/increase-window-height)
-                      (:desc "height -" "M-k" #'pb-misc/shrink-window-height)
+                      (:desc "width +" "L" #'pb-misc/increase-window-width)
+                      (:desc "width -" "H" #'pb-misc/shrink-window-width)
+                      (:desc "height +" "J" #'pb-misc/increase-window-height)
+                      (:desc "height -" "K" #'pb-misc/shrink-window-height)
                       (:desc "balance" "TAB" #'balance-windows)
 
                       ;; splitting
@@ -29,10 +33,10 @@
                       (:desc "split left" "C-k" #'evil-window-split)
 
                       ;; swapping
-                      (:desc "swap up" "K" #'+evil/window-move-up)
-                      (:desc "swap right" "L" #'+evil/window-move-right)
-                      (:desc "swap left" "H" #'+evil/window-move-left)
-                      (:desc "swap down" "J" #'+evil/window-move-down)
+                      (:desc "swap up" "M-k" #'+evil/window-move-up)
+                      (:desc "swap right" "M-l" #'+evil/window-move-right)
+                      (:desc "swap left" "M-h" #'+evil/window-move-left)
+                      (:desc "swap down" "M-j" #'+evil/window-move-down)
 
                       ;; misc
                       (:desc "flash current position" "s-w" #'+nav-flash/blink-cursor)
@@ -146,8 +150,8 @@
 
                       (:desc "scratch buffer"
                              "n" (lambda ()
-                                   (interactive)
-                                   (pb-misc/scratch-buffer 'split)))
+         (interactive)
+         (pb-misc/scratch-buffer 'split)))
 
                       (:desc "new buffer"
                              "N" #'pb-misc/new-buffer)
@@ -159,8 +163,8 @@
                              "h" #'previous-buffer)
 
                       (:desc "elisp eval" "C-e" (lambda ()
-                                                  (interactive)
-                                                  (pb-misc/elisp-eval 'split)))))
+         (interactive)
+         (pb-misc/elisp-eval 'split)))))
 
        (map! (:prefix ("s-q" . "LLMs")
 
@@ -259,7 +263,9 @@
                       (:desc "search replace thing at point" "r" #'pb-misc/query-replace-thing-at-point)
                       (:desc "search replace" "s-r" #'query-replace)
                       (:desc "search google" "g" (lambda () (interactive) (browse-url "https://www.google.com/?autofocus=1")))
-                      (:desc "search mark" "m" #'consult-mark)))
+                      (:desc "search mark" "m" #'consult-mark)
+                      (:desc "search symbol" "e" #'pb-misc/search-symbol)
+                      (:desc "search symbol" "s-e" (lambda () (interactive) (pb-misc/search-symbol :refresh)))))
 
        (map! (:prefix ("s-f" . "file")
                       (:desc "find file" "s-f" #'find-file)
@@ -273,8 +279,8 @@
        (map! (:prefix ("s-d" . "dired")
                       (:desc "dired" "d" #'dired-jump)
                       (:desc "dirvish" "s-d" (lambda ()
-                                               (interactive)
-                                               (let ((file buffer-file-name))
+         (interactive)
+         (let ((file buffer-file-name))
                                                  (dirvish (file-name-directory file))
                                                  (dirvish-find-entry-a file))))
                       (:desc "sidebar" "s" #'dired-sidebar-toggle-sidebar)
@@ -448,13 +454,13 @@
        :n "h" #'dired-up-directory
        :n "l" #'dired-find-file
        :n "K" #'dired-subtree-up
-       :n "s-k" #'kill-this-buffer
-       :n "C-o" #'pb-dired/create-or-open-dotorg-file)
+       :n "s-k" #'kill-this-buffer)
 
       (:map  dired-sidebar-mode-map
        :n "h" #'dired-sidebar-up-directory
        :n "l" #'pb-dired/sidebar-dwim ;#'dired-sidebar-find-file
        :n "q" #'dired-sidebar-hide-sidebar
+       :n "<return>" #'pb-dired/sidebar-dwim
        :n "Q" #'pb-misc/kill-all-dired-buffers
        :n "K" #'dired-subtree-up
        :n "<mouse-1>" #'pb-dired/sidebar-mouse-dwim)
