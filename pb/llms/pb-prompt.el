@@ -361,7 +361,7 @@
 
               (defun pb-prompt/add-project-file ()
                 "Add a file from the current project to the prompt context.
-        Uses projectile to select a file from the project."
+                 Uses projectile to select a file from the project."
                 (interactive)
                 (let ((project-root (projectile-project-root)))
                   (when-let* ((file-path (projectile-completing-read
@@ -375,7 +375,7 @@
 
               (defun pb-prompt/add-project-directory ()
                 "Add a directory from the current project to the prompt context.
-        Allows selecting a directory within the project structure."
+                 Allows selecting a directory within the project structure."
                 (interactive)
                 (let* ((project-root (projectile-project-root))
                        (project-dirs (cons project-root
@@ -383,15 +383,15 @@
                                                        (directory-files-recursively
                                                         project-root "^[^.]" t))))
                        (rel-dirs (mapcar (lambda (dir)
-         (if (string= dir project-root)
-           "/"
-         (substring dir (length project-root))))
+                                           (if (string= dir project-root)
+                                               "/"
+                                             (substring dir (length project-root))))
                                          project-dirs))
                        (selected (completing-read "Add project directory to context: "
                                                   rel-dirs nil t))
                        (full-dir-path (if (string= selected "/")
-           project-root
-         (concat project-root selected))))
+                                          project-root
+                                        (concat project-root selected))))
                   (pb-prompt/add-item!
                    (km :type "dir"
                        :path full-dir-path))
@@ -399,8 +399,8 @@
 
               (defun pb-prompt/add-project-file-or-dir ()
                 "Add a file or directory from the current project to the prompt context.
-        Uses projectile to select a file from the project, or allows selecting
-        a directory within the project structure."
+                 Uses projectile to select a file from the project, or allows selecting
+                 a directory within the project structure."
                 (interactive)
                 (let ((choice (read-char-choice
                                "Select [f]ile or [d]irectory: "
@@ -438,125 +438,127 @@
                (message "Added saved context '%s' to current context" selected-name))
            (message "No saved contexts available")))
 
-       (defun pb-prompt/edit-function-in-buffer (func-data &optional callback)
-         "Open a buffer to edit a function described in FUNC-DATA.
+       (progn :add-function
 
-          FUNC-DATA should be a keyword map with at least:
-          - :name - The name of the function (string)
-          - Either :function (the actual function) or :code (string representation)
+              (defun pb-prompt/edit-function-in-buffer (func-data &optional callback)
+                "Open a buffer to edit a function described in FUNC-DATA.
 
-          Optional CALLBACK is called when the function is saved with C-c C-c.
-          The callback receives the new function, the function expression string,
-          and the potentially updated function name."
-         (let* ((temp-buffer-name "*Function Editor*")
-                (buffer (get-buffer-create temp-buffer-name))
-                (func (km/get func-data :function))
-                (func-name (km/get func-data :name))
-                (func-str (if (and func (symbolp func))
-                              (prin1-to-string (symbol-function func))
-                            (km/get func-data :code))))
-           (with-current-buffer buffer
-             (erase-buffer)
-             (emacs-lisp-mode)
-             ;; Make the function name editable (wrapped in [[ ]] to indicate it's editable)
-             (insert ";; Edit function: [[" func-name "]]\n")
-             (insert ";; You can edit the name above (between [[ ]]) and the function body below\n")
-             (insert ";; Press C-c C-c to save, C-c C-k to cancel\n\n")
-             ;; Pretty print the function before inserting
-             (let ((pp-func-str (with-temp-buffer
-                                  (emacs-lisp-mode)
-                                  (insert func-str)
-                                  (goto-char (point-min))
-                                  (indent-sexp)
-                                  (buffer-string))))
-               (insert pp-func-str))
-             (goto-char (point-max))
-             (backward-sexp)
-             (indent-region (point-min) (point-max))
-             (symex-mode-interface)
-             (let ((map (make-sparse-keymap)))
-               (define-key map (kbd "C-c C-c")
-                           (lambda ()
-                             (interactive)
-                             (let* ((new-func-name
-                                     (save-excursion
-                                       (goto-char (point-min))
-                                       (when (re-search-forward ";; Edit function: \\[\\[\\(.*?\\)\\]\\]" nil t)
-                                         (match-string-no-properties 1))))
-                                    (func-expr (buffer-substring-no-properties
-                                                (save-excursion
-                                                  (goto-char (point-min))
-                                                  (search-forward "\n\n")
-                                                  (point))
-                                                (point-max)))
-                                    (new-func (condition-case err
-                                                  (eval (read func-expr))
-                                                (error
-                                                 (message "Error in function: %s" (error-message-string err))
-                                                 nil))))
-                               (if (functionp new-func)
-                                   (progn
-                                     (message "Function updated successfully")
-                                     (when callback
-                                       (funcall callback new-func func-expr new-func-name))
-                                     (kill-buffer buffer))
-                                 (message "Not a valid function")))))
-               (define-key map (kbd "C-c C-k")
-                           (lambda ()
-                             (interactive)
-                             (kill-buffer buffer)))
-               (use-local-map (make-composed-keymap map (current-local-map))))
-             ;; Position cursor at the start of the function name for convenience
-             (goto-char (point-min))
-             (re-search-forward ";; Edit function: \\[\\[" nil t)
-             (message "Edit function name between [[ ]] and function body. Press C-c C-c when done"))
-           (switch-to-buffer buffer)))
+                 FUNC-DATA should be a keyword map with at least:
+                 - :name - The name of the function (string)
+                 - Either :function (the actual function) or :code (string representation)
 
-       (defun pb-prompt/add-function ()
-         "Add a function (that generates context-item) to the context.
-          This allows adding dynamic content to the prompt context that can be
-          evaluated when needed during prompt generation.
+                 Optional CALLBACK is called when the function is saved with C-c C-c.
+                 The callback receives the new function, the function expression string,
+                 and the potentially updated function name."
+                (let* ((temp-buffer-name "*Function Editor*")
+                       (buffer (get-buffer-create temp-buffer-name))
+                       (func (km/get func-data :function))
+                       (func-name (km/get func-data :name))
+                       (func-str (if (and func (symbolp func))
+                                     (prin1-to-string (symbol-function func))
+                                   (km/get func-data :code))))
+                  (with-current-buffer buffer
+                    (erase-buffer)
+                    (emacs-lisp-mode)
+                    ;; Make the function name editable (wrapped in [[ ]] to indicate it's editable)
+                    (insert ";; Edit function: [[" func-name "]]\n")
+                    (insert ";; You can edit the name above (between [[ ]]) and the function body below\n")
+                    (insert ";; Press C-c C-c to save, C-c C-k to cancel\n\n")
+                    ;; Pretty print the function before inserting
+                    (let ((pp-func-str (with-temp-buffer
+                                         (emacs-lisp-mode)
+                                         (insert func-str)
+                                         (goto-char (point-min))
+                                         (indent-sexp)
+                                         (buffer-string))))
+                      (insert pp-func-str))
+                    (goto-char (point-max))
+                    (backward-sexp)
+                    (indent-region (point-min) (point-max))
+                    (symex-mode-interface)
+                    (let ((map (make-sparse-keymap)))
+                      (define-key map (kbd "C-c C-c")
+                                  (lambda ()
+                                    (interactive)
+                                    (let* ((new-func-name
+                                            (save-excursion
+                                              (goto-char (point-min))
+                                              (when (re-search-forward ";; Edit function: \\[\\[\\(.*?\\)\\]\\]" nil t)
+                                                (match-string-no-properties 1))))
+                                           (func-expr (buffer-substring-no-properties
+                                                       (save-excursion
+                                                         (goto-char (point-min))
+                                                         (search-forward "\n\n")
+                                                         (point))
+                                                       (point-max)))
+                                           (new-func (condition-case err
+                                                         (eval (read func-expr))
+                                                       (error
+                                                        (message "Error in function: %s" (error-message-string err))
+                                                        nil))))
+                                      (if (functionp new-func)
+                                          (progn
+                                            (message "Function updated successfully")
+                                            (when callback
+                                              (funcall callback new-func func-expr new-func-name))
+                                            (kill-buffer buffer))
+                                        (message "Not a valid function")))))
+                      (define-key map (kbd "C-c C-k")
+                                  (lambda ()
+                                    (interactive)
+                                    (kill-buffer buffer)))
+                      (use-local-map (make-composed-keymap map (current-local-map))))
+                    ;; Position cursor at the start of the function name for convenience
+                    (goto-char (point-min))
+                    (re-search-forward ";; Edit function: \\[\\[" nil t)
+                    (message "Edit function name between [[ ]] and function body. Press C-c C-c when done"))
+                  (switch-to-buffer buffer)))
 
-          The user can either input a custom lambda function or select an existing
-          function using completion."
-         (interactive)
-         (let* ((choice (read-char-choice
-                         "Select function method [e]xisting or [c]ustom lambda: "
-                         '(?e ?c))))
+              (defun pb-prompt/add-function ()
+                "Add a function (that generates context-item) to the context.
+                 This allows adding dynamic content to the prompt context that can be
+                 evaluated when needed during prompt generation.
 
-           (cond
-            ;; Select existing function via completion
-            ((eq choice ?e)
-             (let* ((obarray-functions
-                     (seq-filter (lambda (sym)
-                                   (and (symbolp sym)
-                                        (fboundp sym)
-                                        (not (special-form-p sym))
-                                        (not (macrop sym))))
-                                 obarray))
-                    (selected-func-sym (intern (completing-read
-                                                "Select function: "
-                                                obarray-functions
-                                                #'fboundp t))))
-               (pb-prompt/add-item!
-                (km :type "function"
-                    :name (symbol-name selected-func-sym)
-                    :function (symbol-function selected-func-sym)
-                    :documentation (or (documentation selected-func-sym) "No documentation available")))))
+                 The user can either input a custom lambda function or select an existing
+                 function using completion."
+                (interactive)
+                (let* ((choice (read-char-choice
+                                "Select function method [e]xisting or [c]ustom lambda: "
+                                '(?e ?c))))
 
-            ;; Custom lambda input
-            ((eq choice ?c)
-             (let ((func-name (read-string "Function name: ")))
-               (pb-prompt/edit-function-in-buffer
-                (km :name func-name
-                    :code "(lambda ()\n (interactive)\n ())")
-                (lambda (func func-expr new-func-name)
-                  (pb-prompt/add-item!
-                   (km :type "function"
-                       :name (or new-func-name func-name)
-                       :code func-expr
-                       :function func
-                       :documentation (or (documentation func) "No documentation available")))))))))))
+                  (cond
+                   ;; Select existing function via completion
+                   ((eq choice ?e)
+                    (let* ((obarray-functions
+                            (seq-filter (lambda (sym)
+                                          (and (symbolp sym)
+                                               (fboundp sym)
+                                               (not (special-form-p sym))
+                                               (not (macrop sym))))
+                                        obarray))
+                           (selected-func-sym (intern (completing-read
+                                                       "Select function: "
+                                                       obarray-functions
+                                                       #'fboundp t))))
+                      (pb-prompt/add-item!
+                       (km :type "function"
+                           :name (symbol-name selected-func-sym)
+                           :function (symbol-function selected-func-sym)
+                           :documentation (or (documentation selected-func-sym) "No documentation available")))))
+
+                   ;; Custom lambda input
+                   ((eq choice ?c)
+                    (let ((func-name (read-string "Function name: ")))
+                      (pb-prompt/edit-function-in-buffer
+                       (km :name func-name
+                           :code "(lambda ()\n (interactive)\n ())")
+                       (lambda (func func-expr new-func-name)
+                         (pb-prompt/add-item!
+                          (km :type "function"
+                              :name (or new-func-name func-name)
+                              :code func-expr
+                              :function func
+                              :documentation (or (documentation func) "No documentation available"))))))))))))
 
 (progn :request
 
@@ -612,19 +614,23 @@
            (gptel-request
                (pb-prompt/mk (km/merge
                               (pb-prompt/query-base-instruction)
-                              (when (not (km/get options :node-only))
-                                (km :buffer-info (km :name (buffer-name)
-                                                     :file-path (buffer-file-name)
-                                                     :major-mode (symbol-name major-mode)
-                                                     :point (point)
-                                                     :line-number (line-number-at-pos))
-                                    :buffer-content (buffer-substring-no-properties (point-min) (point-max)) ))
-                              (km :selection selection
-                                  :task (or (km/get options :instructions)
-                                            (read-string "Edit current selection: ")))))
+                              (when (km/get options :buffer)
+                                (km :buffer
+                                    (km :info (km :name (buffer-name)
+                                                  :file-path (buffer-file-name)
+                                                  :major-mode (symbol-name major-mode)
+                                                  :point (point)
+                                                  :line-number (line-number-at-pos))
+                                        :content
+                                        (buffer-substring-no-properties (point-min) (point-max)))))
+                              (when (km/get options :selection)
+                                (km :selection selection))
+                              (when-let ((instructions (km/get options :instructions)))
+                                (km :instructions instructions))))
 
-             :system (pb-prompt/context-prompt)
-             :callback #'pb-prompt/query-handler)
+             :system (pb-prompt/context-prompt (km/get options :context))
+             :callback (or (km/get options :callback)
+                           #'pb-prompt/query-handler))
 
            (let ((start (km/get selection :at))
                  (end (+ (km/get selection :at)
@@ -862,6 +868,76 @@
          "Display help for saved contexts keybindings."
          (interactive)
          (pb-prompt/display-help-menu "Saved Contexts" 'pb-prompt/saved-contexts-keybindings)))
+
+(progn :local-context
+
+       (defun pb-prompt/get-or-create-local-context (&optional file create)
+         "Get or create a context.el file in the meta directory of FILE or current buffer.
+          If FILE is nil, use the current buffer's file.
+          When CREATE is non-nil, create the context file if it doesn't exist.
+          Returns a plist with :file, :exists, :meta-dir, :target-file, and :created properties."
+         (let* ((target-file (or file (buffer-file-name)))
+                (meta-dir (when target-file
+                            (if create
+                                (pb-meta/-ensure-file-meta-dir target-file)
+                              (pb-meta/-get-file-meta-dir target-file))))
+                (context-file (when meta-dir (f-join meta-dir "context.el")))
+                (existed (and context-file (f-exists-p context-file)))
+                (created nil))
+
+           (print context-file)
+
+           ;; Create the context file if requested and it doesn't exist
+           (when (and create context-file (not existed))
+             (pb-prompt/save-current-context-to-file context-file)
+             (setq created t))
+
+           (list :file context-file
+                 :exists (or existed created)
+                 :created created
+                 :meta-dir meta-dir
+                 :target-file target-file)))
+
+       (defun pb-prompt/load-and-browse-context-file (filename)
+         "Load a context from FILENAME and browse it.
+          This function loads the context from the specified file and then opens
+          a context browser to view and interact with the context items.
+
+          The file should contain a serialized context created with
+          `pb-prompt/save-current-context-to-file`.
+
+          When the context is loaded, the user can browse its items in the same way
+          as with `pb-prompt/browse-context`."
+         (when (file-exists-p filename)
+           (pb-prompt/load-context-from-file filename)
+           (pb-prompt/browse-context)
+           (message "Loaded and browsing context from %s" filename)))
+
+       (defun pb-prompt/open-context (&optional file)
+         "Open a context.el file from the meta directory of FILE or current buffer.
+          If FILE is nil, use the current buffer's file.
+          If the context file doesn't exist, offer to create it.
+          Use pb-prompt/browse-context to view the loaded context when opened."
+         (interactive)
+         (let* ((ctx (pb-prompt/get-or-create-local-context file nil))
+                (context-file (plist-get ctx :file))
+                (exists (plist-get ctx :exists))
+                (target-file (plist-get ctx :target-file)))
+           (cond
+            ;; Context file exists - load and browse it
+            (exists
+             (pb-prompt/load-and-browse-context-file context-file))
+
+            ;; No context file but we have a target file and user wants to create it
+            ((and target-file
+                  (y-or-n-p "Context file doesn't exist. Create it?"))
+             (let ((created-ctx (pb-prompt/get-or-create-local-context target-file t)))
+               (when (plist-get created-ctx :created)
+                 (pb-prompt/load-and-browse-context-file (plist-get created-ctx :file)))))
+
+            ;; Default case - no context file and not creating one
+            (t
+             (message "No context file found for %s" (or target-file "current buffer")))))))
 
 (progn :context-browser
 
