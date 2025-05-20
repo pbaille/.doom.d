@@ -150,8 +150,8 @@
 
                       (:desc "scratch buffer"
                              "n" (lambda ()
-         (interactive)
-         (pb-misc/scratch-buffer 'split)))
+                                   (interactive)
+                                   (pb-misc/scratch-buffer 'split)))
 
                       (:desc "new buffer"
                              "N" #'pb-misc/new-buffer)
@@ -163,8 +163,8 @@
                              "h" #'previous-buffer)
 
                       (:desc "elisp eval" "C-e" (lambda ()
-         (interactive)
-         (pb-misc/elisp-eval 'split)))))
+                                                  (interactive)
+                                                  (pb-misc/elisp-eval 'split)))))
 
        (map! (:prefix ("s-q" . "LLMs")
 
@@ -227,7 +227,7 @@
        (map! (:prefix ("s-c" . "prompt: context")
                       (:desc "browse" "c" #'pb-prompt/browse-context)
                       (:desc "display" "C-e" #'pb-prompt/display-context)
-                      (:desc "saved contexts" "s-c" #'pb-prompt/browse-saved-contexts)
+                      (:desc "local context" "s-c" #'pb-prompt/open-context)
                       (:prefix ("a" . "add")
                                (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
                                (:desc "add file to context" "f" #'pb-prompt/add-path)
@@ -279,8 +279,8 @@
        (map! (:prefix ("s-d" . "dired")
                       (:desc "dired" "d" #'dired-jump)
                       (:desc "dirvish" "s-d" (lambda ()
-         (interactive)
-         (let ((file buffer-file-name))
+                                               (interactive)
+                                               (let ((file buffer-file-name))
                                                  (dirvish (file-name-directory file))
                                                  (dirvish-find-entry-a file))))
                       (:desc "sidebar" "s" #'dired-sidebar-toggle-sidebar)

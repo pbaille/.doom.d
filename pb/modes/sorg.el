@@ -153,7 +153,7 @@
 
 (defun sorg/query-replace ()
   (interactive)
-  (pb-prompt/query))
+  (pb-prompt/query (km :instructions (read-string "task: ") :buffer t :selection t)))
 
 (defun sorg/edit-block ()
   "Edit the source block at point."

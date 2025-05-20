@@ -95,7 +95,7 @@
 
 (defmacro pb->/ (&rest forms)
   "Thread the first argument into following FORMS.
-using the _ placeholder to determine threaded value positioning."
+   using the _ placeholder to determine threaded value positioning."
   (cl-destructuring-bind (ret . bindings) (reverse forms)
     `(let* ,(seq-reduce
              (lambda (bindings form)
@@ -110,7 +110,7 @@ using the _ placeholder to determine threaded value positioning."
 
 (defun pb/slurp (file-path)
   "Return the contents of FILE-PATH as a string.
-Returns nil if the file doesn't exist or can't be read."
+   Returns nil if the file doesn't exist or can't be read."
   (condition-case nil
       (with-temp-buffer
         (insert-file-contents file-path)
@@ -123,10 +123,13 @@ Returns nil if the file doesn't exist or can't be read."
 (defun pb/eq (&rest xs)
   "Compares every element of XS for equality using `equal'."
   (if xs
-    (let ((first (car xs)))
-      (cl-every (lambda (x) (equal first x))
-                (cdr xs)))
+      (let ((first (car xs)))
+        (cl-every (lambda (x) (equal first x))
+                  (cdr xs)))
     t))
+
+(defun pb/hash (x)
+  (substring (md5 (format "%s" x)) 0 8))
 
 (defun pb/test ()
   "Run some assertions about this file."

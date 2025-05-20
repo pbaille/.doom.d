@@ -151,7 +151,7 @@
           ("M-C-k" . symex-join-lines-backwards)
 
           ;; llm
-          ("q r" . pb-prompt/query)
+          ("q r" . (lambda () (interactive) (pb-prompt/query (km :buffer t :selection t :instructions (read-string "task: ")))))
           ("q f" . pb-gptel/fill-holes)
           ("q e" . pb-gptel/current-symex-chat)
           ("q b" . pb-gptel/current-buffer-chat)

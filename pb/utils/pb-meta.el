@@ -79,14 +79,16 @@
 
 (progn :create
 
-       (defun pb-meta/create-org-file ()
-         "Create an org meta file for the current buffer or file at point in dired."
+       (defun pb-meta/create-org-file (&optional custom-filename)
+         "Create an org meta file for the current buffer or file at point in dired.
+          If CUSTOM-FILENAME is provided, use that instead of prompting."
          (interactive)
          (let* ((file (pb-meta/-get-current-file))
                 (meta-dir (pb-meta/-ensure-file-meta-dir file))
                 (basename (pb-meta/-get-file-basename file))
-                (_ (print (kmq meta-dir basename file)))
-                (basename (read-string "Meta file name: " basename))
+                (basename (if custom-filename
+                              (file-name-sans-extension custom-filename)
+                            (read-string "Meta file name: " basename)))
                 (org-file (f-join meta-dir (concat basename ".org"))))
            (if (f-exists-p org-file)
                (find-file org-file)
@@ -95,65 +97,20 @@
              (save-buffer)
              (message "Created new org meta file for %s" basename))))
 
-       (defun pb-meta/create-context-file ()
-         "Save current prompt context to a meta file.
-
-          This function creates a 'context.el' file in the meta directory of the
-          current buffer's file, saving the current `pb-prompt/context` for later use.
-
-          The saved context can be loaded later with `pb-prompt/load-context-from-file`,
-          which is useful for:
-          - Preserving project or file-specific prompting context
-          - Maintaining consistent LLM interactions across multiple editing sessions
-          - Sharing prompt contexts with collaborators
-
-          This integration connects pb-meta's file organization with pb-prompt's
-          context management capabilities."
-         (interactive)
-         (let* ((file (pb-meta/-get-current-file))
-                (meta-dir (pb-meta/-ensure-file-meta-dir file))
-                (context-file (f-join meta-dir "context.el")))
-           (pb-prompt/save-current-context-to-file context-file)
-           (message "Saved context to %s" context-file)))
-
-       (defun pb-meta/load-meta-context ()
-         "Load a prompt context from the current buffer's meta directory.
-
-          This function loads the context.el file from the meta directory associated
-          with the current buffer's file. If the file exists, it will load the context
-          using pb-prompt's context loading mechanism and display it in the context browser.
-
-          The function provides a convenient way to:
-          - Restore previously saved contexts specific to the current file
-          - Continue working with the same LLM interaction context across editing sessions
-          - Load shared prompt contexts created by collaborators
-
-          If the context file doesn't exist or the current buffer has no file,
-          a message will be displayed."
-         (interactive)
-         (if (buffer-file-name)
-             (let* ((file (pb-meta/-get-current-file))
-                    (meta-dir (pb-meta/-get-file-meta-dir file))
-                    (context-file (f-join meta-dir "context.el")))
-               (if (f-exists-p context-file)
-                   (progn
-                     (pb-prompt/load-context-from-file context-file)
-                     (pb-prompt/browse-context)
-                     (message "Loaded context from %s" context-file))
-                 (message "No context file found at %s" context-file)))
-           (message "Current buffer has no associated file")))
-
-
-       (defun pb-meta/create-scratch-file ()
+       (defun pb-meta/create-scratch-file (&optional custom-filename)
          "Create a scratch file with same extension for the current buffer.
           The scratch file is created in the meta directory associated with
-          the current file. Prompts for a custom file name."
+          the current file. If CUSTOM-FILENAME is provided, use that instead of prompting."
          (interactive)
          (let* ((file (pb-meta/-get-current-file))
                 (meta-dir (pb-meta/-ensure-file-meta-dir file))
                 (basename (pb-meta/-get-file-basename file))
-                (basename (read-string "Scratch file name: " (concat basename "-scratch")))
-                (extension (file-name-extension file))
+                (basename (if custom-filename
+                              (file-name-sans-extension custom-filename)
+                            (read-string "Scratch file name: " (concat basename "-scratch"))))
+                (extension (if custom-filename
+                               (file-name-extension custom-filename)
+                             (file-name-extension file)))
                 (scratch-file (f-join meta-dir (concat basename "." extension)))
                 (current-mode major-mode)
                 (buffer-exists (f-exists-p scratch-file)))
@@ -179,9 +136,17 @@
                (when (fboundp 'symex-mode-interface)
                  (symex-mode-interface)))
              (save-buffer)
-             (message "Created new scratch file for %s" basename)))))
+             (message "Created new scratch file for %s" basename))))
 
-(progn :find
+       (defun pb-meta/create-context-file (&optional custom-filename)
+         "Save current prompt context to a meta file.
+          If CUSTOM-FILENAME is provided, use that as the file name."
+         (interactive)
+         (let* ((file (pb-meta/-get-current-file))
+                (meta-dir (pb-meta/-ensure-file-meta-dir file))
+                (context-file (f-join meta-dir (or custom-filename "context.el"))))
+           (pb-prompt/save-current-context-to-file context-file)
+           (message "Saved context to %s" context-file)))
 
        (defun pb-meta/change-or-create-meta-file ()
          "Find an existing meta file for the current buffer or create one if none exist.
@@ -204,24 +169,16 @@
                      ;; If selection matches an existing file, open it
                      (find-file (f-join meta-dir selected))
                    ;; If selection doesn't match, create appropriate file
-                   (let ((extension (if (string-match "\\.[^.]+$" selected)
-                                        (match-string 0 selected)
-                                      ".org")))
-                     (cond
-                      ((string= extension ".org")
-                       (let ((org-file (f-join meta-dir selected)))
-                         (find-file org-file)
-                         (unless (f-exists-p org-file)
-                           (insert (format "* %s\n\n" (file-name-sans-extension selected)))
-                           (save-buffer)
-                           (message "Created new org meta file"))))
-                      (t
-                       (let ((scratch-file (f-join meta-dir selected))
-                             (mode (assoc-default (concat "." (file-name-extension selected t))
-                                                  auto-mode-alist #'string-match)))
-                         (find-file scratch-file)
-                         (when mode (funcall mode))
-                         (message "Created new file %s" selected)))))))
+                   (cond
+                    ;; Context file
+                    ((string= selected "context.el")
+                     (pb-meta/create-context-file selected))
+                    ;; Org files
+                    ((string-match "\\.org$" selected)
+                     (pb-meta/create-org-file selected))
+                    ;; All other files treated as scratch files
+                    (t
+                     (pb-meta/create-scratch-file selected)))))
              ;; No meta directory or it's empty - prompt to create a file
              (let ((choice (completing-read "Create meta file: "
                                             '("Org Document" "Scratch File" "Context File")
@@ -232,7 +189,9 @@
                 ((string= choice "Scratch File")
                  (pb-meta/create-scratch-file))
                 ((string= choice "Context File")
-                 (pb-meta/create-context-file)))))))
+                 (pb-meta/create-context-file))))))))
+
+(progn :find
 
        (defun pb-meta/goto-main-file ()
          "Navigate back to the main file from a meta file.
