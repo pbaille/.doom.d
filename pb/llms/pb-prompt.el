@@ -18,7 +18,7 @@
 (require 'pb-tree)
 (require 'pb-symex)
 
-(defvar pb-prompt/context ())
+(defvar-local pb-prompt/context ())
 
 (defvar pb-prompt/saved-contexts
   (make-hash-table :test 'equal))
@@ -67,6 +67,42 @@
            :task (lambda ()
                    "Enter main instructions."
                    (km :task (read-string "Task: ")))))
+
+(progn :context
+
+       (defun pb-prompt/get-saved-context (name)
+         (gethash name pb-prompt/saved-contexts))
+
+       (defun pb-prompt/get-context-by-name (name)
+         "Get a context by NAME.
+          If NAME is \"current\", return the current context.
+          If NAME is a string, look up in saved contexts.
+          Return the context or nil if not found."
+         (cond ((string= "current" name) pb-prompt/context)
+               (name (pb-prompt/get-saved-context name))
+               (t pb-prompt/context)))
+
+       (defun pb-prompt/add-context-item (context item)
+         "Add ITEM to CONTEXT if an item with the same ID doesn't exist.
+
+          This function ensures that no duplicate items (based on :id) are added
+          to the context. If ITEM doesn't have an :id, it's wrapped with
+          pb-prompt/with-id before being added.
+
+          Returns the updated context with the item added (if it wasn't a duplicate)."
+         (if (null item)
+             context
+           (let* ((item-with-id (if (km/get item :id)
+                                    item
+                                  (pb-prompt/with-id item)))
+                  (item-id (km/get item-with-id :id)))
+             (if (seq-find (lambda (ctx-item)
+                             (equal (km/get ctx-item :id) item-id))
+                           context)
+                 ;; If item with same ID exists, return unchanged context
+                 context
+               ;; Otherwise, add the item to the context
+               (cons item-with-id context))))))
 
 (progn :prompt-string
 
@@ -233,8 +269,7 @@
           Returns the CONTEXT-ITEM with the unique ID added."
          (km/put context-item
                  :id
-                 (let ((data-string (format "%s" context-item)))
-                   (substring (md5 data-string) 0 8))))
+                 (pb/hash context-item)))
 
        (defun pb-prompt/update-focused-context (f)
          "Apply function F to update either focused saved context or current context.
@@ -248,37 +283,15 @@
 
           Argument F should be a function that takes a context (list of items) and
           returns a modified context."
-         (if pb-prompt/context-browser-focus
-             (when-let ((focused-context
-                         (gethash pb-prompt/context-browser-focus
-                                  pb-prompt/saved-contexts)))
-               (puthash pb-prompt/context-browser-focus
-                        (funcall f focused-context)
-                        pb-prompt/saved-contexts))
-           (setq pb-prompt/context
-                 (funcall f pb-prompt/context))))
-
-       (defun pb-prompt/add-context-item (context item)
-         "Add ITEM to CONTEXT if an item with the same ID doesn't exist.
-
-          This function ensures that no duplicate items (based on :id) are added
-          to the context. If ITEM doesn't have an :id, it's wrapped with
-          pb-prompt/with-id before being added.
-
-          Returns the updated context with the item added (if it wasn't a duplicate)."
-         (if (null item)
-             context
-           (let* ((item-with-id (if (km/get item :id)
-                                    item
-                                  (pb-prompt/with-id item)))
-                  (item-id (km/get item-with-id :id)))
-             (if (seq-find (lambda (ctx-item)
-                             (equal (km/get ctx-item :id) item-id))
-                           context)
-                 ;; If item with same ID exists, return unchanged context
-                 context
-               ;; Otherwise, add the item to the context
-               (cons item-with-id context)))))
+         (cond (pb-prompt/context-browser-focus
+                (when-let ((focused-context
+                            (gethash pb-prompt/context-browser-focus
+                                     pb-prompt/saved-contexts)))
+                  (puthash pb-prompt/context-browser-focus
+                           (funcall f focused-context)
+                           pb-prompt/saved-contexts)))
+               (t (setq-local pb-prompt/context
+                              (funcall f pb-prompt/context)))))
 
        (defun pb-prompt/add-item! (item)
          "Add ITEM to the focused context with a unique ID.
@@ -294,9 +307,9 @@
          (pb-prompt/update-focused-context
           (lambda (ctx) (pb-prompt/add-context-item ctx item))))
 
-       (defun pb-prompt/mk-path-context-item ()
+       (defun pb-prompt/mk-path-context-item (&optional path)
          (interactive)
-         (let ((path (read-file-name "Select directory or file: " nil nil t)))
+         (let ((path (or path (read-file-name "Select directory or file: " nil nil t))))
            (when path
              (km :type (cond
                         ((file-directory-p path) "dir")
@@ -871,6 +884,9 @@
 
 (progn :local-context
 
+       (defvar-local pb-prompt/context-file nil)
+       (defvar-local pb-prompt/target-file nil)
+
        (defun pb-prompt/get-or-create-local-context (&optional file create)
          "Get or create a context.el file in the meta directory of FILE or current buffer.
           If FILE is nil, use the current buffer's file.
@@ -889,7 +905,9 @@
 
            ;; Create the context file if requested and it doesn't exist
            (when (and create context-file (not existed))
-             (pb-prompt/save-current-context-to-file context-file)
+             (pb-prompt/save-context
+              (list (pb-prompt/mk-path-context-item target-file))
+              context-file)
              (setq created t))
 
            (list :file context-file
@@ -897,21 +915,6 @@
                  :created created
                  :meta-dir meta-dir
                  :target-file target-file)))
-
-       (defun pb-prompt/load-and-browse-context-file (filename)
-         "Load a context from FILENAME and browse it.
-          This function loads the context from the specified file and then opens
-          a context browser to view and interact with the context items.
-
-          The file should contain a serialized context created with
-          `pb-prompt/save-current-context-to-file`.
-
-          When the context is loaded, the user can browse its items in the same way
-          as with `pb-prompt/browse-context`."
-         (when (file-exists-p filename)
-           (pb-prompt/load-context-from-file filename)
-           (pb-prompt/browse-context)
-           (message "Loaded and browsing context from %s" filename)))
 
        (defun pb-prompt/open-context (&optional file)
          "Open a context.el file from the meta directory of FILE or current buffer.
@@ -926,14 +929,22 @@
            (cond
             ;; Context file exists - load and browse it
             (exists
-             (pb-prompt/load-and-browse-context-file context-file))
+             (let ((context (pb-prompt/read-context context-file)))
+               (pb-prompt/browse-context context target-file)
+               (setq-local pb-prompt/context context)
+               (setq-local pb-prompt/context-file context-file)
+               (setq-local pb-prompt/target-file target-file)))
 
             ;; No context file but we have a target file and user wants to create it
             ((and target-file
                   (y-or-n-p "Context file doesn't exist. Create it?"))
              (let ((created-ctx (pb-prompt/get-or-create-local-context target-file t)))
                (when (plist-get created-ctx :created)
-                 (pb-prompt/load-and-browse-context-file (plist-get created-ctx :file)))))
+                 (let ((context (pb-prompt/read-context (km/get created-ctx :file))))
+                   (pb-prompt/browse-context context target-file)
+                   (setq-local pb-prompt/context context)
+                   (setq-local pb-prompt/context-file context-file)
+                   (setq-local pb-prompt/target-file target-file)))))
 
             ;; Default case - no context file and not creating one
             (t
@@ -962,33 +973,31 @@
            (evil-define-key 'normal pb-prompt/context-browser-mode-map
              (kbd (km/get binding :key)) (km/get binding :function))))
 
-       (defun pb-prompt/browse-context (&optional name)
-         "Browse items in CONTEXT in a dedicated buffer.
-          If CONTEXT is nil, use =pb-prompt/context=.
-          Optional NAME is used for the buffer title."
-         (interactive)
-         (let* ((context (cond ((string= "current" name) pb-prompt/context)
-                               (name (gethash name pb-prompt/saved-contexts))
-                               (t pb-prompt/context)))
-                (buffer (get-buffer-create (concat "*Context Browser " (or name "current") "*")))
-                (inhibit-read-only t))
+       (defun pb-prompt/format-context-title (name context-id)
+         "Format a title for the context browser based on NAME and CONTEXT-ID.
+          If NAME is provided, use it as the title.
+          Otherwise, format an anonymous context title with CONTEXT-ID."
+         (if name
+             (concat "* " name)
+           (concat "* Anonymous Context "
+                   (when context-id (format "[%s]" context-id)))))
+
+       (defun pb-prompt/render-context-browser (buffer context)
+         (let ((inhibit-read-only t))
            (with-current-buffer buffer
-             (erase-buffer)
+             (delete-region (point-min) (point-max))
              (if (null context)
                  (insert (propertize "No context items found.\n" 'face 'font-lock-comment-face))
-               (let* ((title (if name
-                                 (concat "* " name)
-                               "Current Context"))
+               ;; Display context items (formatting code remains the same)
+               (let* ((title "TODO")
                       (items-by-type (seq-group-by
                                       (lambda (item) (km/get item :type))
                                       context)))
-
                  (insert (propertize "RET: browse, h.j.k.l: navigate, ?: help, q: quit\n"
                                      'face 'lsp-details-face))
 
                  ;; Insert title with face
                  (insert "\n" (propertize title 'face 'custom-modified) "\n\n\n")
-                 '(insert (propertize (make-string (length title) ?-) 'face 'font-lock-comment-face) "\n\n")
 
                  ;; Group by type
                  (dolist (type-group (sort items-by-type
@@ -1015,16 +1024,24 @@
                              (insert (propertize line 'face 'font-lock-comment-face))
                            (insert line))))
                      (insert "\n")))))
+             ;; Mode setup and local variables
+             (goto-char (point-min)))))
 
-             (goto-char (point-min))
-             ;; Set mode and header line
-             (pb-prompt/context-browser-mode)
-             (setq-local pb-prompt/context-browser-focus name)
-             '(setq-local header-line-format
-                          (propertize "RET: browse, d: delete, v: view details, r: refresh, q: quit"
-                                      'face 'font-lock-comment-face)))
-
+       (defun pb-prompt/browse-context (context &optional name)
+         "Browse items in CONTEXT in a dedicated buffer.
+          CONTEXT should be a list of context items to display.
+          Optional NAME is used for the buffer title.
+          If NAME is not provided, an identifier is generated from the context."
+         (interactive)
+         (print (km :buf (get-buffer (concat "*Context Browser " (or name (pb/hash context)) "*"))
+                    :target-file pb-prompt/target-file))
+         (let* ((context-id (or name (pb/hash context)))
+                (buf-name (concat "*Context Browser " (or context-id "current") "*"))
+                (existing-buffer (get-buffer buf-name))
+                (buffer (or existing-buffer (get-buffer-create buf-name))))
+           (pb-prompt/render-context-browser buffer context)
            (switch-to-buffer buffer)
+           (pb-prompt/context-browser-mode)
            (pb-prompt/goto-next-item)))
 
        (defun pb-prompt/refresh-context-browser ()
@@ -1032,7 +1049,8 @@
          (interactive)
          (when (eq major-mode 'pb-prompt/context-browser-mode)
            (let ((line (line-number-at-pos)))
-             (pb-prompt/browse-context pb-prompt/context-browser-focus)
+             (pb-prompt/render-context-browser (current-buffer)
+                                               pb-prompt/context)
              (goto-char (point-min))
              (forward-line (1- line)))))
 
@@ -1041,7 +1059,17 @@
               (defun pb-prompt/browse-current-context ()
                 "Browse the current context in a dedicated buffer."
                 (interactive)
-                (pb-prompt/browse-context))
+                (pb-prompt/browse-context pb-prompt/context "current"))
+
+              (defun pb-prompt/browse-current-file-context ()
+                "Look into the meta directory of current file and browse its context.
+                 This function checks if there's a context file in the meta directory
+                 associated with the current buffer's file, loads it, and opens the
+                 context browser. If no context file exists, offers to create one."
+                (interactive)
+                (if-let ((current-file (buffer-file-name)))
+                    (pb-prompt/open-context current-file)
+                  (message "No file associated with current buffer")))
 
               (defun pb-prompt/browse-parent-context ()
                 "Navigate to the parent of the current context browser.
@@ -1318,9 +1346,46 @@
 
                     (when-let ((content (km/get item :content)))
                       (insert "\nContent:\n---------\n")
+
                       (insert content)))
                   (goto-char (point-min))
-                  (pop-to-buffer (current-buffer)))))
+                  (pop-to-buffer (current-buffer))))
+
+              (defun pb-prompt/save-browsed-context ()
+                "Save the currently browsed context using pb-prompt/context-file.
+                 This function saves the context currently being viewed in the browser to its
+                 associated context file, if one exists. If this is a local context associated
+                 with a buffer file, the context will be saved to the corresponding meta directory.
+
+                 When called from a Context Browser buffer, it determines the context to save
+                 based on the `pb-prompt/context-browser-focus` buffer-local variable:
+                 - For a saved named context, it updates the entry in `pb-prompt/saved-contexts`
+                 - For a local file context, it saves to the associated context.el file
+                 - For the current context, it prompts for a filename if none is associated"
+                (interactive)
+                (when (eq major-mode 'pb-prompt/context-browser-mode)
+                  (print (km :context-file pb-prompt/context-file))
+                  (let* ((context-name pb-prompt/context-browser-focus)
+                         (context (cond ((string= "current" context-name) pb-prompt/context)
+                                        (context-name (gethash context-name pb-prompt/saved-contexts))
+                                        (t pb-prompt/context))))
+                    (cond
+                     ;; If we're viewing a named context from saved contexts
+                     ((and context-name (not (string= "current" context-name)))
+                      (puthash context-name context pb-prompt/saved-contexts)
+                      (pb-prompt/save-contexts-to-file)
+                      (message "Updated saved context '%s'" context-name))
+
+                     ;; If we have a local context file associated with current buffer
+                     (pb-prompt/context-file
+                      (pb-prompt/save-context context pb-prompt/context-file)
+                      (message "Saved context to %s" pb-prompt/context-file))
+
+                     ;; Otherwise prompt to save current context
+                     (t
+                      (let ((filename (read-file-name "Save context to file: " nil nil nil "context.el")))
+                        (pb-prompt/save-context context filename)
+                        (message "Saved context to %s" filename))))))))
 
        (progn :at-point
 
@@ -1488,9 +1553,6 @@
 
        (progn :context-actions
 
-              (defun pb-prompt/get-saved-context (name)
-                (gethash name pb-prompt/saved-contexts))
-
               (defun pb-prompt/save-context (name)
                 "Save the current context with NAME for later retrieval.
                  If a context with NAME already exists, it will be overwritten after confirmation."
@@ -1635,20 +1697,51 @@
                 :type 'file
                 :group 'pb-prompt)
 
+              (defun pb-prompt/save-context (context filename)
+                "Save the provided CONTEXT to FILENAME.
+                 This function serializes the given context into a file that can be loaded later.
+
+                 Argument CONTEXT is the context data structure to save.
+                 Argument FILENAME is the path to the file where the context will be saved."
+                (with-temp-file filename
+                  (let ((print-length nil)
+                        (print-level nil))
+                    (insert ";; pb-prompt context - automatically generated\n\n")
+                    (insert "'(\n")
+                    (dolist (item context)
+                      (insert (format "  %S\n" item)))
+                    (insert ")\n"))
+                  (message "Saved context to %s" filename)))
+
+              (defun pb-prompt/read-context (filename)
+                "Read FILENAME and return the contained context.
+                 This function reads a serialized context from the specified file and returns it.
+                 Unlike `pb-prompt/load-context-from-file', this function doesn't modify the current context.
+
+                 Argument FILENAME is the path to the file containing the serialized context.
+                 Returns the deserialized context data structure, or nil if the file couldn't be read."
+                (when (and filename (file-exists-p filename) (file-readable-p filename))
+                  (let ((loaded-context nil)
+                        (buffer (find-file-noselect filename t)))
+                    (unwind-protect
+                        (with-current-buffer buffer
+                          (goto-char (point-min))
+                          (condition-case err
+                              (setq loaded-context (eval (read buffer)))
+                            (error
+                             (message "Error reading context from %s: %s"
+                                      filename (error-message-string err))
+                             nil)))
+                      (kill-buffer buffer))
+                    loaded-context)))
+
               (defun pb-prompt/save-current-context-to-file (filename)
                 "Save the current context to FILENAME.
                  This function serializes the current context into a file that can be loaded later.
                  When called interactively, prompts for a filename to save to."
                 (interactive "FSave current context to file: ")
-                (with-temp-file filename
-                  (let ((print-length nil)
-                        (print-level nil))
-                    (insert ";; pb-prompt current context - automatically generated\n\n")
-                    (insert "(setq pb-prompt/context '(\n")
-                    (dolist (item pb-prompt/context)
-                      (insert (format "  %S\n" item)))
-                    (insert "))\n"))
-                  (message "Saved current context to %s" filename)))
+                (pb-prompt/save-context pb-prompt/context filename)
+                (message "Saved current context to %s" filename))
 
               (defun pb-prompt/load-context-from-file (filename)
                 "Load a context from FILENAME into the current context.
