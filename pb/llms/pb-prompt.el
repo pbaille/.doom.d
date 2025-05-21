@@ -889,10 +889,14 @@
 
        (defun pb-prompt/get-or-create-local-context (&optional file create)
          "Get or create a context.el file in the meta directory of FILE or current buffer.
-          If FILE is nil, use the current buffer's file.
+          If FILE is nil, use the current buffer's file or dired directory if in dired-mode.
           When CREATE is non-nil, create the context file if it doesn't exist.
           Returns a plist with :file, :exists, :meta-dir, :target-file, and :created properties."
-         (let* ((target-file (or file (buffer-file-name)))
+         (let* ((target-file (or file
+                                 (cond
+                                  ((member major-mode '(dired-mode dired-sidebar-mode))
+                                   (dired-get-filename))
+                                  (t (buffer-file-name)))))
                 (meta-dir (when target-file
                             (if create
                                 (pb-meta/-ensure-file-meta-dir target-file)
@@ -900,8 +904,6 @@
                 (context-file (when meta-dir (f-join meta-dir "context.el")))
                 (existed (and context-file (f-exists-p context-file)))
                 (created nil))
-
-           (print context-file)
 
            ;; Create the context file if requested and it doesn't exist
            (when (and create context-file (not existed))
@@ -922,6 +924,8 @@
           If the context file doesn't exist, offer to create it.
           Use pb-prompt/browse-context to view the loaded context when opened."
          (interactive)
+         (print (km :open-ctx (km :file file
+                                  :context-file (pb-prompt/get-or-create-local-context file nil))))
          (let* ((ctx (pb-prompt/get-or-create-local-context file nil))
                 (context-file (plist-get ctx :file))
                 (exists (plist-get ctx :exists))
@@ -982,6 +986,17 @@
            (concat "* Anonymous Context "
                    (when context-id (format "[%s]" context-id)))))
 
+       (defun pb-prompt/format-user-path (path)
+         "Replace the user's home directory in PATH with a tilde (~).
+          If PATH contains the user's home directory at the beginning, replace it with a tilde.
+          Returns the original PATH if it doesn't start with the home directory."
+         (if path
+             (let ((home-dir (expand-file-name "~/")))
+               (if (string-prefix-p home-dir path)
+                   (concat "~" (substring path (1- (length home-dir))))
+                 path))
+           "UNKNOWN"))
+
        (defun pb-prompt/render-context-browser (buffer context)
          (let ((inhibit-read-only t))
            (with-current-buffer buffer
@@ -989,7 +1004,7 @@
              (if (null context)
                  (insert (propertize "No context items found.\n" 'face 'font-lock-comment-face))
                ;; Display context items (formatting code remains the same)
-               (let* ((title "TODO")
+               (let* ((title (pb-prompt/format-user-path pb-prompt/target-file))
                       (items-by-type (seq-group-by
                                       (lambda (item) (km/get item :type))
                                       context)))
@@ -1083,10 +1098,8 @@
                  This function provides hierarchical navigation in the context browser,
                  allowing users to move up the context tree during exploration."
                 (interactive)
-                (cond (pb-prompt/parent-context
-                       (pb-prompt/browse-context pb-prompt/parent-context))
-                      (pb-prompt/context-browser-focus
-                       (pb-prompt/browse-saved-contexts pb-prompt/context-browser-focus))))
+                (cond (pb-prompt/target-file
+                       (pb-prompt/open-context (file-name-directory (directory-file-name pb-prompt/target-file))))))
 
               (defun pb-prompt/browse-child-context ()
                 "If item at point is a context, open a Context Browser for it.
