@@ -924,8 +924,8 @@
           If the context file doesn't exist, offer to create it.
           Use pb-prompt/browse-context to view the loaded context when opened."
          (interactive)
-         (print (km :open-ctx (km :file file
-                                  :context-file (pb-prompt/get-or-create-local-context file nil))))
+         '(print (km :open-ctx (km :file file
+                                   :context-file (pb-prompt/get-or-create-local-context file nil))))
          (let* ((ctx (pb-prompt/get-or-create-local-context file nil))
                 (context-file (plist-get ctx :file))
                 (exists (plist-get ctx :exists))
@@ -986,16 +986,23 @@
            (concat "* Anonymous Context "
                    (when context-id (format "[%s]" context-id)))))
 
-       (defun pb-prompt/format-user-path (path)
-         "Replace the user's home directory in PATH with a tilde (~).
-          If PATH contains the user's home directory at the beginning, replace it with a tilde.
-          Returns the original PATH if it doesn't start with the home directory."
-         (if path
-             (let ((home-dir (expand-file-name "~/")))
-               (if (string-prefix-p home-dir path)
-                   (concat "~" (substring path (1- (length home-dir))))
-                 path))
-           "UNKNOWN"))
+       (defun pb-prompt/-format-relative-path (path)
+         "Format PATH as a relative path to project root or home directory.
+          If PATH is in a project, return it relative to the project root.
+          If PATH is in the home directory, return it with ~ prefix.
+          Otherwise, return the expanded path."
+         (let* ((project-root (when (and (fboundp 'project-current)
+                                         (project-current))
+                                (project-root (project-current))))
+                (expanded-path (expand-file-name path))
+                (relative-path (cond
+                                ((and project-root
+                                      (string-prefix-p project-root expanded-path))
+                                 (substring expanded-path (length project-root)))
+                                ((string-prefix-p (expand-file-name "~") expanded-path)
+                                 (concat "~" (substring expanded-path (length (expand-file-name "~")))))
+                                (t expanded-path))))
+           relative-path))
 
        (defun pb-prompt/render-context-browser (buffer context)
          (let ((inhibit-read-only t))
@@ -1004,7 +1011,9 @@
              (if (null context)
                  (insert (propertize "No context items found.\n" 'face 'font-lock-comment-face))
                ;; Display context items (formatting code remains the same)
-               (let* ((title (pb-prompt/format-user-path pb-prompt/target-file))
+               (let* ((title (if pb-prompt/target-file
+                                 (pb-prompt/-format-relative-path pb-prompt/target-file)
+                               "UNKNOWN"))
                       (items-by-type (seq-group-by
                                       (lambda (item) (km/get item :type))
                                       context)))
@@ -1048,8 +1057,8 @@
           Optional NAME is used for the buffer title.
           If NAME is not provided, an identifier is generated from the context."
          (interactive)
-         (print (km :buf (get-buffer (concat "*Context Browser " (or name (pb/hash context)) "*"))
-                    :target-file pb-prompt/target-file))
+         '(print (km :buf (get-buffer (concat "*Context Browser " (or name (pb/hash context)) "*"))
+                     :target-file pb-prompt/target-file))
          (let* ((context-id (or name (pb/hash context)))
                 (buf-name (concat "*Context Browser " (or context-id "current") "*"))
                 (existing-buffer (get-buffer buf-name))
@@ -1137,24 +1146,6 @@
                           (beginning-of-line))))))))
 
        (progn :selection
-
-              (defun pb-prompt/-format-relative-path (path)
-                "Format PATH as a relative path to project root or home directory.
-                 If PATH is in a project, return it relative to the project root.
-                 If PATH is in the home directory, return it with ~ prefix.
-                 Otherwise, return the expanded path."
-                (let* ((project-root (when (and (fboundp 'project-current)
-                                                (project-current))
-                                       (project-root (project-current))))
-                       (expanded-path (expand-file-name path))
-                       (relative-path (cond
-                                       ((and project-root
-                                             (string-prefix-p project-root expanded-path))
-                                        (substring expanded-path (length project-root)))
-                                       ((string-prefix-p (expand-file-name "~") expanded-path)
-                                        (concat "~" (substring expanded-path (length (expand-file-name "~")))))
-                                       (t expanded-path))))
-                  relative-path))
 
               (defun pb-prompt/-context-item-description (item)
                 "Format a description for a context ITEM based on its type.
