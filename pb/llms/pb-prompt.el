@@ -18,13 +18,6 @@
 (require 'pb-tree)
 (require 'pb-symex)
 
-(defvar-local pb-prompt/context ())
-
-(defvar pb-prompt/saved-contexts
-  (make-hash-table :test 'equal))
-
-(defvar-local pb-prompt/context-browser-focus nil)
-
 (defvar pb-prompt/tree
 
   (pb-tree "You are a useful assistant that lives in the holly emacs editor."
@@ -68,19 +61,87 @@
                    "Enter main instructions."
                    (km :task (read-string "Task: ")))))
 
+(progn :utils
+
+       (defun pb-prompt/format-relative-path (path)
+         "Format PATH as a relative path to project root or home directory.
+          If PATH is in a project, return it relative to the project root.
+          If PATH is in the home directory, return it with ~ prefix.
+          Otherwise, return the expanded path."
+         (let* ((project-root (when (and (fboundp 'project-current)
+                                         (project-current))
+                                (project-root (project-current))))
+                (expanded-path (expand-file-name path))
+                (relative-path (cond
+                                ((and project-root
+                                      (string-prefix-p project-root expanded-path))
+                                 (substring expanded-path (length project-root)))
+                                ((string-prefix-p (expand-file-name "~") expanded-path)
+                                 (concat "~" (substring expanded-path (length (expand-file-name "~")))))
+                                (t expanded-path))))
+           relative-path))
+
+       (defun pb-prompt/indent-content (content &optional indent-size)
+         "Indent each line of CONTENT with spaces if it contains newlines.
+          If CONTENT is a single line, return it unchanged.
+          Optional argument INDENT-SIZE specifies the number of spaces to use (defaults to 2)."
+         (when content
+           (if (string-match-p "\n" content)
+               (let ((spaces (make-string (or indent-size 2) ?\s)))
+                 (replace-regexp-in-string
+                  "^\\(.\\)" (concat spaces "\\1") content))
+             content)))
+
+       (defun pb-prompt/current-file ()
+         "Get the filename associated with the current buffer.
+          This function detects the appropriate file path based on the current buffer's mode:
+          - For dired or dired-sidebar buffers, returns the filename at point using `dired-get-filename`
+          - For all other buffers, returns the buffer's file path using `buffer-file-name`
+          Returns nil if no file is associated with the buffer."
+         (cond
+          ((member major-mode '(dired-mode dired-sidebar-mode))
+           (dired-get-filename))
+          (t (buffer-file-name)))))
+
+(progn :local-context
+
+       (defvar-local pb-prompt/context ())
+       (defvar-local pb-prompt/context-file nil)
+       (defvar-local pb-prompt/target-file nil)
+
+       (defun pb-prompt/get-or-create-local-context (&optional file)
+         "Get or create a context.el file in the meta directory of FILE or current buffer.
+          If FILE is nil, use the current buffer's file or dired directory if in dired-mode.
+          When CREATE is non-nil, create the context file if it doesn't exist.
+          Returns a plist with :file, :exists, :meta-dir, :target-file, and :created properties."
+         (when-let ((target-file (or file (pb-prompt/current-file))))
+           (let* ((target-file (pb-meta/goto-main-file))
+                  (meta-dir (pb-meta/-ensure-file-meta-dir target-file))
+                  (context-file (when meta-dir (f-join meta-dir "context.el")))
+                  (existed (and context-file (f-exists-p context-file)))
+                  (created nil))
+
+             ;; Create the context file if requested and it doesn't exist
+             (when (and context-file (not existed))
+               (pb-prompt/save-context
+                (list (cond ((file-regular-p target-file)
+                             (pb-prompt/mk-file-item target-file))
+                            ((file-directory-p target-file) ())
+                            (t ())))
+                context-file)
+               (setq created t))
+
+             (km :file context-file
+                 :exists (or existed created)
+                 :created created
+                 :meta-dir meta-dir
+                 :target-file target-file))))
+
+       (defun pb-prompt/get-local-context (&optional filename)
+         (when-let ((ctx (pb-prompt/get-or-create-local-context filename)))
+           (pb-prompt/read-context (km/get ctx :file)))))
+
 (progn :context
-
-       (defun pb-prompt/get-saved-context (name)
-         (gethash name pb-prompt/saved-contexts))
-
-       (defun pb-prompt/get-context-by-name (name)
-         "Get a context by NAME.
-          If NAME is \"current\", return the current context.
-          If NAME is a string, look up in saved contexts.
-          Return the context or nil if not found."
-         (cond ((string= "current" name) pb-prompt/context)
-               (name (pb-prompt/get-saved-context name))
-               (t pb-prompt/context)))
 
        (defun pb-prompt/add-context-item (context item)
          "Add ITEM to CONTEXT if an item with the same ID doesn't exist.
@@ -102,20 +163,428 @@
                  ;; If item with same ID exists, return unchanged context
                  context
                ;; Otherwise, add the item to the context
-               (cons item-with-id context))))))
+               (cons item-with-id context)))))
+
+       (defun pb-prompt/display-context ()
+         (interactive)
+         (pb-elisp/display-expression pb-prompt/context
+                                      #'km/pp))
+
+       (defun pb-prompt/save-context (context filename)
+         "Save the provided CONTEXT to FILENAME.
+          This function serializes the given context into a file that can be loaded later.
+
+          Argument CONTEXT is the context data structure to save.
+          Argument FILENAME is the path to the file where the context will be saved."
+         (when (and filename context)
+           (condition-case err
+               (with-temp-file filename
+                 (let ((print-length nil)
+                       (print-level nil))
+                   (insert ";; pb-prompt context - automatically generated\n\n")
+                   (insert "'(\n")
+                   (dolist (item context)
+                     (insert (format "  %S\n" item)))
+                   (insert ")\n"))
+                 (message "Saved context to %s" filename))
+             (file-error
+              (message "Error saving context to %s: %s"
+                       filename (error-message-string err))))))
+
+       (defun pb-prompt/read-context (filename)
+         "Read FILENAME and return the contained context.
+          This function reads a serialized context from the specified file and returns it.
+          Unlike `pb-prompt/load-context-from-file', this function doesn't modify the current context.
+
+          Argument FILENAME is the path to the file containing the serialized context.
+          Returns the deserialized context data structure, or nil if the file couldn't be read."
+         (when (and filename (file-exists-p filename) (file-readable-p filename))
+           (let ((loaded-context nil)
+                 (buffer (find-file-noselect filename t)))
+             (unwind-protect
+                 (with-current-buffer buffer
+                   (goto-char (point-min))
+                   (condition-case err
+                       (setq loaded-context (eval (read buffer)))
+                     (error
+                      (message "Error reading context from %s: %s"
+                               filename (error-message-string err))
+                      nil)))
+               (kill-buffer buffer))
+             loaded-context)))
+
+       (defun pb-prompt/save-current-context-to-file (filename)
+         "Save the current context to FILENAME.
+          This function serializes the current context into a file that can be loaded later.
+          When called interactively, prompts for a filename to save to."
+         (interactive "FSave current context to file: ")
+         (pb-prompt/save-context pb-prompt/context filename)
+         (message "Saved current context to %s" filename))
+
+       (defun pb-prompt/load-context-from-file (filename)
+         "Load a context from FILENAME into the current context.
+          This function reads a serialized context from the specified file and loads it,
+          either replacing or merging with the current context depending on user choice.
+          When called interactively, prompts for a filename to load from."
+         (interactive "FLoad context from file: ")
+         (if (not (file-exists-p filename))
+             (user-error "File %s does not exist" filename)
+           (when (file-readable-p filename)
+             (let ((loaded-context nil)
+                   (buffer (find-file-noselect filename t)))
+               (unwind-protect
+                   (with-current-buffer buffer
+                     (goto-char (point-min))
+                     (setq loaded-context (eval (read buffer)))
+                     (unless (and (listp loaded-context)
+                                  (cl-every #'km? loaded-context))
+                       (user-error "File does not contain a valid context structure")))
+                 (kill-buffer buffer))
+
+               ;; Ask user what to do with the loaded context
+               (if (and pb-prompt/context
+                        (not (seq-empty-p pb-prompt/context)))
+                   (let ((choice (read-char-choice
+                                  "What to do with loaded context? [r]eplace, [a]ppend, [m]erge, [c]ancel: "
+                                  '(?r ?a ?m ?c))))
+                     (cond
+                      ((eq choice ?r)
+                       (setq-local pb-prompt/context loaded-context)
+                       (message "Replaced current context with %d loaded items" (length loaded-context)))
+                      ((eq choice ?a)
+                       (setq-local pb-prompt/context (append pb-prompt/context loaded-context))
+                       (message "Appended %d items to current context" (length loaded-context)))
+                      ((eq choice ?m)
+                       ;; Merge by adding items that don't have duplicate IDs
+                       (let ((merged-count 0))
+                         (dolist (item loaded-context)
+                           (when (pb-prompt/add-context-item pb-prompt/context item)
+                             (setq merged-count (1+ merged-count))))
+                         (message "Merged %d unique items into current context" merged-count)))
+                      (t
+                       (message "Context loading cancelled"))))
+                 ;; No existing context, just load
+                 (setq-local pb-prompt/context loaded-context)
+                 (message "Loaded context with %d items" (length loaded-context)))))))
+
+       (progn :add
+
+              (defun pb-prompt/with-id (context-item)
+                "Add a unique identifier to CONTEXT-ITEM.
+
+                 This function adds a unique identifier key to the provided keyword map.
+                 The identifier is constructed by creating an MD5 hash of the current timestamp
+                 and taking its first 8 characters, prefixed with 'pb-prompt/context-item-'.
+
+                 The identifier helps track and reference context items individually within
+                 the prompt system.
+
+                 Argument CONTEXT-ITEM is a keyword map to which the ID will be added.
+
+                 Returns the CONTEXT-ITEM with the unique ID added."
+                (km/put context-item
+                        :id
+                        (pb/hash context-item)))
+
+              (defun pb-prompt/update-current-context (f)
+                "Update the current context by applying function F to it.
+
+                 This function applies the provided function F to the current context
+                 and updates the buffer-local variable `pb-prompt/context` with the result.
+
+                 Argument F should be a function that takes a context (list of items) and
+                 returns a modified context."
+                (setq-local pb-prompt/context
+                            (funcall f pb-prompt/context)))
+
+              (defun pb-prompt/add-item! (item)
+                "Add ITEM to the current context with a unique ID.
+
+                 This function adds the specified ITEM to the current context.
+                 It ensures the item has a unique ID by using `pb-prompt/add-context-item`,
+                 which internally uses `pb-prompt/with-id` if the item doesn't already have an ID.
+
+                 The item is added to the buffer-local `pb-prompt/context` variable
+                 through the `pb-prompt/update-current-context` function.
+
+                 Argument ITEM should be a keyword map (km) representing context information."
+                (pb-prompt/update-current-context
+                 (lambda (ctx) (pb-prompt/add-context-item ctx item))))
+
+              (defun pb-prompt/mk-path-context-item (&optional path)
+                (interactive)
+                (let ((path (or path (read-file-name "Select directory or file: " nil nil t))))
+                  (when path
+                    (km :type "context"
+                        :path path))))
+
+              (defun pb-prompt/mk-file-item (&optional path)
+                "Create a context item representing a file.
+                 If PATH is provided, use that file path; otherwise prompt the user to select a file.
+                 Returns a keyword map with file metadata suitable for adding to the prompt context."
+                (interactive)
+                (let* ((file-path (or path (read-file-name "Select file: " nil nil t)))
+                       (exists (and file-path (file-exists-p file-path))))
+                  (when (and file-path exists)
+                    (km :type "file"
+                        :path file-path
+                        :name (file-name-nondirectory file-path)
+                        :extension (file-name-extension file-path)))))
+
+              (defun pb-prompt/mk-dir-item (&optional path)
+                "Create a context item representing a directory.
+                 If PATH is provided, use that directory path; otherwise prompt the user to select a directory.
+                 Returns a keyword map with directory metadata suitable for adding to the prompt context."
+                (interactive)
+                (let* ((dir-path (or path (read-directory-name "Select directory: " nil nil t)))
+                       (exists (and dir-path (file-directory-p dir-path))))
+                  (when (and dir-path exists)
+                    (km :type "dir"
+                        :path dir-path
+                        :name (file-name-nondirectory (directory-file-name dir-path))))))
+
+              (defun pb-prompt/mk-buffer-context-item ()
+                (interactive)
+                (km :type "buffer"
+                    :path (buffer-file-name)
+                    :buffer-name (buffer-name)
+                    :major-mode (symbol-name major-mode)))
+
+              (defun pb-prompt/mk-selection-context-item ()
+                (interactive)
+                (let ((selection
+                       (cond
+
+                        ((eq major-mode 'org-mode)
+                         (pb/let [(cons start end) (pb-org/node-bounds)]
+                           (buffer-substring-no-properties start end)))
+
+                        ;; If region is active, use region
+                        ((use-region-p)
+                         (buffer-substring-no-properties (region-beginning) (region-end)))
+
+                        ;; If we're in pb-lisp mode, use current selection
+
+                        ((and (boundp 'evil-state) (eq evil-state 'pb-lisp))
+                         (pb-lisp/current-selection-as-string))
+
+                        ;; If we're in symex-mode, use current symex
+                        ((and (boundp 'symex-mode) symex-mode)
+                         (pb-symex/current-as-string t))
+
+                        ;; Default fallback message
+                        (t
+                         (user-error "No selection, pb-lisp selection, or symex available")))))
+                  (when selection
+                    (km :type "selection"
+                        :path (buffer-file-name)
+                        :major-mode major-mode
+                        :symex symex-mode
+                        :at (point)
+                        :content selection))))
+
+              (defun pb-prompt/add-path ()
+                (interactive)
+                (when-let ((path (pb-prompt/mk-path-context-item)))
+                  (pb-prompt/add-item! path)))
+
+              (defun pb-prompt/add-buffer ()
+                "Add the current buffer to the prompt context.
+                 This collects the buffer name, file path, major mode, and content
+                 for inclusion in the prompt context."
+                (interactive)
+                (pb-prompt/add-item!
+                 (pb-prompt/mk-buffer-context-item)))
+
+              (progn :project-files
+
+                     (defun pb-prompt/add-project-file ()
+                       "Add a file from the current project to the prompt context.
+                        Uses projectile to select a file from the project."
+                       (interactive)
+                       (let ((project-root (projectile-project-root)))
+                         (when-let* ((file-path (projectile-completing-read
+                                                 "Add project file to context: "
+                                                 (directory-files-recursively project-root ""))))
+                           (let ((full-path (expand-file-name file-path project-root)))
+                             (pb-prompt/add-item!
+                              (km :type "file"
+                                  :path full-path))
+                             (message "Added project file: %s" full-path)))))
+
+                     (defun pb-prompt/add-project-directory ()
+                       "Add a directory from the current project to the prompt context.
+                        Allows selecting a directory within the project structure."
+                       (interactive)
+                       (let* ((project-root (projectile-project-root))
+                              (project-dirs (cons project-root
+                                                  (seq-filter #'file-directory-p
+                                                              (directory-files-recursively
+                                                               project-root "^[^.]" t))))
+                              (rel-dirs (mapcar (lambda (dir)
+                                                  (if (string= dir project-root)
+                                                      "/"
+                                                    (substring dir (length project-root))))
+                                                project-dirs))
+                              (selected (completing-read "Add project directory to context: "
+                                                         rel-dirs nil t))
+                              (full-dir-path (if (string= selected "/")
+                                                 project-root
+                                               (concat project-root selected))))
+                         (pb-prompt/add-item!
+                          (km :type "dir"
+                              :path full-dir-path))
+                         (message "Added project directory: %s" full-dir-path)))
+
+                     (defun pb-prompt/add-project-file-or-dir ()
+                       "Add a file or directory from the current project to the prompt context.
+                        Uses projectile to select a file from the project, or allows selecting
+                        a directory within the project structure."
+                       (interactive)
+                       (let ((choice (read-char-choice
+                                      "Select [f]ile or [d]irectory: "
+                                      '(?f ?d))))
+                         (cond
+                          ((eq choice ?f) (pb-prompt/add-project-file))
+                          ((eq choice ?d) (pb-prompt/add-project-directory))))))
+
+              (defun pb-prompt/add-selection ()
+                "Add the current selection to the prompt context.
+                 Adds either the active region or current symex if in symex-mode."
+                (interactive)
+                (when-let ((selection (pb-prompt/mk-selection-context-item)))
+                  (pb-prompt/add-item! selection)))
+
+              (defun pb-prompt/add-url (url &optional description)
+                (interactive)
+                (pb-prompt/add-item!
+                 (km :type "url"
+                     :url url
+                     :description description)))
+
+              (progn :add-function
+
+                     (defun pb-prompt/edit-function-in-buffer (func-data &optional callback)
+                       "Open a buffer to edit a function described in FUNC-DATA.
+
+                        FUNC-DATA should be a keyword map with at least:
+                        - :name - The name of the function (string)
+                        - Either :function (the actual function) or :code (string representation)
+
+                        Optional CALLBACK is called when the function is saved with C-c C-c.
+                        The callback receives the new function, the function expression string,
+                        and the potentially updated function name."
+                       (let* ((temp-buffer-name "*Function Editor*")
+                              (buffer (get-buffer-create temp-buffer-name))
+                              (func (km/get func-data :function))
+                              (func-name (km/get func-data :name))
+                              (func-str (if (and func (symbolp func))
+                                            (prin1-to-string (symbol-function func))
+                                          (km/get func-data :code))))
+                         (with-current-buffer buffer
+                           (erase-buffer)
+                           (emacs-lisp-mode)
+                           ;; Make the function name editable (wrapped in [[ ]] to indicate it's editable)
+                           (insert ";; Edit function: [[" func-name "]]\n")
+                           (insert ";; You can edit the name above (between [[ ]]) and the function body below\n")
+                           (insert ";; Press C-c C-c to save, C-c C-k to cancel\n\n")
+                           ;; Pretty print the function before inserting
+                           (let ((pp-func-str (with-temp-buffer
+                                                (emacs-lisp-mode)
+                                                (insert func-str)
+                                                (goto-char (point-min))
+                                                (indent-sexp)
+                                                (buffer-string))))
+                             (insert pp-func-str))
+                           (goto-char (point-max))
+                           (backward-sexp)
+                           (indent-region (point-min) (point-max))
+                           (symex-mode-interface)
+                           (let ((map (make-sparse-keymap)))
+                             (define-key map (kbd "C-c C-c")
+                                         (lambda ()
+                                           (interactive)
+                                           (let* ((new-func-name
+                                                   (save-excursion
+                                                     (goto-char (point-min))
+                                                     (when (re-search-forward ";; Edit function: \\[\\[\\(.*?\\)\\]\\]" nil t)
+                                                       (match-string-no-properties 1))))
+                                                  (func-expr (buffer-substring-no-properties
+                                                              (save-excursion
+                                                                (goto-char (point-min))
+                                                                (search-forward "\n\n")
+                                                                (point))
+                                                              (point-max)))
+                                                  (new-func (condition-case err
+                                                                (eval (read func-expr))
+                                                              (error
+                                                               (message "Error in function: %s" (error-message-string err))
+                                                               nil))))
+                                             (if (functionp new-func)
+                                                 (progn
+                                                   (message "Function updated successfully")
+                                                   (when callback
+                                                     (funcall callback new-func func-expr new-func-name))
+                                                   (kill-buffer buffer))
+                                               (message "Not a valid function")))))
+                             (define-key map (kbd "C-c C-k")
+                                         (lambda ()
+                                           (interactive)
+                                           (kill-buffer buffer)))
+                             (use-local-map (make-composed-keymap map (current-local-map))))
+                           ;; Position cursor at the start of the function name for convenience
+                           (goto-char (point-min))
+                           (re-search-forward ";; Edit function: \\[\\[" nil t)
+                           (message "Edit function name between [[ ]] and function body. Press C-c C-c when done"))
+                         (switch-to-buffer buffer)))
+
+                     (defun pb-prompt/add-function ()
+                       "Add a function (that generates context-item) to the context.
+                        This allows adding dynamic content to the prompt context that can be
+                        evaluated when needed during prompt generation.
+
+                        The user can either input a custom lambda function or select an existing
+                        function using completion."
+                       (interactive)
+                       (let* ((choice (read-char-choice
+                                       "Select function method [e]xisting or [c]ustom lambda: "
+                                       '(?e ?c))))
+
+                         (cond
+                          ;; Select existing function via completion
+                          ((eq choice ?e)
+                           (let* ((obarray-functions
+                                   (seq-filter (lambda (sym)
+                                                 (and (symbolp sym)
+                                                      (fboundp sym)
+                                                      (not (special-form-p sym))
+                                                      (not (macrop sym))))
+                                               obarray))
+                                  (selected-func-sym (intern (completing-read
+                                                              "Select function: "
+                                                              obarray-functions
+                                                              #'fboundp t))))
+                             (pb-prompt/add-item!
+                              (km :type "function"
+                                  :name (symbol-name selected-func-sym)
+                                  :function (symbol-function selected-func-sym)
+                                  :documentation (or (documentation selected-func-sym) "No documentation available")))))
+
+                          ;; Custom lambda input
+                          ((eq choice ?c)
+                           (let ((func-name (read-string "Function name: ")))
+                             (pb-prompt/edit-function-in-buffer
+                              (km :name func-name
+                                  :code "(lambda ()\n (interactive)\n ())")
+                              (lambda (func func-expr new-func-name)
+                                (pb-prompt/add-item!
+                                 (km :type "function"
+                                     :name (or new-func-name func-name)
+                                     :code func-expr
+                                     :function func
+                                     :documentation (or (documentation func) "No documentation available")))))))))))))
 
 (progn :prompt-string
-
-       (defun pb-prompt/indent-content (content &optional indent-size)
-         "Indent each line of CONTENT with spaces if it contains newlines.
-          If CONTENT is a single line, return it unchanged.
-          Optional argument INDENT-SIZE specifies the number of spaces to use (defaults to 2)."
-         (when content
-           (if (string-match-p "\n" content)
-               (let ((spaces (make-string (or indent-size 2) ?\s)))
-                 (replace-regexp-in-string
-                  "^\\(.\\)" (concat spaces "\\1") content))
-             content)))
 
        (defun pb-prompt/mk (x)
          "Generate a formatted prompt based on input X.
@@ -132,7 +601,9 @@
           readability.
           - If X is a vector, it concatenates the elements separated by
           newlines.
-          - If X is a list, it converts the list to a string representation."
+          - If X is a list, it wraps each item in context-item tags and
+          concatenates them with newlines.
+          - If X is a boolean or number, it converts it to a string."
          (cond ((null x) "nil")
                ((stringp x) (substring-no-properties x))
                ((functionp x) (pb-prompt/mk (funcall x)))
@@ -159,7 +630,7 @@
                     (numberp x))
                 (format "%s" x))))
 
-       (defun pb-prompt/describe-path (path)
+       (defun pb-prompt/describe-path (path &optional options)
          "Create a structured representation of a file or directory at PATH.
           When PATH is a directory, recursively creates a nested structure that
           includes all non-hidden files and subdirectories.
@@ -178,27 +649,32 @@
           - :content - the file content as a string
 
           Returns nil if PATH does not exist or is nil."
-         (if (and path (file-exists-p path))
-             (if (file-directory-p path)
-                 (km :name (file-name-nondirectory (if (and path (string-match-p "/$" path))
-                                                       (substring path 0 -1)
-                                                     path))
-                     :type "dir"
-                     :path path
-                     :children (seq-reduce (lambda (ret p)
-                                             (pb/let [(as x (km/keys name))
-                                                      (pb-prompt/describe-path p)]
-                                               (if name
-                                                   (km/put ret (pb/keyword name) x)
-                                                 ret)))
-                                           (directory-files path t "^[^.].*")
-                                           ()))
-               (km :name (file-name-nondirectory path)
-                   :type "file"
+         (when (and path (file-exists-p path))
+           (if (file-directory-p path)
+               (km :name (file-name-nondirectory (if (and path (string-match-p "/$" path))
+                                                     (substring path 0 -1)
+                                                   path))
+                   :type "dir"
                    :path path
-                   :content (pb/slurp path)))))
+                   :children (seq-reduce (lambda (ret p)
+                                           (pb/let [(as x (km/keys name))
+                                                    (pb-prompt/describe-path p options)]
+                                             (if name
+                                                 (km/put ret (pb/keyword name) x)
+                                               ret)))
+                                         ;; filter out hidden files and meta files (starting with _)
+                                         (directory-files path t "^[^._].*")
+                                         ()))
+             (km :name (file-name-nondirectory path)
+                 :type "file"
+                 :path path
+                 :content (when (not (km/get options :directories-only))
+                            (pb/slurp path))))))
 
-       (defun pb-prompt/context-km (context)
+       (defun pb-prompt/describe-context (path)
+         (error "nested contexts not supported yet..."))
+
+       (defun pb-prompt/context-km (context &optional options)
          (km :context
              (mapcar
               (lambda (ctx-item)
@@ -209,15 +685,11 @@
                              :content (with-current-buffer (km/get ctx-item :buffer-name)
                                         (buffer-substring-no-properties (point-min) (point-max)))))
 
-                    (context
-                     (km/put ctx-item
-                             :content
-                             (pb-prompt/context-km
-                              (pb-prompt/get-saved-context
-                               (km/get ctx-item :name)))))
-
                     ((file dir)
                      (pb-prompt/describe-path (km/get ctx-item :path)))
+
+                    (context
+                     (pb-prompt/describe-context (km/get ctx-item :path)))
 
                     (function
                      (call-interactively (km/get ctx-item :function)))
@@ -227,6 +699,34 @@
 
                     (otherwise ctx-item))))
               context)))
+
+       (progn :path
+              (defun pb-prompt/path->tree (path)
+                (when (and path (file-exists-p path))
+                  (let* ((path-segments (f-split path))
+                         (parent-dirs (seq-map (lambda (i)
+                                                 (let ((segments (seq-take path-segments i)))
+                                                   (km :tree-path (seq-map #'pb/keyword segments )
+                                                       :dir (apply #'f-join segments)
+                                                       :name (sq/last segments))))
+                                               (number-sequence 1 (length path-segments)))))
+                    (seq-reduce
+                     (pb/fn [tree (km/keys tree-path dir name)]
+                            (pb-tree/put tree
+                                         tree-path
+                                         (pb-tree* (km/merge (km :path dir
+                                                                 :name name)
+                                                             (pb-prompt/context-km
+                                                              (pb-prompt/get-local-context dir))))))
+                     parent-dirs
+                     ()))))
+
+              (defun pb-prompt/path-context-km (path)
+                (let* ((tree-path (seq-map #'pb/keyword (f-split path))))
+                  (pb->_ (pb-prompt/path->tree path)
+                         (pb-tree/get-path-values _ tree-path)
+                         (seq-keep (pb/fn [(km/keys context)] context) _)
+                         (apply #'append _)))))
 
        (defun pb-prompt/context-prompt (&optional context)
          "Generate a prompt from the current context.
@@ -245,349 +745,9 @@
              (flycheck-mode -1)
              (erase-buffer)
              (insert (pb-prompt/context-prompt)))
-           (pop-to-buffer buffer)))
-
-       (defun pb-prompt/display-context ()
-         (interactive)
-         (pb-elisp/display-expression pb-prompt/context
-                                      #'km/pp)))
-
-(progn :context-add
-
-       (defun pb-prompt/with-id (context-item)
-         "Add a unique identifier to CONTEXT-ITEM.
-
-          This function adds a unique identifier key to the provided keyword map.
-          The identifier is constructed by creating an MD5 hash of the current timestamp
-          and taking its first 8 characters, prefixed with 'pb-prompt/context-item-'.
-
-          The identifier helps track and reference context items individually within
-          the prompt system.
-
-          Argument CONTEXT-ITEM is a keyword map to which the ID will be added.
-
-          Returns the CONTEXT-ITEM with the unique ID added."
-         (km/put context-item
-                 :id
-                 (pb/hash context-item)))
-
-       (defun pb-prompt/update-focused-context (f)
-         "Apply function F to update either focused saved context or current context.
-
-          If `pb-prompt/context-browser-focus' is non-nil, applies F to the
-          corresponding saved context and stores the result back in the
-          `pb-prompt/saved-contexts' hash table.
-
-          If `pb-prompt/context-browser-focus' is nil, applies F to the current
-          `pb-prompt/context' and updates it with the result.
-
-          Argument F should be a function that takes a context (list of items) and
-          returns a modified context."
-         (cond (pb-prompt/context-browser-focus
-                (when-let ((focused-context
-                            (gethash pb-prompt/context-browser-focus
-                                     pb-prompt/saved-contexts)))
-                  (puthash pb-prompt/context-browser-focus
-                           (funcall f focused-context)
-                           pb-prompt/saved-contexts)))
-               (t (setq-local pb-prompt/context
-                              (funcall f pb-prompt/context)))))
-
-       (defun pb-prompt/add-item! (item)
-         "Add ITEM to the focused context with a unique ID.
-
-          This function adds the specified ITEM to either the current context or a
-          focused saved context, depending on the value of `pb-prompt/context-browser-focus`.
-          It wraps the item with a unique ID using `pb-prompt/with-id` before adding.
-
-          If `pb-prompt/context-browser-focus` is non-nil, adds the item to the specified
-          saved context. Otherwise, adds it to the current `pb-prompt/context`.
-
-          Argument ITEM should be a keyword map (km) representing context information."
-         (pb-prompt/update-focused-context
-          (lambda (ctx) (pb-prompt/add-context-item ctx item))))
-
-       (defun pb-prompt/mk-path-context-item (&optional path)
-         (interactive)
-         (let ((path (or path (read-file-name "Select directory or file: " nil nil t))))
-           (when path
-             (km :type (cond
-                        ((file-directory-p path) "dir")
-                        ((file-regular-p path) "file")
-                        (t "unknown"))
-                 :path path))))
-
-       (defun pb-prompt/mk-buffer-context-item ()
-         (interactive)
-         (km :type "buffer"
-             :path (buffer-file-name)
-             :buffer-name (buffer-name)
-             :major-mode (symbol-name major-mode)))
-
-       (defun pb-prompt/mk-selection-context-item ()
-         (interactive)
-         (let ((selection
-                (cond
-
-                 ((eq major-mode 'org-mode)
-                  (pb/let [(cons start end) (pb-org/node-bounds)]
-                    (buffer-substring-no-properties start end)))
-
-                 ;; If region is active, use region
-                 ((use-region-p)
-                  (buffer-substring-no-properties (region-beginning) (region-end)))
-
-                 ;; If we're in pb-lisp mode, use current selection
-
-                 ((and (boundp 'evil-state) (eq evil-state 'pb-lisp))
-                  (pb-lisp/current-selection-as-string))
-
-                 ;; If we're in symex-mode, use current symex
-                 ((and (boundp 'symex-mode) symex-mode)
-                  (pb-symex/current-as-string t))
-
-                 ;; Default fallback message
-                 (t
-                  (user-error "No selection, pb-lisp selection, or symex available")))))
-           (when selection
-             (km :type "selection"
-                 :path (buffer-file-name)
-                 :major-mode major-mode
-                 :symex symex-mode
-                 :at (point)
-                 :content selection))))
-
-       (defun pb-prompt/add-path ()
-         (interactive)
-         (when-let ((path (pb-prompt/mk-path-context-item)))
-           (pb-prompt/add-item! path)))
-
-       (defun pb-prompt/add-buffer ()
-         "Add the current buffer to the prompt context.
-          This collects the buffer name, file path, major mode, and content
-          for inclusion in the prompt context."
-         (interactive)
-         (pb-prompt/add-item!
-          (pb-prompt/mk-buffer-context-item)))
-
-       (progn :project-files
-
-              (defun pb-prompt/add-project-file ()
-                "Add a file from the current project to the prompt context.
-                 Uses projectile to select a file from the project."
-                (interactive)
-                (let ((project-root (projectile-project-root)))
-                  (when-let* ((file-path (projectile-completing-read
-                                          "Add project file to context: "
-                                          (projectile-project-files project-root))))
-                    (let ((full-path (concat project-root file-path)))
-                      (pb-prompt/add-item!
-                       (km :type "file"
-                           :path full-path))
-                      (message "Added project file: %s" full-path)))))
-
-              (defun pb-prompt/add-project-directory ()
-                "Add a directory from the current project to the prompt context.
-                 Allows selecting a directory within the project structure."
-                (interactive)
-                (let* ((project-root (projectile-project-root))
-                       (project-dirs (cons project-root
-                                           (seq-filter #'file-directory-p
-                                                       (directory-files-recursively
-                                                        project-root "^[^.]" t))))
-                       (rel-dirs (mapcar (lambda (dir)
-                                           (if (string= dir project-root)
-                                               "/"
-                                             (substring dir (length project-root))))
-                                         project-dirs))
-                       (selected (completing-read "Add project directory to context: "
-                                                  rel-dirs nil t))
-                       (full-dir-path (if (string= selected "/")
-                                          project-root
-                                        (concat project-root selected))))
-                  (pb-prompt/add-item!
-                   (km :type "dir"
-                       :path full-dir-path))
-                  (message "Added project directory: %s" full-dir-path)))
-
-              (defun pb-prompt/add-project-file-or-dir ()
-                "Add a file or directory from the current project to the prompt context.
-                 Uses projectile to select a file from the project, or allows selecting
-                 a directory within the project structure."
-                (interactive)
-                (let ((choice (read-char-choice
-                               "Select [f]ile or [d]irectory: "
-                               '(?f ?d))))
-                  (cond
-                   ((eq choice ?f) (pb-prompt/add-project-file))
-                   ((eq choice ?d) (pb-prompt/add-project-directory))))))
-
-       (defun pb-prompt/add-selection ()
-         "Add the current selection to the prompt context.
-          Adds either the active region or current symex if in symex-mode."
-         (interactive)
-         (when-let ((selection (pb-prompt/mk-selection-context-item)))
-           (pb-prompt/add-item! selection)))
-
-       (defun pb-prompt/add-url (url &optional description)
-         (interactive)
-         (pb-prompt/add-item!
-          (km :type "url"
-              :url url
-              :description description)))
-
-       (defun pb-prompt/add-saved-context ()
-         "Add a saved context to the current context.
-          Prompts the user to select a saved context from the available options
-          and adds it to the current context with a unique context-item ID."
-         (interactive)
-         (if-let* ((context-names (hash-table-keys pb-prompt/saved-contexts))
-                   (selected-name (completing-read "Add saved context: " context-names nil t)))
-             (let ((saved-context (gethash selected-name pb-prompt/saved-contexts)))
-               (pb-prompt/add-item!
-                (pb-prompt/with-id
-                 (km :type "context"
-                     :name selected-name)))
-               (message "Added saved context '%s' to current context" selected-name))
-           (message "No saved contexts available")))
-
-       (progn :add-function
-
-              (defun pb-prompt/edit-function-in-buffer (func-data &optional callback)
-                "Open a buffer to edit a function described in FUNC-DATA.
-
-                 FUNC-DATA should be a keyword map with at least:
-                 - :name - The name of the function (string)
-                 - Either :function (the actual function) or :code (string representation)
-
-                 Optional CALLBACK is called when the function is saved with C-c C-c.
-                 The callback receives the new function, the function expression string,
-                 and the potentially updated function name."
-                (let* ((temp-buffer-name "*Function Editor*")
-                       (buffer (get-buffer-create temp-buffer-name))
-                       (func (km/get func-data :function))
-                       (func-name (km/get func-data :name))
-                       (func-str (if (and func (symbolp func))
-                                     (prin1-to-string (symbol-function func))
-                                   (km/get func-data :code))))
-                  (with-current-buffer buffer
-                    (erase-buffer)
-                    (emacs-lisp-mode)
-                    ;; Make the function name editable (wrapped in [[ ]] to indicate it's editable)
-                    (insert ";; Edit function: [[" func-name "]]\n")
-                    (insert ";; You can edit the name above (between [[ ]]) and the function body below\n")
-                    (insert ";; Press C-c C-c to save, C-c C-k to cancel\n\n")
-                    ;; Pretty print the function before inserting
-                    (let ((pp-func-str (with-temp-buffer
-                                         (emacs-lisp-mode)
-                                         (insert func-str)
-                                         (goto-char (point-min))
-                                         (indent-sexp)
-                                         (buffer-string))))
-                      (insert pp-func-str))
-                    (goto-char (point-max))
-                    (backward-sexp)
-                    (indent-region (point-min) (point-max))
-                    (symex-mode-interface)
-                    (let ((map (make-sparse-keymap)))
-                      (define-key map (kbd "C-c C-c")
-                                  (lambda ()
-                                    (interactive)
-                                    (let* ((new-func-name
-                                            (save-excursion
-                                              (goto-char (point-min))
-                                              (when (re-search-forward ";; Edit function: \\[\\[\\(.*?\\)\\]\\]" nil t)
-                                                (match-string-no-properties 1))))
-                                           (func-expr (buffer-substring-no-properties
-                                                       (save-excursion
-                                                         (goto-char (point-min))
-                                                         (search-forward "\n\n")
-                                                         (point))
-                                                       (point-max)))
-                                           (new-func (condition-case err
-                                                         (eval (read func-expr))
-                                                       (error
-                                                        (message "Error in function: %s" (error-message-string err))
-                                                        nil))))
-                                      (if (functionp new-func)
-                                          (progn
-                                            (message "Function updated successfully")
-                                            (when callback
-                                              (funcall callback new-func func-expr new-func-name))
-                                            (kill-buffer buffer))
-                                        (message "Not a valid function")))))
-                      (define-key map (kbd "C-c C-k")
-                                  (lambda ()
-                                    (interactive)
-                                    (kill-buffer buffer)))
-                      (use-local-map (make-composed-keymap map (current-local-map))))
-                    ;; Position cursor at the start of the function name for convenience
-                    (goto-char (point-min))
-                    (re-search-forward ";; Edit function: \\[\\[" nil t)
-                    (message "Edit function name between [[ ]] and function body. Press C-c C-c when done"))
-                  (switch-to-buffer buffer)))
-
-              (defun pb-prompt/add-function ()
-                "Add a function (that generates context-item) to the context.
-                 This allows adding dynamic content to the prompt context that can be
-                 evaluated when needed during prompt generation.
-
-                 The user can either input a custom lambda function or select an existing
-                 function using completion."
-                (interactive)
-                (let* ((choice (read-char-choice
-                                "Select function method [e]xisting or [c]ustom lambda: "
-                                '(?e ?c))))
-
-                  (cond
-                   ;; Select existing function via completion
-                   ((eq choice ?e)
-                    (let* ((obarray-functions
-                            (seq-filter (lambda (sym)
-                                          (and (symbolp sym)
-                                               (fboundp sym)
-                                               (not (special-form-p sym))
-                                               (not (macrop sym))))
-                                        obarray))
-                           (selected-func-sym (intern (completing-read
-                                                       "Select function: "
-                                                       obarray-functions
-                                                       #'fboundp t))))
-                      (pb-prompt/add-item!
-                       (km :type "function"
-                           :name (symbol-name selected-func-sym)
-                           :function (symbol-function selected-func-sym)
-                           :documentation (or (documentation selected-func-sym) "No documentation available")))))
-
-                   ;; Custom lambda input
-                   ((eq choice ?c)
-                    (let ((func-name (read-string "Function name: ")))
-                      (pb-prompt/edit-function-in-buffer
-                       (km :name func-name
-                           :code "(lambda ()\n (interactive)\n ())")
-                       (lambda (func func-expr new-func-name)
-                         (pb-prompt/add-item!
-                          (km :type "function"
-                              :name (or new-func-name func-name)
-                              :code func-expr
-                              :function func
-                              :documentation (or (documentation func) "No documentation available"))))))))))))
+           (pop-to-buffer buffer))))
 
 (progn :request
-
-       (defun pb-prompt/simple-request ()
-         (interactive)
-         (gptel-request
-             (pb-prompt/mk (km :instructions
-                               (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
-                                   :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
-                                                     "Don't use markdown code block syntax or any non-valid code in your output."
-                                                     "If you have to write prose, use appropriate comment syntax."]
-                                   :selection (pb-prompt/mk-selection-context-item)
-                                   :task (read-string "Edit current expression: "))))
-
-           :system (pb-prompt/context-prompt)
-           :callback #'pb-gptel/current-symex-request-handler))
 
        (defun pb-prompt/query-handler (res info)
          (if res
@@ -627,21 +787,21 @@
            (gptel-request
                (pb-prompt/mk (km/merge
                               (pb-prompt/query-base-instruction)
-                              (when (km/get options :buffer)
-                                (km :buffer
-                                    (km :info (km :name (buffer-name)
-                                                  :file-path (buffer-file-name)
-                                                  :major-mode (symbol-name major-mode)
-                                                  :point (point)
-                                                  :line-number (line-number-at-pos))
-                                        :content
+                              (km :buffer
+                                  (km :info (km :name (buffer-name)
+                                                :file-path (buffer-file-name)
+                                                :major-mode (symbol-name major-mode)
+                                                :point (point)
+                                                :line-number (line-number-at-pos))
+                                      :content
+                                      (when (km/get options :buffer)
                                         (buffer-substring-no-properties (point-min) (point-max)))))
                               (when (km/get options :selection)
                                 (km :selection selection))
                               (when-let ((instructions (km/get options :instructions)))
                                 (km :instructions instructions))))
 
-             :system (pb-prompt/context-prompt (km/get options :context))
+             :system "system" ;`(pb-prompt/mk (pb-prompt/path-context-km (buffer-file-name)))
              :callback (or (km/get options :callback)
                            #'pb-prompt/query-handler))
 
@@ -663,300 +823,7 @@
                           (setq evil-symex-state-cursor `("green" box) )
                           (evil-refresh-cursor))))))
 
-(progn :item-navigation
-
-       (defun pb-prompt/goto-next-item ()
-         "Move to the next item in the buffer."
-         (interactive)
-         (let ((orig-point (point))
-               (found nil))
-           (forward-line 1)
-           (while (and (not (eobp))
-                       (not found))
-             (beginning-of-line)
-             (if (looking-at "^•")
-                 (setq found t)
-               (forward-line 1)))
-           (when (not found)
-             (goto-char orig-point)
-             (message "No next context found"))))
-
-       (defun pb-prompt/goto-previous-item ()
-         "Move to the previous item in the buffer."
-         (interactive)
-         (let ((orig-point (point))
-               (found nil))
-           (forward-line -1)
-           (while (and (not (bobp))
-                       (not found))
-             (beginning-of-line)
-             (if (looking-at "^•")
-                 (setq found t)
-               (forward-line -1)))
-           (when (not found)
-             (goto-char orig-point)
-             (message "No previous context found"))))
-
-       (defun pb-prompt/focus-item-by-name (name)
-         "Focus item NAME in saved context special buffer.
-          Find the context with NAME in the saved contexts buffer and move point to it.
-          This function is useful for navigating to a specific context in the
-          browser view after operations that might change the buffer content."
-         (when (and name
-                    (eq major-mode 'pb-prompt/saved-contexts-mode))
-           (let ((orig-point (point))
-                 (found nil))
-             (save-excursion
-               (goto-char (point-min))
-               (while (and (not found)
-                           (re-search-forward (concat "• " (regexp-quote name)) nil t))
-                 (beginning-of-line)
-                 (when (looking-at (concat "• " (regexp-quote name)))
-                   (setq found (point)))))
-             (if found
-                 (progn
-                   (goto-char found)
-                   (recenter)
-                   t)
-               (goto-char orig-point)
-               (message "Context '%s' not found in buffer" name)
-               nil)))))
-
-(progn :bindings
-
-       (defvar pb-prompt/context-browser-keybindings
-         '((:key "RET" :desc "Browse item at point"
-            :category "navigation"
-            :function pb-prompt/browse-context-item-at-point)
-           (:key "d" :desc "Delete item at point"
-            :category "edition"
-            :function pb-prompt/delete-context-item-at-point)
-           (:key "v" :desc "View item details"
-            :category "display"
-            :function pb-prompt/view-context-item-at-point)
-           (:key "r" :desc "Refresh browser"
-            :category "display"
-            :function pb-prompt/refresh-context-browser)
-           (:key "a f" :desc "Add file/path to context"
-            :category "edition"
-            :function pb-prompt/add-path-to-focused-context)
-           (:key "a p" :desc "Add project file or dir to context"
-            :category "edition"
-            :function pb-prompt/add-project-file-or-dir-to-focused-context)
-           (:key "q" :desc "Quit window"
-            :category "navigation"
-            :function quit-window)
-           (:key "k" :desc "Go to parent context"
-            :category "navigation"
-            :function pb-prompt/browse-parent-context)
-           (:key "l" :desc "Go to next item"
-            :category "navigation"
-            :function pb-prompt/goto-next-item)
-           (:key "h" :desc "Go to previous item"
-            :category "navigation"
-            :function pb-prompt/goto-previous-item)
-           (:key "j" :desc "Browse child context"
-            :category "navigation"
-            :function pb-prompt/browse-child-context)
-           (:key "y" :desc "Copy item at point"
-            :category "clipboard"
-            :function pb-prompt/copy-context-item-at-point)
-           (:key "p" :desc "Yank copied item"
-            :category "clipboard"
-            :function pb-prompt/yank-context-item)
-           (:key "C-p" :desc "Yank item from ring"
-            :category "clipboard"
-            :function pb-prompt/yank-context-item-from-ring)
-           (:key "x" :desc "Toggle disable item at point"
-            :category "edition"
-            :function pb-prompt/toggle-context-item-disabled-at-point)
-           (:key "?" :desc "Show help menu"
-            :category "help"
-            :function pb-prompt/context-browser-help-menu)))
-
-       (defvar pb-prompt/saved-contexts-keybindings
-         '((:key "RET" :desc "Browse context at point"
-            :category "navigation"
-            :function pb-prompt/browse-saved-context)
-           (:key "d" :desc "Delete context at point"
-            :category "edition"
-            :function pb-prompt/delete-context-at-point)
-           (:key "l" :desc "Load context at point"
-            :category "edition"
-            :function pb-prompt/load-context-at-point)
-           (:key "a" :desc "Append context at point"
-            :category "edition"
-            :function pb-prompt/append-context-at-point)
-           (:key "q" :desc "Quit window"
-            :category "navigation"
-            :function pb-prompt/exit-saved-contexts)
-           (:key "k" :desc "Go to parent/quit"
-            :category "navigation"
-            :function pb-prompt/exit-saved-contexts)
-           (:key "l" :desc "Go to next item"
-            :category "navigation"
-            :function pb-prompt/goto-next-item)
-           (:key "h" :desc "Go to previous item"
-            :category "navigation"
-            :function pb-prompt/goto-previous-item)
-           (:key "j" :desc "Browse context"
-            :category "navigation"
-            :function pb-prompt/browse-saved-context)
-           (:key "v" :desc "View context details"
-            :category "display"
-            :function pb-prompt/open-context-at-point)
-           (:key "y" :desc "Copy context at point"
-            :category "clipboard"
-            :function pb-prompt/copy-context-at-point)
-           (:key "?" :desc "Show help menu"
-            :category "help"
-            :function pb-prompt/saved-contexts-help-menu))))
-
-(progn :help-menu
-
-       (defun pb-prompt/display-help-menu (title bindings-var)
-         "Display available keybindings in a help window with proper formatting,
-          grouped by category.
-
-          TITLE is the header title for the help buffer.
-          BINDINGS-VAR is a variable containing the keybindings to display."
-         (let* ((bindings (symbol-value bindings-var))
-                (categories (delete-dups (mapcar (lambda (b) (km/get b :category)) bindings)))
-                (sorted-categories (sort categories #'string<))
-                (buf-name (format "*%s Help*" title))
-                (buf (get-buffer-create buf-name)))
-           (with-current-buffer buf
-             (let ((inhibit-read-only t))
-               (erase-buffer)
-               (insert (propertize (concat title " Keybindings:\n") 'face 'bold))
-               (insert (propertize "==========================\n\n" 'face 'bold))
-
-               ;; Display bindings grouped by category
-               (dolist (category sorted-categories)
-                 ;; Category header
-                 (insert (propertize (concat (capitalize category) ":\n")
-                                     'face '(:inherit font-lock-type-face :weight bold)))
-                 (insert (propertize (make-string (+ (length category) 1) ?-)
-                                     'face 'font-lock-comment-face)
-                         "\n")
-
-                 ;; Get bindings for this category
-                 (let* ((category-bindings (seq-filter
-                                            (lambda (b) (string= (km/get b :category) category))
-                                            bindings))
-                        (max-key-length (apply #'max
-                                               (mapcar (lambda (b) (length (km/get b :key)))
-                                                       category-bindings)))
-                        (max-desc-length (apply #'max
-                                                (mapcar (lambda (b) (length (km/get b :desc)))
-                                                        category-bindings))))
-
-                   ;; Sort bindings within category by key
-                   (dolist (binding (sort category-bindings
-                                          (lambda (a b)
-                                            (string< (km/get a :key) (km/get b :key)))))
-                     (let* ((key (km/get binding :key))
-                            (desc (km/get binding :desc))
-                            (func (km/get binding :function))
-                            (key-padding (make-string (- max-key-length (length key)) ? ))
-                            (desc-padding (make-string (- max-desc-length (length desc)) ? )))
-                       (insert "  " (propertize key 'face 'font-lock-keyword-face))
-                       (insert key-padding "  ")
-                       (insert (propertize desc 'face 'font-lock-doc-face))
-                       (insert desc-padding "  → ")
-                       (insert (propertize (symbol-name func) 'face 'font-lock-function-name-face))
-                       (insert "\n")))
-                   (insert "\n")))
-
-               (help-mode)
-               (goto-char (point-min))))
-           (pop-to-buffer buf)))
-
-       (defun pb-prompt/context-browser-help-menu ()
-         "Display help for context browser keybindings."
-         (interactive)
-         (pb-prompt/display-help-menu "Context Browser" 'pb-prompt/context-browser-keybindings))
-
-       (defun pb-prompt/saved-contexts-help-menu ()
-         "Display help for saved contexts keybindings."
-         (interactive)
-         (pb-prompt/display-help-menu "Saved Contexts" 'pb-prompt/saved-contexts-keybindings)))
-
-(progn :local-context
-
-       (defvar-local pb-prompt/context-file nil)
-       (defvar-local pb-prompt/target-file nil)
-
-       (defun pb-prompt/get-or-create-local-context (&optional file create)
-         "Get or create a context.el file in the meta directory of FILE or current buffer.
-          If FILE is nil, use the current buffer's file or dired directory if in dired-mode.
-          When CREATE is non-nil, create the context file if it doesn't exist.
-          Returns a plist with :file, :exists, :meta-dir, :target-file, and :created properties."
-         (let* ((target-file (or file
-                                 (cond
-                                  ((member major-mode '(dired-mode dired-sidebar-mode))
-                                   (dired-get-filename))
-                                  (t (buffer-file-name)))))
-                (meta-dir (when target-file
-                            (if create
-                                (pb-meta/-ensure-file-meta-dir target-file)
-                              (pb-meta/-get-file-meta-dir target-file))))
-                (context-file (when meta-dir (f-join meta-dir "context.el")))
-                (existed (and context-file (f-exists-p context-file)))
-                (created nil))
-
-           ;; Create the context file if requested and it doesn't exist
-           (when (and create context-file (not existed))
-             (pb-prompt/save-context
-              (list (pb-prompt/mk-path-context-item target-file))
-              context-file)
-             (setq created t))
-
-           (list :file context-file
-                 :exists (or existed created)
-                 :created created
-                 :meta-dir meta-dir
-                 :target-file target-file)))
-
-       (defun pb-prompt/open-context (&optional file)
-         "Open a context.el file from the meta directory of FILE or current buffer.
-          If FILE is nil, use the current buffer's file.
-          If the context file doesn't exist, offer to create it.
-          Use pb-prompt/browse-context to view the loaded context when opened."
-         (interactive)
-         '(print (km :open-ctx (km :file file
-                                   :context-file (pb-prompt/get-or-create-local-context file nil))))
-         (let* ((ctx (pb-prompt/get-or-create-local-context file nil))
-                (context-file (plist-get ctx :file))
-                (exists (plist-get ctx :exists))
-                (target-file (plist-get ctx :target-file)))
-           (cond
-            ;; Context file exists - load and browse it
-            (exists
-             (let ((context (pb-prompt/read-context context-file)))
-               (pb-prompt/browse-context context target-file)
-               (setq-local pb-prompt/context context)
-               (setq-local pb-prompt/context-file context-file)
-               (setq-local pb-prompt/target-file target-file)))
-
-            ;; No context file but we have a target file and user wants to create it
-            ((and target-file
-                  (y-or-n-p "Context file doesn't exist. Create it?"))
-             (let ((created-ctx (pb-prompt/get-or-create-local-context target-file t)))
-               (when (plist-get created-ctx :created)
-                 (let ((context (pb-prompt/read-context (km/get created-ctx :file))))
-                   (pb-prompt/browse-context context target-file)
-                   (setq-local pb-prompt/context context)
-                   (setq-local pb-prompt/context-file context-file)
-                   (setq-local pb-prompt/target-file target-file)))))
-
-            ;; Default case - no context file and not creating one
-            (t
-             (message "No context file found for %s" (or target-file "current buffer")))))))
-
-(progn :context-browser
-
-       (defvar-local pb-prompt/parent-context ())
+(progn :browser
 
        (defvar pb-prompt/context-ring ())
 
@@ -971,179 +838,170 @@
           \\{pb-prompt/context-browser-mode-map}"
          (setq buffer-read-only t))
 
-       (with-eval-after-load 'evil
-         (evil-set-initial-state 'pb-prompt/context-browser-mode 'normal)
-         (dolist (binding pb-prompt/context-browser-keybindings)
-           (evil-define-key 'normal pb-prompt/context-browser-mode-map
-             (kbd (km/get binding :key)) (km/get binding :function))))
 
-       (defun pb-prompt/format-context-title (name context-id)
-         "Format a title for the context browser based on NAME and CONTEXT-ID.
-          If NAME is provided, use it as the title.
-          Otherwise, format an anonymous context title with CONTEXT-ID."
-         (if name
-             (concat "* " name)
-           (concat "* Anonymous Context "
-                   (when context-id (format "[%s]" context-id)))))
 
-       (defun pb-prompt/-format-relative-path (path)
-         "Format PATH as a relative path to project root or home directory.
-          If PATH is in a project, return it relative to the project root.
-          If PATH is in the home directory, return it with ~ prefix.
-          Otherwise, return the expanded path."
-         (let* ((project-root (when (and (fboundp 'project-current)
-                                         (project-current))
-                                (project-root (project-current))))
-                (expanded-path (expand-file-name path))
-                (relative-path (cond
-                                ((and project-root
-                                      (string-prefix-p project-root expanded-path))
-                                 (substring expanded-path (length project-root)))
-                                ((string-prefix-p (expand-file-name "~") expanded-path)
-                                 (concat "~" (substring expanded-path (length (expand-file-name "~")))))
-                                (t expanded-path))))
-           relative-path))
+       (progn :render
 
-       (defun pb-prompt/render-context-browser (buffer context)
-         (let ((inhibit-read-only t))
-           (with-current-buffer buffer
-             (delete-region (point-min) (point-max))
-             (if (null context)
-                 (insert (propertize "No context items found.\n" 'face 'font-lock-comment-face))
-               ;; Display context items (formatting code remains the same)
-               (let* ((title (if pb-prompt/target-file
-                                 (pb-prompt/-format-relative-path pb-prompt/target-file)
-                               "UNKNOWN"))
-                      (items-by-type (seq-group-by
-                                      (lambda (item) (km/get item :type))
-                                      context)))
-                 (insert (propertize "RET: browse, h.j.k.l: navigate, ?: help, q: quit\n"
-                                     'face 'lsp-details-face))
+              (defun pb-prompt/format-context-title (name context-id)
+                "Format a title for the context browser based on NAME and CONTEXT-ID.
+                 If NAME is provided, use it as the title.
+                 Otherwise, format an anonymous context title with CONTEXT-ID."
+                (if name
+                    (concat "* " name)
+                  (concat "* Anonymous Context "
+                          (when context-id (format "[%s]" context-id)))))
 
-                 ;; Insert title with face
-                 (insert "\n" (propertize title 'face 'custom-modified) "\n\n\n")
+              (defun pb-prompt/render-context-browser (buffer context)
+                (let ((inhibit-read-only t))
+                  (with-current-buffer buffer
+                    (delete-region (point-min) (point-max))
+                    (if (null context)
+                        (insert (propertize "No context items found.\n" 'face 'font-lock-comment-face))
+                      ;; Display context items (formatting code remains the same)
+                      (let* ((title (if pb-prompt/target-file
+                                        (pb-prompt/format-relative-path pb-prompt/target-file)
+                                      "UNKNOWN"))
+                             (items-by-type (seq-group-by
+                                             (lambda (item) (km/get item :type))
+                                             context)))
+                        (insert (propertize "RET: browse, h.j.k.l: navigate, ?: help, q: quit\n"
+                                            'face 'lsp-details-face))
 
-                 ;; Group by type
-                 (dolist (type-group (sort items-by-type
-                                           (lambda (a b) (string< (car a) (car b)))))
-                   (let ((type (car type-group))
-                         (items (cdr type-group)))
-                     ;; Type header with face
-                     (insert (concat (propertize ": " 'face 'font-lock-doc-face)
-                                     (propertize type 'face 'magit-diff-removed)
-                                     (propertize (format " (%d)" (length items)) 'face 'font-lock-doc-face))
-                             "\n\n")
+                        ;; Insert title with face
+                        (insert "\n" (propertize title 'face 'custom-modified) "\n\n\n")
 
-                     ;; List items of this type
-                     (dolist (item items)
-                       (let* ((id (km/get item :id))
-                              (desc (pb-prompt/-context-item-description item))
-                              (disabled (km/get item :disabled))
-                              (bullet (propertize "• " 'face 'custom-set))
-                              (id-text (propertize (format "[%s]" id) 'face 'lsp-details-face))
-                              (line (format "%s%s %s\n" bullet desc id-text)))
-                         (add-text-properties 0 (length line)
-                                              `(context-item ,item context-item-id ,id) line)
-                         (if disabled
-                             (insert (propertize line 'face 'font-lock-comment-face))
-                           (insert line))))
-                     (insert "\n")))))
-             ;; Mode setup and local variables
-             (goto-char (point-min)))))
+                        ;; Group by type
+                        (dolist (type-group (sort items-by-type
+                                                  (lambda (a b) (string< (car a) (car b)))))
+                          (let ((type (car type-group))
+                                (items (cdr type-group)))
+                            ;; Type header with face
+                            (insert (concat (propertize ": " 'face 'font-lock-doc-face)
+                                            (propertize type 'face 'magit-diff-removed)
+                                            (propertize (format " (%d)" (length items)) 'face 'font-lock-doc-face))
+                                    "\n\n")
 
-       (defun pb-prompt/browse-context (context &optional name)
-         "Browse items in CONTEXT in a dedicated buffer.
-          CONTEXT should be a list of context items to display.
-          Optional NAME is used for the buffer title.
-          If NAME is not provided, an identifier is generated from the context."
-         (interactive)
-         '(print (km :buf (get-buffer (concat "*Context Browser " (or name (pb/hash context)) "*"))
-                     :target-file pb-prompt/target-file))
-         (let* ((context-id (or name (pb/hash context)))
-                (buf-name (concat "*Context Browser " (or context-id "current") "*"))
-                (existing-buffer (get-buffer buf-name))
-                (buffer (or existing-buffer (get-buffer-create buf-name))))
-           (pb-prompt/render-context-browser buffer context)
-           (switch-to-buffer buffer)
-           (pb-prompt/context-browser-mode)
-           (pb-prompt/goto-next-item)))
+                            ;; List items of this type
+                            (dolist (item items)
+                              (let* ((id (km/get item :id))
+                                     (desc (pb-prompt/-context-item-description item))
+                                     (disabled (km/get item :disabled))
+                                     (bullet (propertize "• " 'face 'custom-set))
+                                     (id-text (propertize (format "[%s]" id) 'face 'lsp-details-face))
+                                     (line (format "%s%s %s\n" bullet desc id-text)))
+                                (add-text-properties 0 (length line)
+                                                     `(context-item ,item context-item-id ,id) line)
+                                (if disabled
+                                    (insert (propertize line 'face 'font-lock-comment-face))
+                                  (insert line))))
+                            (insert "\n")))))
+                    ;; Mode setup and local variables
+                    (goto-char (point-min)))))
 
-       (defun pb-prompt/refresh-context-browser ()
-         "Refresh the context browser buffer."
-         (interactive)
-         (when (eq major-mode 'pb-prompt/context-browser-mode)
-           (let ((line (line-number-at-pos)))
-             (pb-prompt/render-context-browser (current-buffer)
-                                               pb-prompt/context)
-             (goto-char (point-min))
-             (forward-line (1- line)))))
+              (defun pb-prompt/refresh-context-browser ()
+                "Refresh the context browser buffer."
+                (interactive)
+                (when (eq major-mode 'pb-prompt/context-browser-mode)
+                  (let ((line (line-number-at-pos)))
+                    (pb-prompt/render-context-browser (current-buffer)
+                                                      pb-prompt/context)
+                    (goto-char (point-min))
+                    (forward-line (1- line))))))
+
+       (progn :item-navigation
+
+              (defun pb-prompt/goto-next-item ()
+                "Move to the next item in the buffer."
+                (interactive)
+                (let ((orig-point (point))
+                      (found nil))
+                  (forward-line 1)
+                  (while (and (not (eobp))
+                              (not found))
+                    (beginning-of-line)
+                    (if (looking-at "^•")
+                        (setq found t)
+                      (forward-line 1)))
+                  (when (not found)
+                    (goto-char orig-point)
+                    (message "No next context found"))))
+
+              (defun pb-prompt/goto-previous-item ()
+                "Move to the previous item in the buffer."
+                (interactive)
+                (let ((orig-point (point))
+                      (found nil))
+                  (forward-line -1)
+                  (while (and (not (bobp))
+                              (not found))
+                    (beginning-of-line)
+                    (if (looking-at "^•")
+                        (setq found t)
+                      (forward-line -1)))
+                  (when (not found)
+                    (goto-char orig-point)
+                    (message "No previous context found"))))
+
+              (defun pb-prompt/focus-item-by-name (name)
+                "Focus item NAME in saved context special buffer.
+                 Find the context with NAME in the saved contexts buffer and move point to it.
+                 This function is useful for navigating to a specific context in the
+                 browser view after operations that might change the buffer content."
+                (when (and name
+                           (eq major-mode 'pb-prompt/saved-contexts-mode))
+                  (let ((orig-point (point))
+                        (found nil))
+                    (save-excursion
+                      (goto-char (point-min))
+                      (while (and (not found)
+                                  (re-search-forward (concat "• " (regexp-quote name)) nil t))
+                        (beginning-of-line)
+                        (when (looking-at (concat "• " (regexp-quote name)))
+                          (setq found (point)))))
+                    (if found
+                        (progn
+                          (goto-char found)
+                          (recenter)
+                          t)
+                      (goto-char orig-point)
+                      (message "Context '%s' not found in buffer" name)
+                      nil)))))
 
        (progn :browse
 
-              (defun pb-prompt/browse-current-context ()
-                "Browse the current context in a dedicated buffer."
+              (defun pb-prompt/browse-context (context options)
                 (interactive)
-                (pb-prompt/browse-context pb-prompt/context "current"))
+                (print options)
+                (let* ((context-name (or (km/get options :name)
+                                         (km/get options :target-file)
+                                         (pb/hash context)))
+                       (buf-name (km/get options :context-file))
+                       (existing-buffer (get-buffer buf-name))
+                       (buffer (or existing-buffer (get-buffer-create buf-name))))
+                  (switch-to-buffer buffer)
+                  (pb-prompt/render-context-browser buffer context)
+                  (pb-prompt/context-browser-mode)
+                  (pb-prompt/goto-next-item)
+                  (setq-local pb-prompt/context-file (km/get options :context-file)
+                              pb-prompt/target-file (km/get options :target-file)
+                              pb-prompt/context context)))
 
-              (defun pb-prompt/browse-current-file-context ()
-                "Look into the meta directory of current file and browse its context.
-                 This function checks if there's a context file in the meta directory
-                 associated with the current buffer's file, loads it, and opens the
-                 context browser. If no context file exists, offers to create one."
+              (defun pb-prompt/browse-context-file (&optional file)
                 (interactive)
-                (if-let ((current-file (buffer-file-name)))
-                    (pb-prompt/open-context current-file)
-                  (message "No file associated with current buffer")))
+                (when-let* ((ctx (pb-prompt/get-or-create-local-context file))
+                            (context-file (plist-get ctx :file))
+                            (target-file (plist-get ctx :target-file)))
+                  (pb-prompt/browse-context
+                   (pb-prompt/read-context context-file)
+                   (km :target-file target-file
+                       :context-file context-file))))
 
               (defun pb-prompt/browse-parent-context ()
-                "Navigate to the parent of the current context browser.
-
-                 If the buffer-local variable `pb-prompt/parent-context' is bound,
-                 navigate to that parent context in the browser. Otherwise, if there
-                 is no parent context but the current context is a saved context
-                 (indicated by `pb-prompt/context-browser-focus' being non-nil),
-                 go back to the full list of saved contexts.
-
-                 This function provides hierarchical navigation in the context browser,
-                 allowing users to move up the context tree during exploration."
                 (interactive)
-                (cond (pb-prompt/target-file
-                       (pb-prompt/open-context (file-name-directory (directory-file-name pb-prompt/target-file))))))
-
-              (defun pb-prompt/browse-child-context ()
-                "If item at point is a context, open a Context Browser for it.
-                 Navigates to the child context and sets the parent context locally
-                 to enable navigation back to the current context."
-                (interactive)
-                (when-let* ((item (pb-prompt/context-item-at-point))
-                            (type (km/get item :type))
-                            (name (km/get item :name)))
-                  (if (equal type "context")
-                      (let ((parent-name (or pb-prompt/context-browser-focus "current"))
-                            (child-buffer (concat "*Context Browser " name "*")))
-                        (pb-prompt/browse-context name)
-                        (with-current-buffer child-buffer
-                          (setq-local pb-prompt/parent-context parent-name)
-                          (message "Navigated to child context: %s (parent: %s)"
-                                   name parent-name)))
-                    (message "Item at point is not a context (type: %s)" type))))
-
-              (defun pb-prompt/back-to-saved-contexts ()
-                "Return to the saved contexts listing view from the context browser.
-                 This function closes the current context browser and opens the saved contexts list."
-                (interactive)
-                (when (eq major-mode 'pb-prompt/context-browser-mode)
-                  (let ((buffer (current-buffer))
-                        (current-context-name pb-prompt/context-browser-focus))
-                    (quit-window)
-                    (pb-prompt/browse-saved-contexts)
-                    (when current-context-name
-                      (with-current-buffer pb-prompt/saved-context-buffer-name
-                        (print current-context-name)
-                        (print (current-buffer))
-                        (goto-char (point-min))
-                        (when (search-forward current-context-name nil t)
-                          (beginning-of-line))))))))
+                (when pb-prompt/target-file
+                  (pb-prompt/browse-context-file
+                   (file-name-directory
+                    (directory-file-name pb-prompt/target-file))))))
 
        (progn :selection
 
@@ -1161,9 +1019,9 @@
                     (buffer
                      (km/get item :buffer-name))
                     (context
-                     (km/get item :name))
+                     (km/get item :path))
                     ((file dir)
-                     (pb-prompt/-format-relative-path path))
+                     (pb-prompt/format-relative-path path))
                     (selection
                      (let* ((content (km/get item :content))
                             (first-line (car (split-string content "\n")))
@@ -1215,49 +1073,7 @@
                                                 :require-match t
                                                 :sort nil)))
 
-                    (gethash picked item-map))))
-
-              (defun pb-prompt/consult-context ()
-                (interactive)
-                (pb-prompt/browse-context-item))
-
-              ;; Define embark actions for context items
-              (with-eval-after-load 'embark
-
-                (defun pb-prompt/embark-browse-context-item (candidate)
-                  (if-let ((item (get-text-property 0 'context-item candidate)))
-                      (pb-prompt/browse-context-item item)))
-
-                (defun pb-prompt/embark-describe-context-item (candidate)
-                  "Display detailed information about the context item from embark."
-                  (if-let ((item (get-text-property 0 'context-item candidate)))
-                      (pb-prompt/describe-context-item item)
-                    (message "No context item found in candidate")))
-
-                (defun pb-prompt/embark-remove-context-item (candidate)
-                  "Remove the context item from embark candidate."
-                  (if-let ((item (get-text-property 0 'context-item candidate)))
-                      (pb-prompt/remove-context-item item)
-                    (message "No context item found in candidate")))
-
-                (setq embark-quit-after-action
-                      '((pb-prompt/embark-browse-context-item . t)
-                        (pb-prompt/embark-describe-context-item . nil)
-                        (pb-prompt/embark-remove-context-item . nil)
-                        (t . t)))
-
-                (add-to-list 'embark-keymap-alist
-                             '(pb-prompt-context-item . pb-prompt-context-item-map))
-
-                (defvar pb-prompt-context-item-map
-                  (make-sparse-keymap))
-
-                (map!
-                 (:map pb-prompt-context-item-map
-                  :desc "Browse item" "b" #'pb-prompt/embark-browse-context-item
-                  :desc "Describe item details" "d" #'pb-prompt/embark-describe-context-item
-                  :desc "Remove item" "r" #'pb-prompt/embark-remove-context-item
-                  :desc "Kill/delete item" "k" #'pb-prompt/embark-remove-context-item))))
+                    (gethash picked item-map)))))
 
        (progn :actions
 
@@ -1270,10 +1086,10 @@
                     (progn (message "Removing context item: %s (ID: %s)"
                                     (or (km/get to-remove :type) "unknown")
                                     (km/get to-remove :id))
-                           (setq pb-prompt/context
-                                 (seq-remove (lambda (item)
-                                               (equal (km/get item :id) (km/get to-remove :id)))
-                                             pb-prompt/context)))
+                           (setq-local pb-prompt/context
+                                       (seq-remove (lambda (item)
+                                                     (equal (km/get item :id) (km/get to-remove :id)))
+                                                   pb-prompt/context)))
 
                   (message "Warning: No item selected for removal (Key: %s)"
                            picked)))
@@ -1286,9 +1102,6 @@
                   (cl-case (intern type)
                     (buffer
                      (switch-to-buffer (km/get item :buffer-name)))
-                    (context
-                     (pb-prompt/browse-context
-                      (km/get item :name)))
                     (file
                      (find-file-other-window (km/get item :path)))
                     (dir
@@ -1317,7 +1130,7 @@
                 (pb-prompt/edit-function-in-buffer
                  item
                  (lambda (new-func func-expr new-func-name)
-                   (pb-prompt/update-focused-context
+                   (pb-prompt/update-current-context
                     (lambda (ctx)
                       (mapcar (lambda (ctx-item)
                                 (if (equal (km/get ctx-item :id) (km/get item :id))
@@ -1356,40 +1169,12 @@
                   (pop-to-buffer (current-buffer))))
 
               (defun pb-prompt/save-browsed-context ()
-                "Save the currently browsed context using pb-prompt/context-file.
-                 This function saves the context currently being viewed in the browser to its
-                 associated context file, if one exists. If this is a local context associated
-                 with a buffer file, the context will be saved to the corresponding meta directory.
-
-                 When called from a Context Browser buffer, it determines the context to save
-                 based on the `pb-prompt/context-browser-focus` buffer-local variable:
-                 - For a saved named context, it updates the entry in `pb-prompt/saved-contexts`
-                 - For a local file context, it saves to the associated context.el file
-                 - For the current context, it prompts for a filename if none is associated"
                 (interactive)
                 (when (eq major-mode 'pb-prompt/context-browser-mode)
-                  (print (km :context-file pb-prompt/context-file))
-                  (let* ((context-name pb-prompt/context-browser-focus)
-                         (context (cond ((string= "current" context-name) pb-prompt/context)
-                                        (context-name (gethash context-name pb-prompt/saved-contexts))
-                                        (t pb-prompt/context))))
-                    (cond
-                     ;; If we're viewing a named context from saved contexts
-                     ((and context-name (not (string= "current" context-name)))
-                      (puthash context-name context pb-prompt/saved-contexts)
-                      (pb-prompt/save-contexts-to-file)
-                      (message "Updated saved context '%s'" context-name))
-
-                     ;; If we have a local context file associated with current buffer
-                     (pb-prompt/context-file
-                      (pb-prompt/save-context context pb-prompt/context-file)
-                      (message "Saved context to %s" pb-prompt/context-file))
-
-                     ;; Otherwise prompt to save current context
-                     (t
-                      (let ((filename (read-file-name "Save context to file: " nil nil nil "context.el")))
-                        (pb-prompt/save-context context filename)
-                        (message "Saved context to %s" filename))))))))
+                  (let ((file (or pb-prompt/context-file
+                                  (read-file-name "Save context to file: " nil nil nil "context.el"))))
+                    (pb-prompt/save-context pb-prompt/context file)
+                    (message "Saved context to %s" file)))))
 
        (progn :at-point
 
@@ -1437,12 +1222,12 @@
                 (when-let ((item (pb-prompt/context-item-at-point)))
                   (pb-prompt/describe-context-item item)))
 
-              (defun pb-prompt/add-path-to-focused-context ()
+              (defun pb-prompt/add-path-to-current-context ()
                 (interactive)
                 (pb-prompt/add-path)
                 (pb-prompt/refresh-context-browser))
 
-              (defun pb-prompt/add-project-file-or-dir-to-focused-context ()
+              (defun pb-prompt/add-project-file-or-dir-to-current-context ()
                 (interactive)
                 (pb-prompt/add-project-file-or-dir)
                 (pb-prompt/refresh-context-browser))
@@ -1452,7 +1237,7 @@
                 (interactive)
                 (print "toggle disabled")
                 (when-let ((item (pb-prompt/context-item-at-point)))
-                  (pb-prompt/update-focused-context
+                  (pb-prompt/update-current-context
                    (lambda (ctx)
                      (mapcar (lambda (ctx-item)
                                (if (equal (km/get ctx-item :id) (km/get item :id))
@@ -1471,475 +1256,264 @@
                                            (pb-prompt/-context-item-description item)))
                       (progn
                         (add-to-list 'pb-prompt/context-ring item)
-                        (pb-prompt/update-focused-context
+                        (pb-prompt/update-current-context
                          (lambda (ctx)
                            (seq-remove (lambda (i)
                                          (equal (km/get i :id) id))
                                        ctx)))
                         (pb-prompt/refresh-context-browser)
                         (message "Item deleted"))
-                    (message "Deletion cancelled"))))))
+                    (message "Deletion cancelled")))))
 
-(progn :saved-contexts
+       (progn :help-menu
 
-       (defvar pb-prompt/saved-context-buffer-name
-         "*Saved Contexts*")
+              (defun pb-prompt/display-help-menu (title bindings-var)
+                "Display available keybindings in a help window with proper formatting,
+                 grouped by category.
 
-       (define-derived-mode pb-prompt/saved-contexts-mode
-         special-mode
-         "PB-Prompt Contexts"
-         "Major mode for listing saved prompt contexts."
-         (setq buffer-read-only t))
+                 TITLE is the header title for the help buffer.
+                 BINDINGS-VAR is a variable containing the keybindings to display."
+                (let* ((bindings (symbol-value bindings-var))
+                       (categories (delete-dups (mapcar (lambda (b) (km/get b :category)) bindings)))
+                       (sorted-categories (sort categories #'string<))
+                       (buf-name (format "*%s Help*" title))
+                       (buf (get-buffer-create buf-name)))
+                  (with-current-buffer buf
+                    (let ((inhibit-read-only t))
+                      (erase-buffer)
+                      (insert (propertize (concat title " Keybindings:\n") 'face 'bold))
+                      (insert (propertize "==========================\n\n" 'face 'bold))
 
-       (defvar pb-prompt/saved-contexts-mode-map
-         (make-sparse-keymap)
-         "Keymap for `pb-prompt/saved-contexts-mode'.")
+                      ;; Display bindings grouped by category
+                      (dolist (category sorted-categories)
+                        ;; Category header
+                        (insert (propertize (concat (capitalize category) ":\n")
+                                            'face '(:inherit font-lock-type-face :weight bold)))
+                        (insert (propertize (make-string (+ (length category) 1) ?-)
+                                            'face 'font-lock-comment-face)
+                                "\n")
 
-       (with-eval-after-load 'evil
-         (evil-set-initial-state 'pb-prompt/saved-contexts-mode 'normal)
-         (dolist (binding pb-prompt/saved-contexts-keybindings)
-           (evil-define-key 'normal pb-prompt/saved-contexts-mode-map
-             (kbd (km/get binding :key)) (km/get binding :function))))
+                        ;; Get bindings for this category
+                        (let* ((category-bindings (seq-filter
+                                                   (lambda (b) (string= (km/get b :category) category))
+                                                   bindings))
+                               (max-key-length (apply #'max
+                                                      (mapcar (lambda (b) (length (km/get b :key)))
+                                                              category-bindings)))
+                               (max-desc-length (apply #'max
+                                                       (mapcar (lambda (b) (length (km/get b :desc)))
+                                                               category-bindings))))
 
-       (defun pb-prompt/browse-saved-contexts (&optional focus-name)
-         "Show a list of all saved contexts with item counts.
-          Displays contexts with syntax highlighting for better readability."
-         (interactive)
+                          ;; Sort bindings within category by key
+                          (dolist (binding (sort category-bindings
+                                                 (lambda (a b)
+                                                   (string< (km/get a :key) (km/get b :key)))))
+                            (let* ((key (km/get binding :key))
+                                   (desc (km/get binding :desc))
+                                   (func (km/get binding :function))
+                                   (key-padding (make-string (- max-key-length (length key)) ? ))
+                                   (desc-padding (make-string (- max-desc-length (length desc)) ? )))
+                              (insert "  " (propertize key 'face 'font-lock-keyword-face))
+                              (insert key-padding "  ")
+                              (insert (propertize desc 'face 'font-lock-doc-face))
+                              (insert desc-padding "  → ")
+                              (insert (propertize (symbol-name func) 'face 'font-lock-function-name-face))
+                              (insert "\n")))
+                          (insert "\n")))
 
-         (with-current-buffer (get-buffer-create pb-prompt/saved-context-buffer-name)
-           (let ((contexts (hash-table-keys pb-prompt/saved-contexts))
-                 (inhibit-read-only t))
-             (erase-buffer)
-             (if (null contexts)
-                 (insert (propertize "No saved contexts found.\n" 'face 'font-lock-comment-face))
-               ;; Header with custom face
-               (insert (propertize "Saved Contexts:\n\n" 'face 'font-lock-keyword-face))
-               (dolist (name (sort contexts #'string<))
-                 (let* ((context (gethash name pb-prompt/saved-contexts))
-                        (count (length context))
-                        (types (mapcar (lambda (item) (pb/keyword (km/get item :type))) context))
-                        (type-counts (seq-reduce
-                                      (lambda (acc type)
-                                        (km/upd acc type (pb/fn [c] (1+ (or c 0)))))
-                                      types
-                                      nil)))
-                   ;; Context name with bullet and count
-                   (insert (propertize "• " 'face '(:foreground "pink"))
-                           name
-                           "\n")
+                      (help-mode)
+                      (goto-char (point-min))))
+                  (pop-to-buffer buf)))
 
-                   ;; Types section with different face
-                   (let ((type-strs
-                          (mapcar (pb/fn [(cons type count)]
-                                         (concat (propertize (pb/string type) 'face 'font-lock-doc-face)
-                                                 (propertize (format " %d" count)
-                                                             'face 'font-lock-type-face)))
-                                  (km/entries type-counts))))
-                     (insert "  ")
-                     (insert (mapconcat #'identity type-strs ", "))
-                     (insert "\n\n"))))))
-
-           (goto-char (point-min))
-           (pb-prompt/saved-contexts-mode)
-           (setq-local header-line-format
-                       (propertize "RET: open, d: delete, l: load, a: append, ?: help, q: quit"
-                                   'face 'header-line))
-           (switch-to-buffer (current-buffer))
-           (if focus-name
-               (pb-prompt/focus-item-by-name focus-name)
-             (pb-prompt/goto-next-item))))
-
-       (defun pb-prompt/exit-saved-contexts ()
-         "Exit the saved contexts buffer, kill the buffer, and quit the window."
-         (interactive)
-         (let ((buffer (current-buffer)))
-           (quit-window t)))
-
-       (progn :context-actions
-
-              (defun pb-prompt/save-context (name)
-                "Save the current context with NAME for later retrieval.
-                 If a context with NAME already exists, it will be overwritten after confirmation."
-                (interactive "sSave context as: ")
-                (when (and (gethash name pb-prompt/saved-contexts)
-                           (not (yes-or-no-p (format "Context '%s' already exists. Overwrite? " name))))
-                  (user-error "Aborted"))
-
-                (puthash name
-                         (copy-tree pb-prompt/context)
-                         pb-prompt/saved-contexts)
-
-                (pb-prompt/save-contexts-to-file)
-
-                (message "Context saved as '%s'" name))
-
-              (defun pb-prompt/load-context (name)
-                "Load a previously saved context with NAME.
-                 If the current context is not empty, it will be replaced after confirmation."
-                (interactive
-                 (list (completing-read "Load context: "
-                                        (hash-table-keys pb-prompt/saved-contexts) nil t)))
-                (let ((saved-context (gethash name pb-prompt/saved-contexts)))
-                  (unless saved-context
-                    (user-error "No context found with name '%s'" name))
-
-                  (when (and pb-prompt/context
-                             (not (yes-or-no-p "Replace current context? ")))
-                    (user-error "Aborted"))
-
-                  (setq pb-prompt/context (copy-tree saved-context))
-                  (message "Loaded context '%s' with %d items"
-                           name (length pb-prompt/context))))
-
-              (defun pb-prompt/append-context (name)
-                "Append items from a saved context with NAME to the current context."
-                (interactive
-                 (list (completing-read "Append context: "
-                                        (hash-table-keys pb-prompt/saved-contexts) nil t)))
-                (let ((saved-context (gethash name pb-prompt/saved-contexts)))
-                  (unless saved-context
-                    (user-error "No context found with name '%s'" name))
-
-                  (setq pb-prompt/context
-                        (append pb-prompt/context (copy-sequence saved-context)))
-                  (message "Appended %d items from context '%s'"
-                           (length saved-context) name)))
-
-              (defun pb-prompt/delete-saved-context (name)
-                "Delete a saved context with NAME."
-                (interactive
-                 (list (completing-read "Delete context: "
-                                        (hash-table-keys pb-prompt/saved-contexts) nil t)))
-                (if (gethash name pb-prompt/saved-contexts)
-                    (progn
-                      (remhash name pb-prompt/saved-contexts)
-                      (message "Deleted context '%s'" name))
-                  (message "No context found with name '%s'" name)))
-
-              (defun pb-prompt/browse-saved-context ()
-                "Browse the context at point in saved contexts buffer."
+              (defun pb-prompt/context-browser-help-menu ()
+                "Display help for context browser keybindings."
                 (interactive)
-                (when-let* ((name (pb-prompt/context-name-at-point))
-                            (trimmed-name (string-trim name))
-                            (context (gethash trimmed-name pb-prompt/saved-contexts)))
-                  (pb-prompt/browse-context trimmed-name))))
+                (pb-prompt/display-help-menu "Context Browser" 'pb-prompt/context-browser-keybindings)))
 
-       (progn :at-point
+       (progn :bindings
 
-              (defun pb-prompt/context-name-at-point ()
-                "Get context name at point in the saved contexts buffer."
-                (save-excursion
-                  (beginning-of-line)
-                  (when (looking-at "• \\(.+\\)")
-                    (match-string-no-properties 1))))
+              (setq pb-prompt/context-browser-keybindings
+                    '((:key "s-f s-s" :desc "Save context"
+                       :category "edition"
+                       :function pb-prompt/save-browsed-context)
+                      (:key "d" :desc "Delete item at point"
+                       :category "edition"
+                       :function pb-prompt/delete-context-item-at-point)
+                      (:key "a f" :desc "Add file/path to context"
+                       :category "edition"
+                       :function pb-prompt/add-path-to-current-context)
+                      (:key "a p" :desc "Add project file or dir to context"
+                       :category "edition"
+                       :function pb-prompt/add-project-file-or-dir-to-current-context)
+                      (:key "x" :desc "Toggle disable item at point"
+                       :category "edition"
+                       :function pb-prompt/toggle-context-item-disabled-at-point)
 
-              (defun pb-prompt/open-context-at-point ()
-                "View the context at point in detail."
+                      (:key "v" :desc "View item details"
+                       :category "display"
+                       :function pb-prompt/view-context-item-at-point)
+                      (:key "r" :desc "Refresh browser"
+                       :category "display"
+                       :function pb-prompt/refresh-context-browser)
+
+                      (:key "RET" :desc "Browse item at point"
+                       :category "navigation"
+                       :function pb-prompt/browse-context-item-at-point)
+                      (:key "q" :desc "Quit window"
+                       :category "navigation"
+                       :function quit-window)
+                      (:key "h" :desc "Go to parent context"
+                       :category "navigation"
+                       :function pb-prompt/browse-parent-context)
+                      (:key "j" :desc "Go to next item"
+                       :category "navigation"
+                       :function pb-prompt/goto-next-item)
+                      (:key "k" :desc "Go to previous item"
+                       :category "navigation"
+                       :function pb-prompt/goto-previous-item)
+                      (:key "l" :desc "Browse child context"
+                       :category "navigation"
+                       :function pb-prompt/browse-child-context)
+
+                      (:key "y" :desc "Copy item at point"
+                       :category "clipboard"
+                       :function pb-prompt/copy-context-item-at-point)
+                      (:key "p" :desc "Yank copied item"
+                       :category "clipboard"
+                       :function pb-prompt/yank-context-item)
+                      (:key "C-p" :desc "Yank item from ring"
+                       :category "clipboard"
+                       :function pb-prompt/yank-context-item-from-ring)
+
+                      (:key "?" :desc "Show help menu"
+                       :category "help"
+                       :function pb-prompt/context-browser-help-menu)))
+
+              (with-eval-after-load 'evil
+                (evil-set-initial-state 'pb-prompt/context-browser-mode 'normal)
+                (dolist (binding pb-prompt/context-browser-keybindings)
+                  (evil-define-key 'normal pb-prompt/context-browser-mode-map
+                    (kbd (km/get binding :key)) (km/get binding :function))))))
+
+(progn :misc
+
+       (progn :git-utils
+
+              (require 'pb-git)
+              (require 'magit)
+
+              (defun pb-prompt/generate-commit-message ()
+                "Generate a commit message using GPT from the current magit diff.
+                 Uses the magit diff buffer to create a prompt with guidelines for commit message
+                 format, then inserts the response into the commit message buffer."
                 (interactive)
-                (let ((name (pb-prompt/context-name-at-point)))
-                  (when name
-                    (let ((context (gethash (string-trim name) pb-prompt/saved-contexts)))
-                      (with-current-buffer (let ((buf (get-buffer "*Context Details*")))
-                                             (when buf (kill-buffer buf))
-                                             (get-buffer-create "*Context Details*"))
-                        (erase-buffer)
-                        (insert (format "Context: %s (%d items)\n\n"
-                                        (string-trim name) (length context)))
-                        (dolist (item context)
-                          (insert (format "Type: %s\n" (km/get item :type)))
-                          (when-let ((id (km/get item :id)))
-                            (insert (format "ID: %s\n" id)))
-                          (when-let ((path (km/get item :path)))
-                            (insert (format "Path: %s\n" path)))
-                          (let ((content (km/get item :content)))
-                            (when content
-                              (insert "Content preview: ")
-                              (let ((preview (if (> (length content) 100)
-                                                 (concat (substring content 0 100) "...")
-                                               content)))
-                                (insert (replace-regexp-in-string "\n" " " preview) "\n"))))
-                          (insert "\n"))
-                        (goto-char (point-min))
-                        (view-mode)
-                        (pop-to-buffer (current-buffer)))))))
+                (let ((prompt (pb-prompt/mk
+                               (km :instructions
+                                   (km :base "You are writing clear and concise git commit messages."
+                                       :task "Generate a git commit message for the changes shown in the diff."
+                                       :guidelines ["Include a brief summary in the first line (preferably under 50 characters)"
+                                                    "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
+                                                    "You can add a more detailed description after a blank line if needed"]
+                                       :diff (pb-git/get-diff-string))))))
 
-              (defun pb-prompt/delete-context-at-point ()
-                "Delete the context at point."
-                (interactive)
-                (when-let ((name (pb-prompt/context-name-at-point)))
-                  (when (yes-or-no-p (format "Delete context '%s'? " (string-trim name)))
-                    (pb-prompt/delete-saved-context (string-trim name))
-                    (pb-prompt/browse-saved-contexts))))
-
-              (defun pb-prompt/load-context-at-point ()
-                "Load the context at point, replacing current context."
-                (interactive)
-                (when-let ((name (pb-prompt/context-name-at-point)))
-                  (pb-prompt/load-context (string-trim name))
-                  (quit-window)))
-
-              (defun pb-prompt/copy-context-at-point ()
-                (interactive)
-                (when-let ((name (pb-prompt/context-name-at-point)))
-                  (add-to-list 'pb-prompt/context-ring
-                               (pb-prompt/with-id
-                                (km :type "context"
-                                    :name name)))))
-
-              (defun pb-prompt/append-context-at-point ()
-                "Append the context at point to current context."
-                (interactive)
-                (when-let ((name (pb-prompt/context-name-at-point)))
-                  (pb-prompt/append-context (string-trim name))
-                  (quit-window))))
-
-       (progn :persist
-
-              (defcustom pb-prompt/contexts-file
-                (expand-file-name "~/.doom.d/pb/llms/pb-prompt-contexts.el")
-                "File where saved contexts are stored between Emacs sessions."
-                :type 'file
-                :group 'pb-prompt)
-
-              (defun pb-prompt/save-context (context filename)
-                "Save the provided CONTEXT to FILENAME.
-                 This function serializes the given context into a file that can be loaded later.
-
-                 Argument CONTEXT is the context data structure to save.
-                 Argument FILENAME is the path to the file where the context will be saved."
-                (with-temp-file filename
-                  (let ((print-length nil)
-                        (print-level nil))
-                    (insert ";; pb-prompt context - automatically generated\n\n")
-                    (insert "'(\n")
-                    (dolist (item context)
-                      (insert (format "  %S\n" item)))
-                    (insert ")\n"))
-                  (message "Saved context to %s" filename)))
-
-              (defun pb-prompt/read-context (filename)
-                "Read FILENAME and return the contained context.
-                 This function reads a serialized context from the specified file and returns it.
-                 Unlike `pb-prompt/load-context-from-file', this function doesn't modify the current context.
-
-                 Argument FILENAME is the path to the file containing the serialized context.
-                 Returns the deserialized context data structure, or nil if the file couldn't be read."
-                (when (and filename (file-exists-p filename) (file-readable-p filename))
-                  (let ((loaded-context nil)
-                        (buffer (find-file-noselect filename t)))
-                    (unwind-protect
-                        (with-current-buffer buffer
+                  ;; Send the request to generate a commit message
+                  (gptel-request
+                      prompt
+                    :callback
+                    (lambda (response _info)
+                      ;; Find the magit commit message buffer
+                      (when-let ((commit-buffer (pb-git/magit-commit-buffer)))
+                        (with-current-buffer commit-buffer
+                          ;; Insert the generated message at the beginning of the buffer
                           (goto-char (point-min))
-                          (condition-case err
-                              (setq loaded-context (eval (read buffer)))
-                            (error
-                             (message "Error reading context from %s: %s"
-                                      filename (error-message-string err))
-                             nil)))
-                      (kill-buffer buffer))
-                    loaded-context)))
+                          (when (save-excursion (re-search-forward "^#" nil t))
+                            (delete-region (point-min) (1- (match-beginning 0))))
+                          (insert response)
+                          (insert "\n")
+                          ;; Notify the user
+                          (message "Generated commit message inserted in magit commit buffer")))))))
 
-              (defun pb-prompt/save-current-context-to-file (filename)
-                "Save the current context to FILENAME.
-                 This function serializes the current context into a file that can be loaded later.
-                 When called interactively, prompts for a filename to save to."
-                (interactive "FSave current context to file: ")
-                (pb-prompt/save-context pb-prompt/context filename)
-                (message "Saved current context to %s" filename))
-
-              (defun pb-prompt/load-context-from-file (filename)
-                "Load a context from FILENAME into the current context.
-                 This function reads a serialized context from the specified file and loads it,
-                 either replacing or merging with the current context depending on user choice.
-                 When called interactively, prompts for a filename to load from."
-                (interactive "FLoad context from file: ")
-                (if (not (file-exists-p filename))
-                    (user-error "File %s does not exist" filename)
-                  (when (file-readable-p filename)
-                    (let ((loaded-context nil)
-                          (buffer (find-file-noselect filename t)))
-                      (unwind-protect
-                          (with-current-buffer buffer
-                            (goto-char (point-min))
-                            (setq loaded-context (eval (read buffer)))
-                            (unless (and (listp loaded-context)
-                                         (cl-every #'km? loaded-context))
-                              (user-error "File does not contain a valid context structure")))
-                        (kill-buffer buffer))
-
-                      ;; Ask user what to do with the loaded context
-                      (if (and pb-prompt/context
-                               (not (seq-empty-p pb-prompt/context)))
-                          (let ((choice (read-char-choice
-                                         "What to do with loaded context? [r]eplace, [a]ppend, [m]erge, [c]ancel: "
-                                         '(?r ?a ?m ?c))))
-                            (cond
-                             ((eq choice ?r)
-                              (setq pb-prompt/context loaded-context)
-                              (message "Replaced current context with %d loaded items" (length loaded-context)))
-                             ((eq choice ?a)
-                              (setq pb-prompt/context (append pb-prompt/context loaded-context))
-                              (message "Appended %d items to current context" (length loaded-context)))
-                             ((eq choice ?m)
-                              ;; Merge by adding items that don't have duplicate IDs
-                              (let ((merged-count 0))
-                                (dolist (item loaded-context)
-                                  (when (pb-prompt/add-context-item pb-prompt/context item)
-                                    (setq merged-count (1+ merged-count))))
-                                (message "Merged %d unique items into current context" merged-count)))
-                             (t
-                              (message "Context loading cancelled"))))
-                        ;; No existing context, just load
-                        (setq pb-prompt/context loaded-context)
-                        (message "Loaded context with %d items" (length loaded-context)))))))
-
-              (defun pb-prompt/save-contexts-to-file ()
-                "Save all contexts to `pb-prompt/contexts-file'."
+              (defun pb-prompt/commit ()
+                "Create a new commit with an AI-generated commit message.
+                 Starts the commit process and uses a timer to generate the message after
+                 the commit buffer is created."
                 (interactive)
-                (with-temp-file pb-prompt/contexts-file
-                  (let ((print-length nil)
-                        (print-level nil))
-                    (insert ";; pb-prompt saved contexts - automatically generated\n\n")
-                    (insert "(setq pb-prompt/saved-contexts (make-hash-table :test 'equal))\n\n")
-                    (maphash (lambda (name context)
-                               (insert (format "(puthash %S '(" (substring-no-properties name)))
-                               (dolist (item context)
-                                 (insert (format "\n  %S" item)))
-                               (insert ")\n pb-prompt/saved-contexts)\n\n"))
-                             pb-prompt/saved-contexts))
-                  (message "Saved contexts to %s" pb-prompt/contexts-file)))
+                (magit-commit-create)
+                (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
 
-              (defun pb-prompt/load-contexts-from-file ()
-                "Load contexts from `pb-prompt/contexts-file'."
+              (defun pb-prompt/commit-amend ()
+                "Amend the current commit with an AI-generated commit message.
+                 Opens the amend commit buffer and uses a timer to generate a new
+                 commit message based on the updated diff."
                 (interactive)
-                (when (file-exists-p pb-prompt/contexts-file)
-                  (load-file pb-prompt/contexts-file)
-                  (message "Loaded %d saved contexts" (hash-table-count pb-prompt/saved-contexts))))
+                (magit-commit-amend)
+                (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
 
-              ;; Automatically load saved contexts when package is loaded
-              (with-eval-after-load 'pb-prompt
-                (pb-prompt/load-contexts-from-file))
+              (defun pb-prompt/diff-branch ()
+                "Compare current branch with another and discuss changes with GPT.
+                 Prompts for a branch to compare against, creates a diff, and opens a chat
+                 buffer with the diff content to analyze changes using GPT."
+                (interactive)
+                (with-temp-buffer
+                  (let* ((current-branch (magit-get-current-branch))
+                         (branches (magit-list-branch-names))
+                         (selected-branch (completing-read
+                                           (format "Compare %s with branch: " current-branch)
+                                           (seq-remove (lambda (branch) (string= branch current-branch))
+                                                       branches)
+                                           nil t))
+                         (chat-buffer-name (format "CHAT_DIFF_%s_%s" current-branch selected-branch))
+                         (diff-buffer (magit-diff-range selected-branch))
+                         (diff-output (with-current-buffer diff-buffer
+                                        (buffer-string))))
+                    ;; Now create a chat buffer with the diff content
+                    (with-current-buffer (get-buffer-create chat-buffer-name)
+                      (org-mode)
+                      (erase-buffer)
+                      (gptel-mode)
+                      (setq-local gptel--system-message
+                                  (pb-prompt/mk
+                                   (km :context
+                                       (km :diff-content
+                                           (km :current-branch current-branch
+                                               :compared-branch selected-branch
+                                               :diff diff-output))
+                                       :instructions
+                                       (km :base "You are a helpful code assistant analyzing git diffs."
+                                           :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
+                                                             "All org headings are level 3, 4, 5 ..."
+                                                             "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
+                                           :task "Analyze this git diff and provide a summary of the changes.")))
+                                  gptel-use-tools nil
+                                  gptel-max-tokens 32768)
 
-              ;; Add hook to save contexts when Emacs exits
-              (add-hook 'kill-emacs-hook #'pb-prompt/save-contexts-to-file)))
+                      (evil-normal-state)
+                      (symex-mode -1)
 
-(progn :git-utils
+                      ;; Add key bindings similar to other chat buffers
+                      (evil-define-key nil 'local (kbd "s-q <return>")
+                        (lambda () (interactive)
+                          (call-interactively #'gptel-send)
+                          (evil-insert-newline-below)
+                          (goto-char (point-max))))
 
-       (require 'pb-git)
-       (require 'magit)
+                      ;; Insert the header content
+                      (insert (format "* Diff: %s..%s\n\n" current-branch selected-branch))
+                      (insert "** Analyze this diff between branches\n\n")
 
-       (defun pb-prompt/generate-commit-message ()
-         "Generate a commit message using GPT from the current magit diff.
-          Uses the magit diff buffer to create a prompt with guidelines for commit message
-          format, then inserts the response into the commit message buffer."
-         (interactive)
-         (let ((prompt (pb-prompt/mk
-                        (km :instructions
-                            (km :base "You are writing clear and concise git commit messages."
-                                :task "Generate a git commit message for the changes shown in the diff."
-                                :guidelines ["Include a brief summary in the first line (preferably under 50 characters)"
-                                             "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
-                                             "You can add a more detailed description after a blank line if needed"]
-                                :diff (pb-git/get-diff-string))))))
+                      ;; Position for GPT response
+                      (goto-char (point-max))
 
-           ;; Send the request to generate a commit message
-           (gptel-request
-               prompt
-             :callback
-             (lambda (response _info)
-               ;; Find the magit commit message buffer
-               (when-let ((commit-buffer (pb-git/magit-commit-buffer)))
-                 (with-current-buffer commit-buffer
-                   ;; Insert the generated message at the beginning of the buffer
-                   (goto-char (point-min))
-                   (when (save-excursion (re-search-forward "^#" nil t))
-                     (delete-region (point-min) (1- (match-beginning 0))))
-                   (insert response)
-                   (insert "\n")
-                   ;; Notify the user
-                   (message "Generated commit message inserted in magit commit buffer")))))))
-
-       (defun pb-prompt/commit ()
-         "Create a new commit with an AI-generated commit message.
-          Starts the commit process and uses a timer to generate the message after
-          the commit buffer is created."
-         (interactive)
-         (magit-commit-create)
-         (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
-
-       (defun pb-prompt/commit-amend ()
-         "Amend the current commit with an AI-generated commit message.
-          Opens the amend commit buffer and uses a timer to generate a new
-          commit message based on the updated diff."
-         (interactive)
-         (magit-commit-amend)
-         (run-with-timer 0.5 nil #'pb-prompt/generate-commit-message))
-
-       (defun pb-prompt/diff-branch ()
-         "Compare current branch with another and discuss changes with GPT.
-          Prompts for a branch to compare against, creates a diff, and opens a chat
-          buffer with the diff content to analyze changes using GPT."
-         (interactive)
-         (with-temp-buffer
-           (let* ((current-branch (magit-get-current-branch))
-                  (branches (magit-list-branch-names))
-                  (selected-branch (completing-read
-                                    (format "Compare %s with branch: " current-branch)
-                                    (seq-remove (lambda (branch) (string= branch current-branch))
-                                                branches)
-                                    nil t))
-                  (chat-buffer-name (format "CHAT_DIFF_%s_%s" current-branch selected-branch))
-                  (diff-buffer (magit-diff-range selected-branch))
-                  (diff-output (with-current-buffer diff-buffer
-                                 (buffer-string))))
-             ;; Now create a chat buffer with the diff content
-             (with-current-buffer (get-buffer-create chat-buffer-name)
-               (org-mode)
-               (erase-buffer)
-               (gptel-mode)
-               (setq-local gptel--system-message
-                           (pb-prompt/mk
-                            (km :context
-                                (km :diff-content
-                                    (km :current-branch current-branch
-                                        :compared-branch selected-branch
-                                        :diff diff-output))
-                                :instructions
-                                (km :base "You are a helpful code assistant analyzing git diffs."
-                                    :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
-                                                      "All org headings are level 3, 4, 5 ..."
-                                                      "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
-                                    :task "Analyze this git diff and provide a summary of the changes.")))
-                           gptel-use-tools nil
-                           gptel-max-tokens 32768)
-
-               (evil-normal-state)
-               (symex-mode -1)
-
-               ;; Add key bindings similar to other chat buffers
-               (evil-define-key nil 'local (kbd "s-q <return>")
-                 (lambda () (interactive)
-                   (call-interactively #'gptel-send)
-                   (evil-insert-newline-below)
-                   (goto-char (point-max))))
-
-               ;; Insert the header content
-               (insert (format "* Diff: %s..%s\n\n" current-branch selected-branch))
-               (insert "** Analyze this diff between branches\n\n")
-
-               ;; Position for GPT response
-               (goto-char (point-max))
-
-               ;; Switch to the buffer and start in insert mode
-               (switch-to-buffer (current-buffer))
-               (evil-insert-state)
-               (gptel-send))))))
+                      ;; Switch to the buffer and start in insert mode
+                      (switch-to-buffer (current-buffer))
+                      (evil-insert-state)
+                      (gptel-send)))))))
 
 (provide 'pb-prompt)
 
 ;;; examples
 
-[(pb-prompt/update-focused-context
+[(pb-prompt/update-current-context
   (lambda (ctx)
     (seq-filter (lambda (item)
                   (km/get item :type))

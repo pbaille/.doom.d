@@ -206,28 +206,13 @@
                       (:desc "chat: directory"
                              "s-d" #'pb-gptel/directory-chat)
 
-                      ;; pb-prompt
-
-                      (:desc "prompt: consult-context"
-                             "s-c" #'pb-prompt/browse-context-item)
-
-                      (:desc "prompt: simple request"
-                             "r" #'pb-prompt/simple-request)
-
-                      (:desc "prompt: browse saved contexts"
-                             "s-i" #'pb-prompt/browse-saved-contexts)
-
-                      (:desc "prompt: browse current context"
-                             "i" #'pb-prompt/browse-current-context)
-
                       ;; git
                       (:prefix ("g" . "git:")
                                (:desc "generate commit message" "m" #'pb-prompt/generate-commit-message))))
 
        (map! (:prefix ("s-c" . "prompt: context")
-                      (:desc "browse" "c" #'pb-prompt/browse-context)
                       (:desc "display" "C-e" #'pb-prompt/display-context)
-                      (:desc "local context" "s-c" #'pb-prompt/open-context)
+                      (:desc "local context" "s-c" #'pb-prompt/browse-context-file)
                       (:prefix ("a" . "add")
                                (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
                                (:desc "add file to context" "f" #'pb-prompt/add-path)
