@@ -90,18 +90,7 @@
                (let ((spaces (make-string (or indent-size 2) ?\s)))
                  (replace-regexp-in-string
                   "^\\(.\\)" (concat spaces "\\1") content))
-             content)))
-
-       (defun pb-prompt/current-file ()
-         "Get the filename associated with the current buffer.
-          This function detects the appropriate file path based on the current buffer's mode:
-          - For dired or dired-sidebar buffers, returns the filename at point using `dired-get-filename`
-          - For all other buffers, returns the buffer's file path using `buffer-file-name`
-          Returns nil if no file is associated with the buffer."
-         (cond
-          ((member major-mode '(dired-mode dired-sidebar-mode))
-           (dired-get-filename))
-          (t (buffer-file-name)))))
+             content))))
 
 (progn :local-context
 
@@ -114,21 +103,15 @@
           If FILE is nil, use the current buffer's file or dired directory if in dired-mode.
           When CREATE is non-nil, create the context file if it doesn't exist.
           Returns a plist with :file, :exists, :meta-dir, :target-file, and :created properties."
-         (when-let ((target-file (or file (pb-prompt/current-file))))
-           (let* ((target-file (pb-meta/goto-main-file))
-                  (meta-dir (pb-meta/-ensure-file-meta-dir target-file))
+         (when-let ((target-file (pb-meta/get-main-file file)))
+           (let* ((meta-dir (pb-meta/ensure-meta-dir target-file))
                   (context-file (when meta-dir (f-join meta-dir "context.el")))
                   (existed (and context-file (f-exists-p context-file)))
                   (created nil))
 
              ;; Create the context file if requested and it doesn't exist
              (when (and context-file (not existed))
-               (pb-prompt/save-context
-                (list (cond ((file-regular-p target-file)
-                             (pb-prompt/mk-file-item target-file))
-                            ((file-directory-p target-file) ())
-                            (t ())))
-                context-file)
+               (pb-prompt/save-context () context-file)
                (setq created t))
 
              (km :file context-file
@@ -722,11 +705,13 @@
                      ()))))
 
               (defun pb-prompt/path-context-km (path)
-                (let* ((tree-path (seq-map #'pb/keyword (f-split path))))
-                  (pb->_ (pb-prompt/path->tree path)
-                         (pb-tree/get-path-values _ tree-path)
-                         (seq-keep (pb/fn [(km/keys context)] context) _)
-                         (apply #'append _)))))
+                (pb-prompt/context-km
+                 (append (seq-mapcat (pb/fn [p] (pb-prompt/read-context (f-join p "context.el")))
+                                     (pb-meta/get-parent-meta-dirs path))
+                         (when (f-file-p path)
+                           (list (pb-prompt/mk-file-item (pb-meta/get-main-file path))))
+                         (when (pb-meta/meta-file? path)
+                           (list (pb-prompt/mk-file-item path)))))))
 
        (defun pb-prompt/context-prompt (&optional context)
          "Generate a prompt from the current context.
@@ -784,6 +769,7 @@
           Otherwise uses current selection or expression at point."
          (interactive)
          (let ((selection (pb-prompt/mk-selection-context-item)))
+           (print (pb-prompt/mk (pb-prompt/path-context-km (pb-misc/get-current-file))))
            (gptel-request
                (pb-prompt/mk (km/merge
                               (pb-prompt/query-base-instruction)
@@ -801,7 +787,7 @@
                               (when-let ((instructions (km/get options :instructions)))
                                 (km :instructions instructions))))
 
-             :system "system" ;`(pb-prompt/mk (pb-prompt/path-context-km (buffer-file-name)))
+             :system (pb-prompt/mk (pb-prompt/path-context-km (pb-misc/get-current-file)))
              :callback (or (km/get options :callback)
                            #'pb-prompt/query-handler))
 
