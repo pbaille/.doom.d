@@ -16,7 +16,7 @@
 
 (defmacro pb-tree (value &rest children)
   "Create a tree structure from nested node expressions.
-BODY should be a node expression, which can contain nested node expressions."
+   BODY should be a node expression, which can contain nested node expressions."
   `(km
     :value ,value
     :children (km ,@(km/map-vals children
@@ -40,7 +40,7 @@ BODY should be a node expression, which can contain nested node expressions."
 
 (defun pb-tree/path (path)
   "Generate a path for traversing a tree structure.
-Interleaves :children with elements of PATH to create the path."
+   Interleaves :children with elements of PATH to create the path."
   (let ((path (cond ((keywordp path) (list path))
                     ((vectorp path) (append path ()))
                     (t path))))
@@ -58,6 +58,19 @@ Interleaves :children with elements of PATH to create the path."
 (defun pb-tree/get-value (tree path)
   "Get the value at PATH in TREE."
   (km/get (pb-tree/get tree path) :value))
+
+(defun pb-tree/put (tree path x)
+  "Set the node at PATH in TREE to X.
+   If PATH doesn't exist yet, creates the necessary structure.
+   Returns a new tree with the updated node."
+  (let ((path-list (cond ((keywordp path) (list path))
+                         ((vectorp path) (append path nil))
+                         (t path))))
+    (if (null path-list)
+        (if (pb-tree? x) x (pb-tree* x))
+      (let ((node-x (if (pb-tree? x) x (pb-tree* x)))
+            (path-keywords (pb-tree/path path-list)))
+        (km/put tree path-keywords node-x)))))
 
 (defun pb-tree/get-children (tree path)
   "Get the children of the node at PATH in TREE."
@@ -77,18 +90,18 @@ Interleaves :children with elements of PATH to create the path."
   "Traverse the TREE with PATH, accumulating intermediate values and returning a list of them."
   (if (pb-tree/contains? tree path)
       (pb/let [(km/keys values node) (pb-tree/traverse tree path)]
-          (seq-reverse
-           (cons (pb-tree/value node)
-                 values)))))
+        (seq-reverse
+         (cons (pb-tree/value node)
+               values)))))
 
 (defun pb-tree/merge (tree1 tree2)
   "Merge two trees TREE1 and TREE2 into a new tree.
-Starts with the value of TREE2 as the root value and recursively
-merges the children of TREE1 and TREE2 recursively.
+   Starts with the value of TREE2 as the root value and recursively
+   merges the children of TREE1 and TREE2 recursively.
 
-TREE1 and TREE2 are expected to be trees created by `pb-tree` or `pb-tree/node`.
+   TREE1 and TREE2 are expected to be trees created by `pb-tree` or `pb-tree/node`.
 
-Returns a new tree with the merged structure."
+   Returns a new tree with the merged structure."
   (pb/if
    (not (pb-tree? tree1)) tree2
    (not (pb-tree? tree2)) tree1
@@ -101,15 +114,15 @@ Returns a new tree with the merged structure."
 
 (defun pb-tree/select (tree x)
   "Select a subset of TREE according to the selector X.
-TREE is a tree created with `pb-tree` or `pb-tree*`.
-X can be:
-- A keyword: selects only the subtree at that key path
-- A vector: selects a nested path through the tree
-- A keyword map: for each key in the map, selects corresponding subtrees
+   TREE is a tree created with `pb-tree` or `pb-tree*`.
+   X can be:
+   - A keyword: selects only the subtree at that key path
+   - A vector: selects a nested path through the tree
+   - A keyword map: for each key in the map, selects corresponding subtrees
   where values determine further selection in those subtrees
-- nil or empty: returns the entire tree
+   - nil or empty: returns the entire tree
 
-Returns a new tree containing only the selected parts of the original tree."
+   Returns a new tree containing only the selected parts of the original tree."
   (pb/if
    (keywordp x) (pb-tree* (pb-tree/value tree)
                           (km x (pb-tree/get tree x)))
@@ -137,8 +150,8 @@ Returns a new tree containing only the selected parts of the original tree."
 
 (defun pb-tree/run-tests ()
   "Run tests to verify the `pb-tree` macro and `pb-tree/node` function.
-The tests check if the `pb-tree` macro correctly expands to the expected `pb-tree/node`
-structure and that the resulting tree structure matches the desired nested format."
+   The tests check if the `pb-tree` macro correctly expands to the expected `pb-tree/node`
+   structure and that the resulting tree structure matches the desired nested format."
   (cl-assert
    (equal
     (macroexpand '(pb-tree "root node"
@@ -258,6 +271,32 @@ structure and that the resulting tree structure matches the desired nested forma
                       :b "B"
                       :c "C")))))
 
+  (progn :pb-tree/put
+         (cl-assert
+          (let* ((tree (pb-tree "root"
+                                :a (node "A"
+                                         :aa "AA")
+                                :b "B"))
+                 (updated-tree (pb-tree/put tree [:a :aa] "updated-AA"))
+                 (extended-tree (pb-tree/put tree [:a :new-node] "New Node"))
+                 (new-subtree (pb-tree/put tree [:c] (pb-tree "C"
+                                                              :cc "CC"))))
+            (and
+             ;; Test updating existing node
+             (equal (pb-tree/get-value updated-tree [:a :aa]) "updated-AA")
+
+             ;; Test adding new node to existing path
+             (equal (pb-tree/get-value extended-tree [:a :new-node]) "New Node")
+
+             ;; Test adding entirely new path
+             (equal (pb-tree/get-value new-subtree [:c]) "C")
+             (equal (pb-tree/get-value new-subtree [:c :cc]) "CC")
+
+             ;; Test that original tree is unchanged
+             (equal (pb-tree/get-value tree [:a :aa]) "AA")
+             (not (pb-tree/contains? tree [:a :new-node]))
+             (not (pb-tree/contains? tree [:c]))))))
+
   (progn :pb-tree/select
 
          (defvar pb-tree/ex1
@@ -274,6 +313,17 @@ structure and that the resulting tree structure matches the desired nested forma
           (and (km/eq (pb-tree/select pb-tree/ex1
                                       ())
                       pb-tree/ex1)
+
+               (km/eq (pb-tree/select pb-tree/ex1
+                                      (km :child1 nil
+                                          :child2 :grandchild-2-1))
+                      (pb-tree "root node"
+                               :child1 (node "child1"
+                                             :grandchild-1-1 (node "foo")
+                                             :grandchild-1-2 (node "bar"))
+
+                               :child2 (node "child2"
+                                             :grandchild-2-1 (node "foo2"))))
 
                (km/eq (pb-tree/select pb-tree/ex1
                                       :child1)

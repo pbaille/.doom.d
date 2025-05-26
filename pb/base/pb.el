@@ -93,7 +93,7 @@
    forms
    x))
 
-(defmacro pb->/ (&rest forms)
+(defmacro pb->_ (&rest forms)
   "Thread the first argument into following FORMS.
    using the _ placeholder to determine threaded value positioning."
   (cl-destructuring-bind (ret . bindings) (reverse forms)
