@@ -44,7 +44,9 @@
          "Ensure meta directory exists for FILE."
          (let ((meta-dir (pb-meta/-get-meta-dir file)))
            (unless (f-exists-p meta-dir)
-             (f-mkdir meta-dir))
+             (condition-case err
+                 (f-mkdir meta-dir)
+               (error nil)))
            meta-dir))
 
        (defun pb-meta/-get-file-basename (file)
@@ -64,7 +66,9 @@
          "Ensure file-specific meta directory exists for FILE."
          (let ((file-meta-dir (pb-meta/-get-file-meta-dir file)))
            (unless (f-exists-p file-meta-dir)
-             (f-mkdir-full-path file-meta-dir))
+             (condition-case err
+                 (f-mkdir-full-path file-meta-dir)
+               (error nil)))
            file-meta-dir))
 
        (defun pb-meta/-get-current-file ()
@@ -75,7 +79,25 @@
          (cond ((member major-mode '(dired-mode dired-sidebar-mode))
                 (dired-get-filename))
                ((buffer-file-name))
-               (t default-directory))))
+               (t default-directory)))
+
+       (defun pb-meta/-get-parent-meta-dirs (file)
+         "Get the list of all existing parent meta directories of FILE."
+         (let* ((path (if (f-directory-p file)
+                          file
+                        (f-dirname file)))
+                (parents (f-split path))
+                (current-path "")
+                (meta-dirs '()))
+           ;; Build paths from root to the file location
+           (dolist (part parents)
+             (setq current-path (f-join current-path part))
+             (let ((meta-path (f-join current-path pb-meta/directory-name)))
+               ;; If a meta directory exists at this level, add it to the list
+               (when (f-directory-p meta-path)
+                 (push meta-path meta-dirs))))
+           ;; Return directories in order from closest to furthest
+           (nreverse meta-dirs))))
 
 (progn :create
 
