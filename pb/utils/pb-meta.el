@@ -20,6 +20,7 @@
 (require 'f)
 (require 'consult)
 (require 'org)
+(require 'pb-misc)
 
 (defgroup pb-meta nil
   "Options for pb-meta."
@@ -32,61 +33,43 @@
 
 (progn :utils
 
-       (defun pb-meta/-get-meta-dir (file)
+       (defun pb-meta/get-meta-dir (file)
          "Get the meta directory for FILE."
-         (let* ((dir (if (f-directory-p file)
-                         file
-                       (f-dirname file)))
-                (meta-dir (f-join dir pb-meta/directory-name)))
-           meta-dir))
+         (f-join (f-dirname file)
+                 pb-meta/directory-name
+                 (f-filename file)))
 
-       (defun pb-meta/-ensure-meta-dir (file)
+       (defun pb-meta/ensure-meta-dir (file)
          "Ensure meta directory exists for FILE."
-         (let ((meta-dir (pb-meta/-get-meta-dir file)))
+         (let ((meta-dir (pb-meta/get-meta-dir file)))
            (unless (f-exists-p meta-dir)
-             (condition-case err
-                 (f-mkdir meta-dir)
-               (error nil)))
+             (condition-case _ (f-mkdir-full-path meta-dir) (error nil)))
            meta-dir))
 
-       (defun pb-meta/-get-file-basename (file)
-         "Get the base name of FILE without extension."
-         (file-name-sans-extension (f-filename file)))
+       (defun pb-meta/meta-file? (file)
+         "Check if FILE is a meta file.
+          Return non-nil if FILE is located in a meta directory."
+         (when file
+           (let ((meta-dir-pattern (concat "/" pb-meta/directory-name "/")))
+             (string-match-p meta-dir-pattern file))))
 
-       (defun pb-meta/-get-file-meta-dir (file)
-         "Get the specific meta directory for FILE.
-          If FILE is a directory, return the meta directory without appending a basename."
-         (let ((meta-dir (pb-meta/-get-meta-dir file)))
-           (if (f-directory-p file)
-               meta-dir
-             (let ((basename (pb-meta/-get-file-basename file)))
-               (f-join meta-dir basename)))))
+       (require 'pb-misc)
 
-       (defun pb-meta/-ensure-file-meta-dir (file)
-         "Ensure file-specific meta directory exists for FILE."
-         (let ((file-meta-dir (pb-meta/-get-file-meta-dir file)))
-           (unless (f-exists-p file-meta-dir)
-             (condition-case err
-                 (f-mkdir-full-path file-meta-dir)
-               (error nil)))
-           file-meta-dir))
+       (defun pb-meta/get-main-file (&optional file)
+         (interactive)
+         (let* ((current-file (or file (pb-misc/get-current-file)))
+                (meta-dir-name pb-meta/directory-name)
+                (meta-dir-pattern (concat "/" meta-dir-name "/")))
+           (if (string-match meta-dir-pattern current-file)
+               (let* ((parts (split-string current-file meta-dir-pattern))
+                      (before-meta (car parts))
+                      (after-meta (cadr parts)))
+                 (f-join before-meta (car (split-string after-meta "/"))))
+             current-file)))
 
-       (defun pb-meta/-get-current-file ()
-         "Get the current file or directory.
-          - In dired mode: the file at point or current directory
-          - In normal buffers: the buffer's file
-          - As fallback: the default directory"
-         (cond ((member major-mode '(dired-mode dired-sidebar-mode))
-                (dired-get-filename))
-               ((buffer-file-name))
-               (t default-directory)))
-
-       (defun pb-meta/-get-parent-meta-dirs (file)
+       (defun pb-meta/get-parent-meta-dirs (file)
          "Get the list of all existing parent meta directories of FILE."
-         (let* ((path (if (f-directory-p file)
-                          file
-                        (f-dirname file)))
-                (parents (f-split path))
+         (let* ((parents (f-split (pb-meta/get-main-file file)))
                 (current-path "")
                 (meta-dirs '()))
            ;; Build paths from root to the file location
@@ -105,9 +88,9 @@
          "Create an org meta file for the current buffer or file at point in dired.
           If CUSTOM-FILENAME is provided, use that instead of prompting."
          (interactive)
-         (let* ((file (pb-meta/-get-current-file))
-                (meta-dir (pb-meta/-ensure-file-meta-dir file))
-                (basename (pb-meta/-get-file-basename file))
+         (let* ((file (pb-misc/get-current-file))
+                (meta-dir (pb-meta/ensure-meta-dir file))
+                (basename (f-filename file))
                 (basename (if custom-filename
                               (file-name-sans-extension custom-filename)
                             (read-string "Meta file name: " basename)))
@@ -124,9 +107,9 @@
           The scratch file is created in the meta directory associated with
           the current file. If CUSTOM-FILENAME is provided, use that instead of prompting."
          (interactive)
-         (let* ((file (pb-meta/-get-current-file))
-                (meta-dir (pb-meta/-ensure-file-meta-dir file))
-                (basename (pb-meta/-get-file-basename file))
+         (let* ((file (pb-misc/get-current-file))
+                (meta-dir (pb-meta/ensure-meta-dir file))
+                (basename (f-filename file))
                 (basename (if custom-filename
                               (file-name-sans-extension custom-filename)
                             (read-string "Scratch file name: " (concat basename "-scratch"))))
@@ -160,58 +143,31 @@
              (save-buffer)
              (message "Created new scratch file for %s" basename))))
 
-       (defun pb-meta/create-context-file (&optional custom-filename)
-         "Save current prompt context to a meta file.
-          If CUSTOM-FILENAME is provided, use that as the file name."
-         (interactive)
-         (let* ((file (pb-meta/-get-current-file))
-                (meta-dir (pb-meta/-ensure-file-meta-dir file))
-                (context-file (f-join meta-dir (or custom-filename "context.el"))))
-           (pb-prompt/save-current-context-to-file context-file)
-           (message "Saved context to %s" context-file)))
-
        (defun pb-meta/change-or-create-meta-file ()
          "Find an existing meta file for the current buffer or create one if none exist.
           Works with the current buffer's file or with file at point in dired."
          (interactive)
-         (let* ((file (pb-meta/-get-current-file))
-                (meta-dir (pb-meta/-get-file-meta-dir file)))
-           (if (and (f-exists-p meta-dir)
-                    (not (equal 0 (length (f-files meta-dir nil t)))))
-               ;; Meta directory exists and has files - let user select one
-               (let* ((meta-files (f-files meta-dir nil t))
-                      (file-names (mapcar #'f-filename meta-files))
-                      (selected (consult--read
-                                 file-names
-                                 :prompt "Select meta file: "
-                                 :category 'file
-                                 :require-match nil
-                                 :sort t)))
-                 (if (member selected file-names)
-                     ;; If selection matches an existing file, open it
-                     (find-file (f-join meta-dir selected))
-                   ;; If selection doesn't match, create appropriate file
-                   (cond
-                    ;; Context file
-                    ((string= selected "context.el")
-                     (pb-meta/create-context-file selected))
-                    ;; Org files
-                    ((string-match "\\.org$" selected)
-                     (pb-meta/create-org-file selected))
-                    ;; All other files treated as scratch files
-                    (t
-                     (pb-meta/create-scratch-file selected)))))
-             ;; No meta directory or it's empty - prompt to create a file
-             (let ((choice (completing-read "Create meta file: "
-                                            '("Org Document" "Scratch File" "Context File")
-                                            nil t)))
-               (cond
-                ((string= choice "Org Document")
-                 (pb-meta/create-org-file))
-                ((string= choice "Scratch File")
-                 (pb-meta/create-scratch-file))
-                ((string= choice "Context File")
-                 (pb-meta/create-context-file))))))))
+         (let* ((file (pb-misc/get-current-file))
+                (meta-dir (pb-meta/ensure-meta-dir file))
+                (meta-files (f-files meta-dir nil t))
+                (file-names (mapcar #'f-filename meta-files))
+                (selected (consult--read
+                           file-names
+                           :prompt "Select meta file: "
+                           :category 'file
+                           :require-match nil
+                           :sort t)))
+           (if (member selected file-names)
+               ;; If selection matches an existing file, open it
+               (find-file (f-join meta-dir selected))
+             ;; If selection doesn't match, create appropriate file
+             (cond
+              ;; Org files
+              ((string-match "\\.org$" selected)
+               (pb-meta/create-org-file selected))
+              ;; All other files treated as scratch files
+              (t
+               (pb-meta/create-scratch-file selected)))))))
 
 (progn :find
 
@@ -220,23 +176,9 @@
           This function attempts to determine the main file associated with
           the current meta file and opens it in a buffer."
          (interactive)
-         (let* ((current-file (buffer-file-name))
-                (meta-dir-name pb-meta/directory-name)
-                (meta-dir-pattern (concat "/" meta-dir-name "/")))
-           (if (not (string-match meta-dir-pattern current-file))
-               (message "This doesn't appear to be a meta file.")
-             ;; Extract the main file name from the path
-             (let* ((parts (split-string current-file meta-dir-pattern))
-                    (before-meta (car parts))
-                    (after-meta (cadr parts))
-                    (possible-basename (file-name-sans-extension
-                                        (car (split-string after-meta "/"))))
-                    (dir-to-search before-meta)
-                    (possible-files (directory-files dir-to-search t
-                                                     (concat "^" possible-basename "\\."))))
-               (if possible-files
-                   (find-file (car possible-files))
-                 (message "Could not locate the main file for %s" current-file))))))
+         (if-let* ((main-file (pb-meta/get-main-file)))
+             (find-file main-file)
+           (message "Could not locate the main file for %s" current-file)))
 
        (defun pb-meta/find-all-meta-files ()
          "Find any meta file in the project using consult."
