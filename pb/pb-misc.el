@@ -32,6 +32,16 @@
     (make-directory (file-name-parent-directory file) t)
     (write-region (point-min) (point-max) file t)))
 
+(defun pb-misc/get-current-file ()
+  "Get the current file or directory.
+   - In dired mode: the file at point or current directory
+   - In normal buffers: the buffer's file
+   - As fallback: the default directory"
+  (cond ((member major-mode '(dired-mode dired-sidebar-mode))
+         (dired-get-filename))
+        ((buffer-file-name))
+        (t default-directory)))
+
 (progn :text
        (defun pb-misc/insert-open-paren ()
          "Insert parentheses pair and position cursor between them."
