@@ -11,6 +11,7 @@
 (require 'pb-udp)
 (require 'pb-format)
 (require 'pb-meta)
+(require 'pb-window)
 
 (print "pb-utils loaded")
 
