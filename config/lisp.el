@@ -172,7 +172,7 @@
 
 
           ;; indent, tidy
-          ("<tab>" . pb-sexpr/indent)
+          ("<tab>" . pb-lisp/indent-current-node)
           ("<backtab>" . symex-tidy)
 
           ;; folding
