@@ -562,10 +562,24 @@
          "Quit the tree browser."
          (interactive)
          (let ((buf (current-buffer)))
-           (quit-window)
-           (kill-buffer buf)
-           (widen)
-           (balance-windows)))
+           (if tree-browser/source-buffer
+               (progn (quit-window)
+                      (kill-buffer buf)
+                      (widen)
+                      (balance-windows))
+             (let ((tb-buffers (cl-remove-if-not
+                                (lambda (b)
+                                  (with-current-buffer b
+                                    (derived-mode-p 'tree-browser/mode)))
+                                (buffer-list))))
+               (if tb-buffers
+                   (dolist (tb-buf tb-buffers)
+                     (when-let ((win (get-buffer-window tb-buf)))
+                       (with-selected-window win
+                         (quit-window))
+                       (kill-buffer tb-buf)))
+                 ;; If we can't find any tree browser buffers, just quit the window
+                 (quit-window))))))
 
        (defun tree-browser/goto-source (&optional close-browser)
          "Go to the source location of the node at point.

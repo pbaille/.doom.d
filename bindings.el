@@ -98,6 +98,7 @@
        (map! (:prefix ("s-i" . "info/help")
                       (:desc "doom help menu" "h" help-map)
                       (:desc "imenu" "s-i" #'consult-imenu)
+                      (:desc "imenu quit" "q" #'tree-browser/quit)
                       (:desc "describe function" "f" #'helpful-callable)
                       (:desc "describe face" "F" #'describe-face)
                       (:desc "describe variable" "v" #'helpful-variable)
