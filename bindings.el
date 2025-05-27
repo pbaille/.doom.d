@@ -373,7 +373,7 @@
 
       (:map dired-mode-map
        :nv "H" #'dired-omit-mode
-       :nv "m" #'pb-meta/change-or-create-meta-file
+       :nv "m" #'dired-mark;; #'pb-meta/change-or-create-meta-file
        :nv "C-d" #'dired-hide-details-mode)
 
       (:map messages-buffer-mode-map
