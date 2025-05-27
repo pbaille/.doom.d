@@ -42,8 +42,8 @@
   (setq company-idle-delay nil))
 
 '(use-package nerd-icons-dired
-  :hook
-  (dired-mode . nerd-icons-dired-mode))
+   :hook
+   (dired-mode . nerd-icons-dired-mode))
 
 (use-package nerd-icons-ibuffer
   :ensure t
@@ -59,15 +59,15 @@
     ;; TODO this may have been needed due to brutal erasing of .local
     ;; should have been fixed by running `doom env` ... to check
     (when (string= system-type "darwin")
-         (setq dired-use-ls-dired t
-               insert-directory-program "/usr/local/bin/gls"
-               dired-listing-switches "-aBhl --group-directories-first"))
+      (setq dired-use-ls-dired t
+            insert-directory-program "/usr/local/bin/gls"
+            dired-listing-switches "-aBhl --group-directories-first"))
 
     (setq delete-by-moving-to-trash t)
 
     '(setq dired-omit-files "\\|^\\.[^.]")
     '(setq dired-omit-files
-      (concat dired-omit-files "\\|^\\.[^.]"))
+           (concat dired-omit-files "\\|^\\.[^.]"))
 
     (add-hook 'dired-mode-hook
               (lambda ()
@@ -103,6 +103,11 @@
   (setq git-commit-style-convention-checks
         (remove 'overlong-summary-line git-commit-style-convention-checks)))
 
+
+(use-package vertico
+  :config
+  (setq vertico-buffer-display-action '(display-buffer-below-selected) )
+  (setq vertico-buffer-mode t))
 
 (use-package consult
   :config
