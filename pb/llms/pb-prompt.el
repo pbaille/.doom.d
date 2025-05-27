@@ -159,7 +159,7 @@
 
           Argument CONTEXT is the context data structure to save.
           Argument FILENAME is the path to the file where the context will be saved."
-         (when (and filename context)
+         (when filename
            (condition-case err
                (with-temp-file filename
                  (let ((print-length nil)
@@ -367,9 +367,13 @@
                         :content selection))))
 
               (defun pb-prompt/add-path ()
+                "Let the user choose a file or dir in the minibuffer and add it to the prompt context.
+                 This function prompts the user to select a file or directory and adds it as a context item."
                 (interactive)
-                (when-let ((path (pb-prompt/mk-path-context-item)))
-                  (pb-prompt/add-item! path)))
+                (when-let ((path (read-file-name "Select directory or file: " nil nil t)))
+                  (pb-prompt/add-item!
+                   (km :type (if (f-file-p path) "file" "dir")
+                       :path path))))
 
               (defun pb-prompt/add-buffer ()
                 "Add the current buffer to the prompt context.
@@ -986,8 +990,9 @@
                 (interactive)
                 (when pb-prompt/target-file
                   (pb-prompt/browse-context-file
-                   (file-name-directory
-                    (directory-file-name pb-prompt/target-file))))))
+                   (f-join (pb-meta/ensure-meta-dir
+                            (f-dirname pb-prompt/target-file))
+                           "context.el")))))
 
        (progn :selection
 
@@ -1236,16 +1241,16 @@
               (defun pb-prompt/delete-context-item-at-point ()
                 "Delete the context item at point from the current context."
                 (interactive)
-                (when-let* ((item (pb-prompt/context-item-at-point))
-                            (id (km/get item :id)))
+                (when-let* ((item (pb-prompt/context-item-at-point)))
                   (if (yes-or-no-p (format "Delete item %s? "
                                            (pb-prompt/-context-item-description item)))
-                      (progn
+                      (let ((id (km/get item :id)))
                         (add-to-list 'pb-prompt/context-ring item)
                         (pb-prompt/update-current-context
                          (lambda (ctx)
                            (seq-remove (lambda (i)
-                                         (equal (km/get i :id) id))
+                                         (or (equal (km/get i :id) id)
+                                             (equal i item)))
                                        ctx)))
                         (pb-prompt/refresh-context-browser)
                         (message "Item deleted"))
