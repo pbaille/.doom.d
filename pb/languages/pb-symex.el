@@ -31,7 +31,8 @@
           (symex-mode-interface)
         (evil-normal-state))
     (progn
-      (forward-char)
+      (when (not (eobp))
+        (forward-char))
       (evil-normal-state)
       (pb-symex/select-nearest-in-line)
       (symex-mode-interface))))
