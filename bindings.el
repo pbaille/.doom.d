@@ -111,10 +111,10 @@
        (map! (:prefix ("s-j" . "buffers")
 
                       (:desc "project buffer"
-                             "j" #'consult-project-buffer)
+                             "s-j" #'consult-project-buffer)
 
                       (:desc "consult buffer"
-                             "s-j" #'consult-buffer)
+                             "j" #'consult-buffer)
 
                       (:desc "ibuffer"
                              "s-i" #'ibuffer)
@@ -263,12 +263,17 @@
                       (:desc "delete file" "D" #'doom/delete-this-file)))
 
        (map! (:prefix ("s-d" . "dired")
-                      (:desc "dired" "d" #'dired-jump)
-                      (:desc "dirvish" "s-d" (lambda ()
-                                               (interactive)
-                                               (let ((file buffer-file-name))
-                                                 (dirvish (file-name-directory file))
-                                                 (dirvish-find-entry-a file))))
+                      (:desc "dired" "s-d" (lambda ()
+                                             (interactive)
+                                             (dired-jump)
+                                             (dired-omit-mode 1)
+                                             ;; :( conflicting hook probably...
+                                             (run-at-time 0.01 nil (lambda () (dired-hide-details-mode 1)))))
+                      (:desc "dirvish" "d" (lambda ()
+                                             (interactive)
+                                             (let ((file buffer-file-name))
+                                               (dirvish (file-name-directory file))
+                                               (dirvish-find-entry-a file))))
                       (:desc "sidebar" "s" #'dired-sidebar-toggle-sidebar)
                       (:desc "dired kill all" "s-k" #'pb-misc/kill-all-dired-buffers)))
 
