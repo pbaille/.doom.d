@@ -197,7 +197,7 @@
           ("C-e" . symex-evaluate-pretty)
           ("M-l" . symex-run)
           (";" . pb-symex/toggle-comment)
-          ("<return>" . (lambda () (interactive) (evil-normal-state 1) (symex-mode-interface) (message "already in symex")))))
+          ("<return>" . (lambda () (interactive) (evil-normal-state 1) (symex-mode-interface) (symex--toggle-highlight) (message "already in symex")))))
 
   (symex-initialize)
 
