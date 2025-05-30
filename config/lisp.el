@@ -172,7 +172,9 @@
 
 
           ;; indent, tidy
-          ("<tab>" . pb-lisp/indent-current-node)
+          ("<tab>" . (lambda () (interactive) (if (treesit-parser-list)
+                                                  (pb-lisp/indent-current-node)
+                                                (pb-sexpr/indent))))
           ("<backtab>" . symex-tidy)
 
           ;; folding
