@@ -2,6 +2,8 @@
 
 (setq warning-minimum-log-level :error)
 
+(setq max-mini-window-height 3)
+
 (setq user-script-dir
       (concat doom-user-dir "pb/"))
 
@@ -30,7 +32,7 @@
     (apply fn args)))
 
 (set-popup-rules!
-  '(("^\\*Messages" :ttl t :quit t)))
+ '(("^\\*Messages" :ttl t :quit t)))
 
 (add-hook 'prog-mode-hook
           (lambda () (reveal-mode 1)))
@@ -46,22 +48,22 @@
 (setq pop-up-frames nil)
 
 '(progn
- (defun pb-doom/banner ()
-   (let ((banner '("                                                 "
-                   "███████ ███    ███  █████   ██████ ███████       "
-                   "██      ████  ████ ██   ██ ██      ██            "
-                   "█████   ██ ████ ██ ███████ ██      ███████       "
-                   "██      ██  ██  ██ ██   ██ ██           ██       "
-                   "███████ ██      ██ ██   ██  ██████ ███████       "
-                   "                                                 ")))
-     (insert (propertize (concat (mapconcat #'identity banner "\n") "\n")
-                         'face 'doom-dashboard-banner))))
+   (defun pb-doom/banner ()
+     (let ((banner '("                                                 "
+                     "███████ ███    ███  █████   ██████ ███████       "
+                     "██      ████  ████ ██   ██ ██      ██            "
+                     "█████   ██ ████ ██ ███████ ██      ███████       "
+                     "██      ██  ██  ██ ██   ██ ██           ██       "
+                     "███████ ██      ██ ██   ██  ██████ ███████       "
+                     "                                                 ")))
+       (insert (propertize (concat (mapconcat #'identity banner "\n") "\n")
+                           'face 'doom-dashboard-banner))))
 
- ;; Add to config.el and replace the default banner
- (setq +doom-dashboard-functions
-       (cons #'pb-doom/banner
-             (remove #'+doom-dashboard-ascii-banner
-                     +doom-dashboard-functions))))
+   ;; Add to config.el and replace the default banner
+   (setq +doom-dashboard-functions
+         (cons #'pb-doom/banner
+               (remove #'+doom-dashboard-ascii-banner
+                       +doom-dashboard-functions))))
 
 (progn :shorthand-bug-fix
 
