@@ -708,14 +708,17 @@
                      parent-dirs
                      ()))))
 
+              (defun pb-prompt/path-context (path)
+                (append (seq-mapcat (pb/fn [p] (pb-prompt/read-context (f-join p "context.el")))
+                                    (pb-meta/get-parent-meta-dirs path))
+                        (when (f-file-p path)
+                          (list (pb-prompt/mk-file-item (pb-meta/get-main-file path))))
+                        (when (pb-meta/meta-file? path)
+                          (list (pb-prompt/mk-file-item path)))))
+
               (defun pb-prompt/path-context-km (path)
                 (pb-prompt/context-km
-                 (append (seq-mapcat (pb/fn [p] (pb-prompt/read-context (f-join p "context.el")))
-                                     (pb-meta/get-parent-meta-dirs path))
-                         (when (f-file-p path)
-                           (list (pb-prompt/mk-file-item (pb-meta/get-main-file path))))
-                         (when (pb-meta/meta-file? path)
-                           (list (pb-prompt/mk-file-item path)))))))
+                 (pb-prompt/path-context path))))
 
        (defun pb-prompt/context-prompt (&optional context)
          "Generate a prompt from the current context.
@@ -738,7 +741,19 @@
 
 (progn :request
 
+       (defun pb-prompt/log-response-infos (info)
+         (message
+          (format "\n>>-\n%s\n"
+                  (km/pp (km/merge (km/select-paths info :status :output-tokens :error)
+                                   (km/select-paths (km/get info :data)
+                                                    :model
+                                                    :max_tokens))))))
+
+       (defvar pb-prompt/history nil)
+
        (defun pb-prompt/query-handler (res info)
+         (pb-prompt/log-response-infos info)
+         (add-to-list 'pb-prompt/history (kmq res info) )
          (if res
              (progn
                (cond ((eq major-mode 'org-mode) (pb-org/delete))
@@ -767,13 +782,21 @@
                                       "Don't use markdown code block syntax or any non-valid code in your output."
                                       "If you have to write prose, use appropriate comment syntax."]))))
 
+       (defun pb-prompt/log-query ()
+         (message
+          (format "\n??--\n%s\n"
+                  (km/pp (km :model gptel-model
+                             :system-context (pb-prompt/path-context (pb-misc/get-current-file)))))))
+
        (defun pb-prompt/query (&optional options)
          "Send a GPT request with the current buffer context.
           In Org mode, uses the current Org node as selection.
           Otherwise uses current selection or expression at point."
          (interactive)
-         (let ((selection (pb-prompt/mk-selection-context-item)))
-           (print (pb-prompt/mk (pb-prompt/path-context-km (pb-misc/get-current-file))))
+         (let ((gptel-max-tokens 32768)
+               (selection (pb-prompt/mk-selection-context-item))
+               (system-prompt (pb-prompt/mk (pb-prompt/path-context-km (pb-misc/get-current-file)))))
+           (pb-prompt/log-query)
            (gptel-request
                (pb-prompt/mk (km/merge
                               (pb-prompt/query-base-instruction)
@@ -791,7 +814,7 @@
                               (when-let ((instructions (km/get options :instructions)))
                                 (km :instructions instructions))))
 
-             :system (pb-prompt/mk (pb-prompt/path-context-km (pb-misc/get-current-file)))
+             :system system-prompt
              :callback (or (km/get options :callback)
                            #'pb-prompt/query-handler))
 
