@@ -61,33 +61,35 @@
   (pb/let [values (pb-tree/get-path-values pb-prompt/tree path)]
     (mapconcat #'pb-prompt/mk values "\n\n")))
 
-(defvar pb-gptel/models
-  (append gptel--anthropic-models
-          gptel--openai-models
-          gptel--gemini-models))
+(progn :models
 
-(defun pb-gptel/change-model (&optional globally)
-  "Change the GPT model used for conversations.
+       (defvar pb-gptel/models
+         (append gptel--anthropic-models
+                 gptel--openai-models
+                 gptel--gemini-models))
 
-   This function prompts the user to select a model from the available options,
-   and whether to apply the change globally or just to the current buffer."
-  (interactive)
-  (let* ((scope (completing-read "Apply change: " '("Current buffer only" "Globally (all buffers)") nil t))
-         (globally (string= scope "Globally (all buffers)"))
-         (models (mapcar #'car pb-gptel/models))
-         (current-model (if globally
-                            (default-value 'gptel-model)
-                          gptel-model))
-         (selected-model (completing-read
-                          (format "Select model (current: %s): " current-model)
-                          models nil t)))
-    (when selected-model
-      (if globally
-          (progn
-            (setq-default gptel-model selected-model)
-            (message "Model changed globally to: %s" selected-model))
-        (setq-local gptel-model selected-model)
-        (message "Model changed in current buffer to: %s" selected-model)))))
+       (defun pb-gptel/change-model (&optional globally)
+         "Change the GPT model used for conversations.
+
+          This function prompts the user to select a model from the available options,
+          and whether to apply the change globally or just to the current buffer."
+         (interactive)
+         (let* ((scope (completing-read "Apply change: " '("Current buffer only" "Globally (all buffers)") nil t))
+                (globally (string= scope "Globally (all buffers)"))
+                (models (mapcar #'car pb-gptel/models))
+                (current-model (if globally
+                                   (default-value 'gptel-model)
+                                 gptel-model))
+                (selected-model (completing-read
+                                 (format "Select model (current: %s): " current-model)
+                                 models nil t)))
+           (when selected-model
+             (if globally
+                 (progn
+                   (setq-default gptel-model selected-model)
+                   (message "Model changed globally to: %s" selected-model))
+               (setq-local gptel-model selected-model)
+               (message "Model changed in current buffer to: %s" selected-model))))))
 
 
 (progn :context
@@ -180,289 +182,292 @@
                       (mapconcat #'identity files ", "))))))
 
 (require 'doom-themes)
-(defvar pb-gptel/overlay-color (doom-darken "#232530" 0.2)
-  "Color used to highlight the current s-expression when being edited by GPT.
-   This is a darkened version of the default theme background.")
+(progn :requests
+       (defvar pb-gptel/overlay-color (doom-darken "#232530" 0.2)
+         "Color used to highlight the current s-expression when being edited by GPT.
+          This is a darkened version of the default theme background.")
 
-(defun pb-gptel/current-symex-request-handler (res info)
-  "Replace current symbolic expression with GPT model response.
-   This function handles the response from a GPT model request and replaces
-   the current symbolic expression with that response.
+       (defun pb-gptel/current-symex-request-handler (res info)
+         "Replace current symbolic expression with GPT model response.
+          This function handles the response from a GPT model request and replaces
+          the current symbolic expression with that response.
 
-   The function performs the following steps:
-   1. Enter change mode for the current symbolic expression
-   2. Insert the model's response text in place of the original content
-   3. Restore the symbolic expression navigation interface
-   4. Tidy up the edited expression (proper formatting, indentation, etc.)
+          The function performs the following steps:
+          1. Enter change mode for the current symbolic expression
+          2. Insert the model's response text in place of the original content
+          3. Restore the symbolic expression navigation interface
+          4. Tidy up the edited expression (proper formatting, indentation, etc.)
 
-   Parameters:
-   - RES: The response text from the language model
-   - INFO: A plist containing metadata about the request (provided by gptel)
+          Parameters:
+          - RES: The response text from the language model
+          - INFO: A plist containing metadata about the request (provided by gptel)
 
-   This function is used as the default callback for pb-gptel/current-symex-request."
+          This function is used as the default callback for pb-gptel/current-symex-request."
 
-  ;; this is hardcoding horizon-tweaked theme value :(
-  (progn :style
-         (face-remap-add-relative 'symex--current-node-face
-                                  :background (doom-lighten "#232530" 0.03))
-         (setq evil-symex-state-cursor `("cyan" box)))
-  (symex-change 1)
-  
-  (if res (insert res)
-    (message (km/pp (km :status (km/get info :http-status)
-                        :error (km/get info :error)))))
-  (symex-mode-interface)
-  (symex-tidy))
+         ;; this is hardcoding horizon-tweaked theme value :(
+         (progn :style
+                (face-remap-add-relative 'symex--current-node-face
+                                         :background (doom-lighten "#232530" 0.03))
+                (setq evil-symex-state-cursor `("cyan" box)))
+         (symex-change 1)
 
-(defun pb-gptel/current-symex-request (&optional options)
-  "Request a language model to rewrite the current symbolic expression.
+         (if res (insert res)
+           (message (km/pp (km :status (km/get info :http-status)
+                               :error (km/get info :error)))))
+         (symex-mode-interface)
+         (symex-tidy))
 
-   OPTIONS is a plist or keyword map that may contain:
-   - `prompt`: A string with instructions for the language model (prompted
-   for interactively if not provided)
-   - `callback`: A function to handle the response (defaults to
-   `pb-gptel/replace-current-symex-request-handler` which replaces
-   the current expression)
+       (defun pb-gptel/current-symex-request (&optional options)
+         "Request a language model to rewrite the current symbolic expression.
 
-   This function creates a structured request with the current buffer context,
-   the specified prompt, and the current symbolic expression, then sends it
-   to the language model using `pb-gptel/request`.
+          OPTIONS is a plist or keyword map that may contain:
+          - `prompt`: A string with instructions for the language model (prompted
+          for interactively if not provided)
+          - `callback`: A function to handle the response (defaults to
+          `pb-gptel/replace-current-symex-request-handler` which replaces
+          the current expression)
 
-   When called interactively, prompts for instructions to guide the modification."
-  (interactive)
-  (pb/let [(km/keys prompt callback) options
-           prompt (or prompt
-                      (read-string "Edit current expression: "))]
-    (progn :style
-           (setq evil-symex-state-cursor `("gold" box) )
-           (face-remap-add-relative 'symex--current-node-face
-                                    :background pb-gptel/overlay-color))
-    (pb-gptel/request
+          This function creates a structured request with the current buffer context,
+          the specified prompt, and the current symbolic expression, then sends it
+          to the language model using `pb-gptel/request`.
 
-     (km :context
-         (km :current-file
-             (km :editor "emacs"
-                 :buffer-name (buffer-file-name)
-                 :major-mode (symbol-name major-mode)
-                 :file-content (buffer-substring-no-properties (point-min) (point-max)))
-             :additional-files
-             (pb-gptel/context-files-to-km))
-         :instructions
-         (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
-             :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
-                               "Don't use markdown code block syntax or any non-valid code in your output."
-                               "If you have to write prose, use appropriate comment syntax."]
-             :expression (pb-symex/current-as-string)
-             :task (or prompt
-                       (read-string "Edit current expression: "))))
+          When called interactively, prompts for instructions to guide the modification."
+         (interactive)
+         (pb/let [(km/keys prompt callback) options
+                  prompt (or prompt
+                             (read-string "Edit current expression: "))]
+           (progn :style
+                  (setq evil-symex-state-cursor `("gold" box) )
+                  (face-remap-add-relative 'symex--current-node-face
+                                           :background pb-gptel/overlay-color))
+           (pb-gptel/request
 
-     (km :callback
-         (or callback
-             #'pb-gptel/current-symex-request-handler)))
-    (message "Querying...")))
+            (km :context
+                (km :current-file
+                    (km :editor "emacs"
+                        :buffer-name (buffer-file-name)
+                        :major-mode (symbol-name major-mode)
+                        :file-content (buffer-substring-no-properties (point-min) (point-max)))
+                    :additional-files
+                    (pb-gptel/context-files-to-km))
+                :instructions
+                (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+                    :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
+                                      "Don't use markdown code block syntax or any non-valid code in your output."
+                                      "If you have to write prose, use appropriate comment syntax."]
+                    :expression (pb-symex/current-as-string)
+                    :task (or prompt
+                              (read-string "Edit current expression: "))))
 
-(defun pb-gptel/current-buffer-request (&optional options)
-  "Request a language model to rewrite the current buffer contents.
+            (km :callback
+                (or callback
+                    #'pb-gptel/current-symex-request-handler)))
+           (message "Querying...")))
 
-   OPTIONS is a plist or keyword map that may contain:
-   - `prompt`: A string with instructions for the language model (prompted
-   for interactively if not provided)
-   - `callback`: A function to handle the response (defaults to a
-   function that replaces the entire buffer content)
+       (defun pb-gptel/current-buffer-request (&optional options)
+         "Request a language model to rewrite the current buffer contents.
 
-   This function creates a structured request with the current buffer context,
-   the specified prompt, and sends it to the language model using
-   `pb-gptel/request`. The response will replace the entire buffer content.
+          OPTIONS is a plist or keyword map that may contain:
+          - `prompt`: A string with instructions for the language model (prompted
+          for interactively if not provided)
+          - `callback`: A function to handle the response (defaults to a
+          function that replaces the entire buffer content)
 
-   When called interactively, prompts for instructions to guide the modification."
-  (interactive)
-  (pb/let [(km/keys prompt callback) options]
-    (pb-gptel/request
-     ;; Create a structured prompt with context information
-     (km :context
-         (km :current-file
-             (km :editor "emacs"
-                 :buffer-name (buffer-file-name)
-                 :major-mode (symbol-name major-mode)
-                 :file-content (buffer-substring-no-properties (point-min) (point-max)))
-             :additional-files
-             (pb-gptel/context-files-to-km))
-         :instructions
-         (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
-             :response-format ["Your response should be valid code, intended to replace the whole content of the current buffer."
-                               "Don't use markdown code block syntax or any non-valid code in your output."
-                               "If you have to write prose, use appropriate comment syntax."]
-             :task (or prompt
-                       (read-string "Edit current buffer: "))))
+          This function creates a structured request with the current buffer context,
+          the specified prompt, and sends it to the language model using
+          `pb-gptel/request`. The response will replace the entire buffer content.
 
-     ;; Define the callback to process the response
-     (km :callback
-         (lambda (res info)
-           (with-current-buffer (plist-get info :buffer)
-             (delete-region (point-min) (point-max))
-             (insert res)))))))
+          When called interactively, prompts for instructions to guide the modification."
+         (interactive)
+         (pb/let [(km/keys prompt callback) options]
+           (pb-gptel/request
+            ;; Create a structured prompt with context information
+            (km :context
+                (km :current-file
+                    (km :editor "emacs"
+                        :buffer-name (buffer-file-name)
+                        :major-mode (symbol-name major-mode)
+                        :file-content (buffer-substring-no-properties (point-min) (point-max)))
+                    :additional-files
+                    (pb-gptel/context-files-to-km))
+                :instructions
+                (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+                    :response-format ["Your response should be valid code, intended to replace the whole content of the current buffer."
+                                      "Don't use markdown code block syntax or any non-valid code in your output."
+                                      "If you have to write prose, use appropriate comment syntax."]
+                    :task (or prompt
+                              (read-string "Edit current buffer: "))))
 
-(defun pb-gptel/fill-holes ()
-  "Fill holes (denoted by __) in the current expression.
-   This function sends the current expression to the language model with
-   instructions to complete any placeholder holes marked with __ without
-   modifying the rest of the code. The response will replace the current
-   expression."
-  (interactive)
-  (pb-gptel/current-symex-request
-   (km :prompt "Complete the holes (denoted by __) in the given expression, do not change anything else!")))
+            ;; Define the callback to process the response
+            (km :callback
+                (lambda (res info)
+                  (with-current-buffer (plist-get info :buffer)
+                    (delete-region (point-min) (point-max))
+                    (insert res)))))))
 
-(defun pb-gptel/current-buffer-chat (&optional options)
-  "Create a chat buffer to discuss code with GPT based on OPTIONS.
+       (defun pb-gptel/fill-holes ()
+         "Fill holes (denoted by __) in the current expression.
+          This function sends the current expression to the language model with
+          instructions to complete any placeholder holes marked with __ without
+          modifying the rest of the code. The response will replace the current
+          expression."
+         (interactive)
+         (pb-gptel/current-symex-request
+          (km :prompt "Complete the holes (denoted by __) in the given expression, do not change anything else!"))))
 
-   OPTIONS is a plist or keyword map that may contain:
-   - `prompt': A string with instructions for the language model
-   (prompted for interactively if not provided)
-   - `selection': The code excerpt to discuss (defaults to region if active,
-   otherwise current symbolic expression if not provided)
+(progn :chats
 
-   This function creates a dedicated chat buffer in `org-mode' with the
-   following structure:
-   1. A level-1 header with the file name
-   2. A code block containing the selected code (when provided)
-   3. A level-2 header with the prompt/question
-   4. The GPT response formatted as org content
+       (defun pb-gptel/current-buffer-chat (&optional options)
+         "Create a chat buffer to discuss code with GPT based on OPTIONS.
 
-   The chat buffer is set up for further interaction with the model using
-   gptel-mode, allowing for back-and-forth conversation about the code.
-   After the GPT response is inserted, a new level-2 header is added
-   to continue the conversation."
-  (interactive)
-  (pb/let [(km/keys prompt selection pop-window) options]
-    (let* ((source-buffer (current-buffer))
-           (file-path (buffer-file-name))
-           (file-name (if file-path
-                          (file-name-nondirectory file-path)
-                        (buffer-name)))
-           (chat-buffer-name (concat "CHAT_" file-name)))
+          OPTIONS is a plist or keyword map that may contain:
+          - `prompt': A string with instructions for the language model
+          (prompted for interactively if not provided)
+          - `selection': The code excerpt to discuss (defaults to region if active,
+          otherwise current symbolic expression if not provided)
 
-      (if (get-buffer chat-buffer-name)
-          (if pop-window
-              (pop-to-buffer (get-buffer chat-buffer-name))
-            (switch-to-buffer (get-buffer chat-buffer-name)))
-        (let* ((major-mode-name (symbol-name major-mode))
-               (selection (or selection
-                              (when (use-region-p)
-                                (buffer-substring-no-properties
-                                 (region-beginning)
-                                 (region-end)))))
+          This function creates a dedicated chat buffer in `org-mode' with the
+          following structure:
+          1. A level-1 header with the file name
+          2. A code block containing the selected code (when provided)
+          3. A level-2 header with the prompt/question
+          4. The GPT response formatted as org content
 
-               (full-prompt (km :context
-                                (km :current-file
-                                    (km :editor "emacs"
-                                        :buffer-name (buffer-file-name)
-                                        :major-mode (symbol-name major-mode)
-                                        :file-content (buffer-substring-no-properties (point-min) (point-max)))
-                                    :additional-files
-                                    (pb-gptel/context-files-to-km))
-                                :instructions
-                                (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
-                                    :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
-                                                      "All org headings are level 3, 4, 5 ..."
-                                                      "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
-                                    :expression selection))))
+          The chat buffer is set up for further interaction with the model using
+          gptel-mode, allowing for back-and-forth conversation about the code.
+          After the GPT response is inserted, a new level-2 header is added
+          to continue the conversation."
+         (interactive)
+         (pb/let [(km/keys prompt selection pop-window) options]
+           (let* ((source-buffer (current-buffer))
+                  (file-path (buffer-file-name))
+                  (file-name (if file-path
+                                 (file-name-nondirectory file-path)
+                               (buffer-name)))
+                  (chat-buffer-name (concat "CHAT_" file-name)))
 
-          ;; Create or switch to the chat buffer
-          (with-current-buffer (get-buffer-create chat-buffer-name)
-            (org-mode)
-            (erase-buffer)
-            (gptel-mode)
-            (setq-local gptel--system-message (pb-prompt/mk full-prompt)
-                        gptel-use-tools nil
-                        gptel-max-tokens 32768)
+             (if (get-buffer chat-buffer-name)
+                 (if pop-window
+                     (pop-to-buffer (get-buffer chat-buffer-name))
+                   (switch-to-buffer (get-buffer chat-buffer-name)))
+               (let* ((major-mode-name (symbol-name major-mode))
+                      (selection (or selection
+                                     (when (use-region-p)
+                                       (buffer-substring-no-properties
+                                        (region-beginning)
+                                        (region-end)))))
 
-            (evil-normal-state)
-            (symex-mode -1)
+                      (full-prompt (km :context
+                                       (km :current-file
+                                           (km :editor "emacs"
+                                               :buffer-name (buffer-file-name)
+                                               :major-mode (symbol-name major-mode)
+                                               :file-content (buffer-substring-no-properties (point-min) (point-max)))
+                                           :additional-files
+                                           (pb-gptel/context-files-to-km))
+                                       :instructions
+                                       (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+                                           :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
+                                                             "All org headings are level 3, 4, 5 ..."
+                                                             "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]
+                                           :expression selection))))
 
-            (progn :bindings
-                   (evil-define-key nil 'local (kbd "s-q <return>")
-                     (lambda () (interactive)
-                       (call-interactively #'gptel-send)
-                       (evil-insert-newline-below)
-                       (goto-char (point-max))))
-                   (evil-define-key nil 'local (kbd "s-q b")
-                     (lambda () (interactive)
-                       (switch-to-buffer source-buffer))))
+                 ;; Create or switch to the chat buffer
+                 (with-current-buffer (get-buffer-create chat-buffer-name)
+                   (org-mode)
+                   (erase-buffer)
+                   (gptel-mode)
+                   (setq-local gptel--system-message (pb-prompt/mk full-prompt)
+                               gptel-use-tools nil
+                               gptel-max-tokens 32768)
 
-            ;; Insert the symex as a code block
-            (insert (format "* %s\n\n" file-name))
-            (when selection
-              (insert (format "#+begin_src %s\n%s\n#+end_src\n\n"
-                              (replace-regexp-in-string "-mode$" "" major-mode-name)
-                              selection)))
-            (insert "** ")
+                   (evil-normal-state)
+                   (symex-mode -1)
 
-            ;; Switch to the buffer and position cursor
-            (if pop-window
-                (pop-to-buffer (current-buffer))
-              (switch-to-buffer (current-buffer)))
-            (goto-char (point-max))
-            (evil-insert-state)))))))
+                   (progn :bindings
+                          (evil-define-key nil 'local (kbd "s-q <return>")
+                            (lambda () (interactive)
+                              (call-interactively #'gptel-send)
+                              (evil-insert-newline-below)
+                              (goto-char (point-max))))
+                          (evil-define-key nil 'local (kbd "s-q b")
+                            (lambda () (interactive)
+                              (switch-to-buffer source-buffer))))
 
-(defun pb-gptel/directory-chat ()
-  (interactive)
-  (let* ((dir (read-directory-name "Directory to discuss: "))
-         (chat-buffer-name (read-string "Buffer name: ")))
+                   ;; Insert the symex as a code block
+                   (insert (format "* %s\n\n" file-name))
+                   (when selection
+                     (insert (format "#+begin_src %s\n%s\n#+end_src\n\n"
+                                     (replace-regexp-in-string "-mode$" "" major-mode-name)
+                                     selection)))
+                   (insert "** ")
 
-    (if (get-buffer chat-buffer-name)
-        (switch-to-buffer (get-buffer chat-buffer-name))
-      (let* ((full-prompt (km :context
-                              (km :project-files
-                                  (pb-gptel/directory-to-km dir))
-                              :instructions
-                              (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
-                                  :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
-                                                    "All org headings are level 3, 4, 5 ..."
-                                                    "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]))))
+                   ;; Switch to the buffer and position cursor
+                   (if pop-window
+                       (pop-to-buffer (current-buffer))
+                     (switch-to-buffer (current-buffer)))
+                   (goto-char (point-max))
+                   (evil-insert-state)))))))
 
-        ;; Create or switch to the chat buffer
-        (with-current-buffer (get-buffer-create chat-buffer-name)
-          (org-mode)
-          (erase-buffer)
-          (gptel-mode)
-          (setq-local gptel--system-message (pb-prompt/mk full-prompt)
-                      gptel-use-tools nil
-                      gptel-max-tokens 32768)
-          (evil-normal-state)
-          (symex-mode -1)
+       (defun pb-gptel/directory-chat ()
+         (interactive)
+         (let* ((dir (read-directory-name "Directory to discuss: "))
+                (chat-buffer-name (read-string "Buffer name: ")))
 
-          (progn :bindings
-                 (evil-define-key nil 'local (kbd "s-q <return>")
-                   (lambda () (interactive)
-                     (call-interactively #'gptel-send)
-                     (evil-insert-newline-below)
-                     (goto-char (point-max)))))
+           (if (get-buffer chat-buffer-name)
+               (switch-to-buffer (get-buffer chat-buffer-name))
+             (let* ((full-prompt (km :context
+                                     (km :project-files
+                                         (pb-gptel/directory-to-km dir))
+                                     :instructions
+                                     (km :base "You are a useful code assistant, you really like lisp-like languages and you know how to balance parentheses correctly."
+                                         :response-format ["Your response will be inserted in an org buffer, it should be valid org content"
+                                                           "All org headings are level 3, 4, 5 ..."
+                                                           "Org code blocks should use the syntax: #+begin_src <lang>\n<code block content>\n#+end_src"]))))
 
-          ;; Insert the symex as a code block
-          (insert (format "* %s\n\n" dir))
-          (insert "** ")
+               ;; Create or switch to the chat buffer
+               (with-current-buffer (get-buffer-create chat-buffer-name)
+                 (org-mode)
+                 (erase-buffer)
+                 (gptel-mode)
+                 (setq-local gptel--system-message (pb-prompt/mk full-prompt)
+                             gptel-use-tools nil
+                             gptel-max-tokens 32768)
+                 (evil-normal-state)
+                 (symex-mode -1)
 
-          ;; Switch to the buffer and position cursor
-          (switch-to-buffer (current-buffer))
-          (goto-char (point-max))
-          (evil-insert-state))))))
+                 (progn :bindings
+                        (evil-define-key nil 'local (kbd "s-q <return>")
+                          (lambda () (interactive)
+                            (call-interactively #'gptel-send)
+                            (evil-insert-newline-below)
+                            (goto-char (point-max)))))
 
-(defun pb-gptel/current-symex-chat ()
-  "Create a chat buffer to discuss the current symbolic expression.
-   This function opens a dedicated chat buffer in `org-mode' containing
-   the current symbolic expression and initiates a conversation with GPT.
-   The user will be prompted to enter a question or topic for discussion
-   about the expression. The resulting buffer will contain:
+                 ;; Insert the symex as a code block
+                 (insert (format "* %s\n\n" dir))
+                 (insert "** ")
 
-   1. A header with the current file name
-   2. A code block with the current symbolic expression
-   3. The user's question/prompt
-   4. GPT's response formatted as org content
+                 ;; Switch to the buffer and position cursor
+                 (switch-to-buffer (current-buffer))
+                 (goto-char (point-max))
+                 (evil-insert-state))))))
 
-   The chat buffer supports ongoing conversation through gptel-mode."
-  (interactive)
-  (pb-gptel/current-buffer-chat
-   (km :selection (pb-symex/current-as-string))))
+       (defun pb-gptel/current-symex-chat ()
+         "Create a chat buffer to discuss the current symbolic expression.
+          This function opens a dedicated chat buffer in `org-mode' containing
+          the current symbolic expression and initiates a conversation with GPT.
+          The user will be prompted to enter a question or topic for discussion
+          about the expression. The resulting buffer will contain:
+
+          1. A header with the current file name
+          2. A code block with the current symbolic expression
+          3. The user's question/prompt
+          4. GPT's response formatted as org content
+
+          The chat buffer supports ongoing conversation through gptel-mode."
+         (interactive)
+         (pb-gptel/current-buffer-chat
+          (km :selection (pb-symex/current-as-string)))))
 
 (progn :tools
 
