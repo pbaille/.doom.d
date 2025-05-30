@@ -1425,7 +1425,8 @@
                                (km :instructions
                                    (km :base "You are writing clear and concise git commit messages."
                                        :task "Generate a git commit message for the changes shown in the diff."
-                                       :guidelines ["Include a brief summary in the first line (preferably under 50 characters)"
+                                       :guidelines ["Don't use any code block syntax, just plain text."
+                                                    "Include a brief summary in the first line (preferably under 50 characters)"
                                                     "Start with a capitalized verb in imperative mood (e.g., 'Add', 'Fix', 'Update')"
                                                     "You can add a more detailed description after a blank line if needed"]
                                        :diff (pb-git/get-diff-string))))))
