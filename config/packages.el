@@ -258,7 +258,7 @@
   (advice-add #'gptel-menu :after #'pb-gptel-change-return-key-in-menu)
 
   (setq-default gptel-model
-                "claude-3-7-sonnet-20250219")
+                "claude-sonnet-4-20250514")
 
   (setq gptel-backend
         (gptel-make-anthropic "Claude"          ;Any name you want
