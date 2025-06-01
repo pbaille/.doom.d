@@ -172,9 +172,10 @@
 
 
           ;; indent, tidy
-          ("<tab>" . (lambda () (interactive) (if (treesit-parser-list)
-                                                  (pb-lisp/indent-current-node)
-                                                (pb-sexpr/indent))))
+          ("<tab>" . (lambda () (interactive)
+                       (pb-sexpr/indent)
+                       (when (treesit-parser-list)
+                         (pb-lisp/indent-current-node))))
           ("<backtab>" . symex-tidy)
 
           ;; folding
@@ -197,7 +198,8 @@
           ("C-e" . symex-evaluate-pretty)
           ("M-l" . symex-run)
           (";" . pb-symex/toggle-comment)
-          ("<return>" . (lambda () (interactive) (evil-normal-state 1) (symex-mode-interface) (symex--toggle-highlight) (message "already in symex")))))
+          ("<return>" . (lambda () (interactive) (evil-normal-state 1) (symex-mode-interface) (symex--toggle-highlight) (message "already in symex")))
+          ("<double-mouse-1>" . (lambda () (interactive) (evil-normal-state 1) (symex-mode-interface)))))
 
   (symex-initialize)
 
@@ -237,6 +239,7 @@
    :keymaps pb-config_lisp-modes
    [mouse-1] #'pb-symex/click
    [mouse-3] (lambda (event) (interactive "e") (posn-set-point (event-end event)) (evil-insert-state))
+   [double-mouse-1] #'symex-mode-interface
    ;; "C-w" (lambda () (interactive) (evil-insert 1) (pb-misc/insert-open-paren))
    "RET" #'pb-symex/enter)
 
