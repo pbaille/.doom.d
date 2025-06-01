@@ -166,8 +166,30 @@
                (sq/interleave '(a b c) '(x y)))))
 
   (cl-assert
-   (equal (sq/interpose (list 1 2 3 4) :a)
-          '(1 :a 2 :a 3 :a 4)))
+   (and
+    ;; Basic test case with numbers and keyword separator
+    (equal (sq/interpose (list 1 2 3 4) :a)
+           '(1 :a 2 :a 3 :a 4))
+
+    ;; Test with string separator
+    (equal (sq/interpose (list "a" "b" "c") "-")
+           '("a" "-" "b" "-" "c"))
+
+    ;; Test with symbol separator
+    (equal (sq/interpose (list 'foo 'bar 'baz) 'sep)
+           '(foo sep bar sep baz))
+
+    ;; Test with list separator
+    (equal (sq/interpose (list 1 2 3) '(x y))
+           '(1 (x y) 2 (x y) 3))
+
+    ;; Test with single element list (no separators should be added)
+    (equal (sq/interpose (list 1) :a)
+           '(1))
+
+    ;; Test with empty list (should return empty list)
+    (equal (sq/interpose '() :a)
+           '())))
 
   (cl-assert
    (and (equal (sq/put (list 1 2 3 4) 2 9)
