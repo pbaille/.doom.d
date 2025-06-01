@@ -16,23 +16,23 @@
 (defun sq/split (index seq)
   "Split the sequence SEQ at the given INDEX into two subsequences.
 
-INDEX is the position at which to split SEQ.
-SEQ is the sequence to split.
+   INDEX is the position at which to split SEQ.
+   SEQ is the sequence to split.
 
-Returns a list of two subsequences:
-the first from the beginning of SEQ to INDEX (exclusive)
-and the second from INDEX to the end of SEQ."
+   Returns a list of two subsequences:
+   the first from the beginning of SEQ to INDEX (exclusive)
+   and the second from INDEX to the end of SEQ."
   (list (cl-subseq seq 0 index) (cl-subseq seq index)))
 
 (defun sq/partition (size step seq)
   "Partition SEQ into sublists of SIZE elements, moving by STEP each time.
 
-SIZE is the number of elements in each sublist.
-STEP is the number of elements to move forward for each new sublist.
-SEQ is the sequence to partition.
+   SIZE is the number of elements in each sublist.
+   STEP is the number of elements to move forward for each new sublist.
+   SEQ is the sequence to partition.
 
-Returns a list of sublists, each of SIZE elements,
-until the end of SEQ is reached."
+   Returns a list of sublists, each of SIZE elements,
+   until the end of SEQ is reached."
   (cl-loop for start from 0 to (- (length seq) step) by step
            if (<= (+ start size) (length seq))
            collect (cl-subseq seq start (+ start size))))
@@ -40,11 +40,11 @@ until the end of SEQ is reached."
 (defun sq/range (start end &optional step)
   "Generate a list of numbers from START to END, incrementing by STEP.
 
-START is the beginning of the range.
-END is the upper limit of the range (exclusive).
-STEP is the optional increment value (defaults to 1).
+   START is the beginning of the range.
+   END is the upper limit of the range (exclusive).
+   STEP is the optional increment value (defaults to 1).
 
-Returns a list of numbers from START up to but not including END."
+   Returns a list of numbers from START up to but not including END."
   (cl-loop for i from start below end by (or step 1)
            collect i))
 
@@ -57,10 +57,12 @@ Returns a list of numbers from START up to but not including END."
   (car-safe (reverse lst)))
 
 (defun sq/interleave (list1 list2)
-  "Interleave elements of LIST1 and LIST2."
-  (cl-loop for e1 in list1 and e2 in list2
-           append (if e1 (list e1) '())
-           append (if e2 (list e2) '())))
+  "Interleave elements of LIST1 and LIST2.
+   Returns a new list containing alternating elements from LIST1 and LIST2.
+   The interleaving stops when the shorter list is exhausted."
+  (cl-loop for e1 in list1
+           for e2 in list2
+           nconc (list e1 e2)))
 
 (defun sq/interpose (lst sep)
   "Interpose SEP between elements of LST."
@@ -71,7 +73,7 @@ Returns a list of numbers from START up to but not including END."
 
 (defun sq/take-strict (lst n)
   "Produce a list containing the N first elements of LST.
-Returns nil if LST is shorter than N."
+   Returns nil if LST is shorter than N."
   (let ((taken (take n lst)))
     (if (= n (length taken))
         taken)))
@@ -82,8 +84,8 @@ Returns nil if LST is shorter than N."
 
 (defun sq/put (lst idx v)
   "Put V at IDX in LST.
-returns nil if IDX is out of bounds, except if it is equal to length,
-in this case V is added at the end of the LST."
+   returns nil if IDX is out of bounds, except if it is equal to length,
+   in this case V is added at the end of the LST."
   (if-let ((head (sq/take-strict lst idx)))
       (append head (cons v (sq/drop lst (+ 1 idx))))))
 
@@ -123,9 +125,9 @@ in this case V is added at the end of the LST."
 
 (defun sq/count-by (function sequence)
   "Count elements in SEQUENCE grouped by result of FUNCTION applied to them.
-Returns an alist of (VALUE . COUNT) where VALUE is the result of
-applying FUNCTION to elements of SEQUENCE, and COUNT is the number
-of elements for which FUNCTION returns that value."
+   Returns an alist of (VALUE . COUNT) where VALUE is the result of
+   applying FUNCTION to elements of SEQUENCE, and COUNT is the number
+   of elements for which FUNCTION returns that value."
   (let ((counts (make-hash-table :test 'equal)))
     (seq-doseq (elt sequence)
       (let ((key (funcall function elt)))
