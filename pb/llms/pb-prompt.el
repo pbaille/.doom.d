@@ -122,7 +122,28 @@
 
        (defun pb-prompt/get-local-context (&optional filename)
          (when-let ((ctx (pb-prompt/get-or-create-local-context filename)))
-           (pb-prompt/read-context (km/get ctx :file)))))
+           (pb-prompt/read-context (km/get ctx :file))))
+
+       (defun pb-prompt/current-buffer-km ()
+         (let ((selection (pb-prompt/mk-selection-context-item)))
+           (km :name (buffer-name)
+               :file-path (buffer-file-name)
+               :major-mode (symbol-name major-mode)
+               :point (point)
+               :line-number (line-number-at-pos)
+               :selection (km/get selection :content))))
+
+       (defun pb-prompt/current-mode-km ()
+         (cond ((eq 'org-mode major-mode)
+                (km :base "You are editing an org-mode buffer, you are very aware its tree structure."
+                    :mode (symbol-name major-mode)
+                    :response-format ["For code snippets, use only org src block syntax, you should never use markdown."]))
+               (symex-mode
+                (km :base "You are expert in lisp-like languages, very careful about balancing parentheses correctly."
+                    :mode (symbol-name major-mode)
+                    :response-format ["Your response should be valid source code syntax, accordingly to current mode."
+                                      "Don't use markdown code block syntax or any non-valid code in your output."
+                                      "If you have to write prose, use appropriate comment syntax."])))))
 
 (progn :context
 
@@ -250,8 +271,7 @@
                  (setq-local pb-prompt/context loaded-context)
                  (message "Loaded context with %d items" (length loaded-context)))))))
 
-       (progn :add
-
+       (progn :item
               (defun pb-prompt/with-id (context-item)
                 "Add a unique identifier to CONTEXT-ITEM.
 
@@ -268,17 +288,6 @@
                 (km/put context-item
                         :id
                         (pb/hash context-item)))
-
-              (defun pb-prompt/update-current-context (f)
-                "Update the current context by applying function F to it.
-
-                 This function applies the provided function F to the current context
-                 and updates the buffer-local variable `pb-prompt/context` with the result.
-
-                 Argument F should be a function that takes a context (list of items) and
-                 returns a modified context."
-                (setq-local pb-prompt/context
-                            (funcall f pb-prompt/context)))
 
               (defun pb-prompt/add-item! (item)
                 "Add ITEM to the current context with a unique ID.
@@ -364,7 +373,20 @@
                         :major-mode major-mode
                         :symex symex-mode
                         :at (point)
-                        :content selection))))
+                        :content selection)))))
+
+       (progn :add
+
+              (defun pb-prompt/update-current-context (f)
+                "Update the current context by applying function F to it.
+
+                 This function applies the provided function F to the current context
+                 and updates the buffer-local variable `pb-prompt/context` with the result.
+
+                 Argument F should be a function that takes a context (list of items) and
+                 returns a modified context."
+                (setq-local pb-prompt/context
+                            (funcall f pb-prompt/context)))
 
               (defun pb-prompt/add-path ()
                 "Let the user choose a file or dir in the minibuffer and add it to the prompt context.
@@ -619,23 +641,9 @@
 
        (defun pb-prompt/describe-path (path &optional options)
          "Create a structured representation of a file or directory at PATH.
-          When PATH is a directory, recursively creates a nested structure that
-          includes all non-hidden files and subdirectories.
-
-          For directories, returns a keyword map with the following keys:
-          - :path - the full path
-          - :filename - the name of the directory without parent path
-          - :file-type - always \"directory\"
-          - :children - a list of similar structures for each child node
-
-          For files, returns a keyword map with the following keys:
-          - :path - the full path
-          - :filename - the name of the file without parent path
-          - :file-extension - the file extension if any
-          - :file-type - always \"file\"
-          - :content - the file content as a string
-
-          Returns nil if PATH does not exist or is nil."
+          For directories, returns a nested km structure with children.
+          For files, returns a km with file metadata and content.
+          OPTIONS can include :directories-only to skip file contents."
          (when (and path (file-exists-p path))
            (if (file-directory-p path)
                (km :name (file-name-nondirectory (if (and path (string-match-p "/$" path))
@@ -660,6 +668,18 @@
 
        (defun pb-prompt/describe-context (path)
          (error "nested contexts not supported yet..."))
+
+       (defun pb-prompt/dir-km (path)
+         "Create a keyword map representation of directory structure at PATH."
+         (when (and path (file-exists-p path))
+           (if (file-directory-p path)
+               (km :dir (file-name-nondirectory (if (and path (string-match-p "/$" path))
+                                                    (substring path 0 -1)
+                                                  path))
+                   :files (seq-map #'pb-prompt/dir-km
+                                   ;; filter out hidden files and meta files (starting with _)
+                                   (directory-files path t "^[^._].*")))
+             (file-name-nondirectory path))))
 
        (defun pb-prompt/context-km (context &optional options)
          (km :context
@@ -708,13 +728,19 @@
                      parent-dirs
                      ()))))
 
-              (defun pb-prompt/path-context (path)
-                (append (seq-mapcat (pb/fn [p] (pb-prompt/read-context (f-join p "context.el")))
-                                    (pb-meta/get-parent-meta-dirs path))
-                        (when (f-file-p path)
+              (defun pb-prompt/parent-context (path)
+                (seq-mapcat (pb/fn [p] (pb-prompt/read-context (f-join p "context.el")))
+                            (pb-meta/get-parent-meta-dirs path)))
+
+              (defun pb-prompt/file-context (path)
+                (append (when (f-file-p path)
                           (list (pb-prompt/mk-file-item (pb-meta/get-main-file path))))
                         (when (pb-meta/meta-file? path)
                           (list (pb-prompt/mk-file-item path)))))
+
+              (defun pb-prompt/path-context (path)
+                (append (pb-prompt/parent-context path)
+                        (pb-prompt/file-context path)))
 
               (defun pb-prompt/path-context-km (path)
                 (pb-prompt/context-km
@@ -741,15 +767,60 @@
 
 (progn :request
 
-       (defun pb-prompt/log-response-infos (info)
-         (message
-          (format "\n>>-\n%s\n"
-                  (km/pp (km/merge (km/select-paths info :status :output-tokens :error)
-                                   (km/select-paths (km/get info :data)
-                                                    :model
-                                                    :max_tokens))))))
-
        (defvar pb-prompt/history nil)
+
+       (progn :log
+
+              (defun pb-prompt/log-response-infos (info)
+                (message
+                 (format "\n>>-\n%s\n"
+                         (km/pp (km/merge (km/select-paths info :status :output-tokens :error)
+                                          (km/select-paths (km/get info :data) :model :max_tokens))))))
+
+              (defun pb-prompt/log-query ()
+                (message
+                 (format "\n??--\n%s\n"
+                         (km/pp (km :model gptel-model
+                                    :system-context (pb-prompt/path-context (pb-misc/get-current-file))))))))
+
+       (progn :overlay
+
+              (defun pb-prompt/enable-query-overlay (selection)
+                (let ((start (km/get selection :at))
+                      (end (+ (km/get selection :at)
+                              (length (km/get selection :content)))))
+                  (symex--delete-overlay)
+                  (let ((overlay (make-overlay start end)))
+                    (overlay-put overlay 'face (km :background pb-gptel/overlay-color))))
+
+                (run-at-time 0.1 nil
+                             (lambda ()
+                               (cond ((and (eq major-mode 'org-mode)
+                                           (not (evil-sorg-state-p)))
+                                      (evil-sorg-state 1))
+                                     (symex-mode
+                                      (symex-mode-interface)))
+                               (setq evil-sorg-state-cursor `("green" box) )
+                               (setq evil-symex-state-cursor `("green" box) )
+                               (evil-refresh-cursor))))
+
+              (defun pb-prompt/disable-query-overlay ()
+                (setq evil-sorg-state-cursor `("gold" box) )
+                (setq evil-symex-state-cursor `("cyan" box) )
+                (evil-refresh-cursor)))
+
+       (progn :buffers
+
+              (defun pb-prompt/ensure-chat-buffer ()
+                (let* ((buf (buffer-name (current-buffer)))
+                       (chat-buffer-name (concat "CHAT_" buf ".org"))
+                       (chat-buffer (get-buffer-create chat-buffer-name)))
+                  (with-current-buffer chat-buffer
+                    (when (= (point-min) (point-max))
+                      (insert (format "* %s\n\n" buf))
+                      (org-mode))
+                    (goto-char (point-max)))
+                  chat-buffer)))
 
        (defun pb-prompt/query-handler (res info)
          (pb-prompt/log-response-infos info)
@@ -767,9 +838,8 @@
                       (symex-tidy))))
            (message (km/pp (km :status (km/get info :http-status)
                                :error (km/get info :error)))))
-         (setq evil-sorg-state-cursor `("gold" box) )
-         (setq evil-symex-state-cursor `("cyan" box) )
-         (evil-refresh-cursor))
+
+         (pb-prompt/disable-query-overlay))
 
        (defun pb-prompt/query-base-instruction ()
          (cond ((eq 'org-mode major-mode)
@@ -781,12 +851,6 @@
                     :response-format ["Your response should be valid code, intended to replace the current expression in a source code file."
                                       "Don't use markdown code block syntax or any non-valid code in your output."
                                       "If you have to write prose, use appropriate comment syntax."]))))
-
-       (defun pb-prompt/log-query ()
-         (message
-          (format "\n??--\n%s\n"
-                  (km/pp (km :model gptel-model
-                             :system-context (pb-prompt/path-context (pb-misc/get-current-file)))))))
 
        (defun pb-prompt/query (&optional options)
          "Send a GPT request with the current buffer context.
@@ -818,23 +882,111 @@
              :callback (or (km/get options :callback)
                            #'pb-prompt/query-handler))
 
-           (let ((start (km/get selection :at))
-                 (end (+ (km/get selection :at)
-                         (length (km/get selection :content)))))
-             (symex--delete-overlay)
-             (let ((overlay (make-overlay start end)))
-               (overlay-put overlay 'face (km :background pb-gptel/overlay-color))))
+           (pb-prompt/enable-query-overlay selection)))
 
-           (run-at-time 0.1 nil
-                        (lambda ()
-                          (cond ((and (eq major-mode 'org-mode)
-                                      (not (evil-sorg-state-p)))
-                                 (evil-sorg-state 1))
-                                (symex-mode
-                                 (symex-mode-interface)))
-                          (setq evil-sorg-state-cursor `("green" box) )
-                          (setq evil-symex-state-cursor `("green" box) )
-                          (evil-refresh-cursor))))))
+       (progn :query+
+
+              (defvar-local pb-prompt/continuation (lambda () (interactive) (message "no continuation")))
+              (defvar-local pb-prompt/current-query nil)
+
+              (require 'doom-keybinds)
+              (map! :ni "C-<return>" (lambda () (interactive) (funcall pb-prompt/continuation)))
+
+              (progn :handlers
+
+                     (defun pb-prompt/handle-list-response (response info chat-buffer)
+                       (add-to-list 'pb-prompt/history
+                                    (list (car response)
+                                          (seq-map (pb/fn [(list tool args)]
+                                                          (list (gptel-tool-name tool)
+                                                                args))
+                                                   (cdr response))))
+                       (cond ((eq 'tool-call (car response))
+                              (pb/let [(list tool args cb) (car (cdr response))]
+                                (setq-local pb-prompt/continuation
+                                            (lambda ()
+                                              (interactive)
+                                              (funcall cb (apply (gptel-tool-function tool)
+                                                                 args))))
+                                (with-current-buffer chat-buffer
+                                  (goto-char (point-max))
+                                  (insert (concat "\n*** Tool: " (gptel-tool-name tool) "\n\n"))
+                                  (insert (let ((tool-name (gptel-tool-name tool)))
+                                            (cond ((string= tool-name "eval_elisp")
+                                                   (format "#+begin_src elisp\n%s\n#+end_src\n"
+                                                           (car args)))
+                                                  ((string= tool-name "replace_expression")
+                                                   (format "#+begin_src elisp\n%s\n#+end_src\n"
+                                                           (concat "(:replace " (car args) ")")))
+                                                  (t (format "#+begin_src elisp\n%s\n#+end_src\n"
+                                                             (pp-to-string (cons tool-name args)))))))
+                                  (goto-char (point-min)))))
+                             (t (message "unhandled response type: %s" (car response)))))
+
+                     (defun pb-prompt/handle-string-response (response info chat-buffer)
+                       (add-to-list 'pb-prompt/history response)
+                       (message "%s" response)
+                       (let* ((posn (marker-position (plist-get info :position)))
+                              (buf  (buffer-name (plist-get info :buffer))))
+                         (with-current-buffer chat-buffer
+                           (goto-char (point-max))
+                           ;; Move current line to top of window
+                           ;; (evil-scroll-line-to-top nil)
+                           (insert "\n\n*** >>")
+                           (insert "\n\n")
+                           (insert response)
+                           (insert "\n")
+                           (goto-char (point-min))
+                           (org-mode)
+                           ;; Check if buffer is not currently visible in any window
+                           (unless (get-buffer-window (current-buffer))
+                             (display-buffer (current-buffer)
+                                             '(display-buffer-in-direction
+                                               (direction . right)
+                                               (window-height . 0.3))))))))
+
+              (defun pb-prompt/query+ (&optional options)
+
+                (let ((gptel-use-tools t)
+                      (gptel-max-tokens (or (km/get options :max-tokens) 32768)))
+
+                  (let* ((chat-buffer (pb-prompt/ensure-chat-buffer))
+                         (current-file (pb-misc/get-current-file))
+
+                         (system-prompt (km :project-structure (pb-prompt/dir-km (projectile-project-root))
+                                            :inherited-context (pb-prompt/context-km
+                                                                (pb-prompt/parent-context current-file))))
+                         (prompt (km :current-file
+                                     (pb-prompt/context-km (pb-prompt/file-context current-file))
+                                     :current-buffer
+                                     (pb-prompt/current-buffer-km)
+                                     :current-mode
+                                     (pb-prompt/current-mode-km)
+                                     :instructions
+                                     (km/get options :instructions))))
+
+                    (with-current-buffer (get-buffer-create "QUERY+")
+                      (insert (km/pp (km :system system-prompt
+                                         :prompt prompt))))
+
+                    (setq-local pb-prompt/current-query
+                                (gptel-request (pb-prompt/mk prompt)
+                                  :system (pb-prompt/mk system-prompt)
+                                  :stream nil
+                                  :callback
+                                  (lambda (response info)
+                                    (print (km/get info :stop-reason))
+                                    (cond ((null response)
+                                           (message "%s"
+                                                    (km/pp (km :status (km/get info :http-status)
+                                                               :error (km/get info :error)))))
+                                          ((stringp response)
+                                           (pb-prompt/handle-string-response response info chat-buffer))
+                                          ((listp response)
+                                           (pb-prompt/handle-list-response response info chat-buffer))
+                                          (t
+                                           (message "gptel-request failed with message: %s"
+                                                    (plist-get info :status))))))))))))
 
 (progn :browser
 
@@ -1556,9 +1708,7 @@
   (file-exists-p "/Users/pierrebaille/.doom.d/pb/archived/reaper.el"))
 
  (pb/comment
-  (pb-tree/get-path-values pb-prompt/tree [:code :lisp :context]))
-
- ]
+  (pb-tree/get-path-values pb-prompt/tree [:code :lisp :context]))]
 
 
 
