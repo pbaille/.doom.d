@@ -474,16 +474,41 @@
        (defvar pb-gptel/elisp-evaluation-tool
          (gptel-make-tool
           :name "eval_elisp"
-          :function (lambda (code)
-                      (condition-case err
-                          (let ((result (eval (read code))))
-                            (format "%S" result))
-                        (error (format "Error: %S" err))))
-          :description "Evaluates Elisp code and returns the result. Warning: Only use for safe operations."
+          :function #'pb-elisp/capture-eval
+          :description (documentation #'pb-elisp/capture-eval)
           :args (list '(:name "code"
                         :type string
                         :description "Elisp code to evaluate"))
           :category "emacs"
+          :confirm t))
+
+       (defvar pb-gptel/replace-expression-tool
+         (gptel-make-tool
+          :name "replace_expression"
+          :function (lambda (buffer_name expression replacement)
+                      (if-let ((buffer (get-buffer buffer_name)))
+                          (with-current-buffer buffer
+                            (save-excursion
+                              (save-restriction
+                                (widen)
+                                (goto-char (point-min))
+                                (if (search-forward expression nil t)
+                                    (progn
+                                      (replace-match replacement t t)
+                                      (format "Successfully replaced expression in buffer '%s'" buffer_name))
+                                  (format "Expression not found in buffer '%s'" buffer_name)))))
+                        (format "Error: Buffer '%s' not found" buffer_name)))
+          :description "Replaces an expression with new content in a specified buffer."
+          :args (list '(:name "buffer_name"
+                        :type string
+                        :description "Name of the buffer where the replacement should occur")
+                      '(:name "expression"
+                        :type string
+                        :description "The exact expression string to be replaced")
+                      '(:name "replacement"
+                        :type string
+                        :description "The new content that should replace the expression"))
+          :category "buffer-editing"
           :confirm t))
 
        (defvar pb-gptel/clojure-evaluation-tool
@@ -499,6 +524,7 @@
 
        (setq gptel-tools
              (list pb-gptel/elisp-evaluation-tool
+                   pb-gptel/replace-expression-tool
                    pb-gptel/clojure-evaluation-tool))
 
        (progn :incub
@@ -535,66 +561,7 @@
                                :description "Where to insert content: 'beginning', 'end', or line number"))
                  :category "file-editing"
                  :confirm t)
-                "A tool that allows editing source files in the current context by inserting content at specified positions."))
-
-       (progn :query-xp
-
-              (require 'doom-keybinds)
-
-              (defvar-local pb-gptel/continuation (lambda () (interactive) (message "no continuation")))
-              (map! :ni "C-<return>" (lambda () (interactive) (funcall pb-gptel/continuation)))
-
-              (defun pb-gptel/tool-query (options)
-                (let ((gptel-use-tools t))
-                  (gptel-request (or (km/get options :prompt)
-                                     "Give informations about current emacs session.")
-                    :stream nil
-                    :callback
-                    (lambda (response info)
-
-                      (cond ((stringp response)
-                             (let* ((posn (marker-position (plist-get info :position)))
-                                    (buf  (buffer-name (plist-get info :buffer)))
-                                    (response-buffer-name (concat "Response_" buf)))
-                               (with-current-buffer (get-buffer-create response-buffer-name)
-                                 (erase-buffer)
-                                 (insert (format "Response for request from %S at %d:"
-                                                 buf posn))
-                                 (insert "\n\n")
-                                 (insert response)
-                                 (display-buffer (current-buffer)
-                                                 '(display-buffer-in-direction
-                                                   (direction . below)
-                                                   (window-height . 0.3))))))
-
-                            ((listp response)
-                             (cond ((eq 'tool-call (car response))
-                                    (pb/let [(list tool args cb) (car (cdr response))
-                                             buf (current-buffer)
-                                             tool-buffer-name (concat "TOOL_" (buffer-name (current-buffer)))]
-                                      (setq-local pb-gptel/continuation
-                                                  (lambda ()
-                                                    (interactive)
-                                                    (when-let ((tool-window (get-buffer-window (get-buffer tool-buffer-name))))
-                                                      (with-selected-window tool-window (quit-window t)))
-                                                    (funcall cb (apply (gptel-tool-function tool)
-                                                                       args))))
-                                      (with-current-buffer (get-buffer-create tool-buffer-name)
-                                        (erase-buffer)
-                                        (emacs-lisp-mode)
-                                        (insert (concat ";; Tool Call: " (gptel-tool-name tool) "\n\n"))
-                                        (insert (car args))
-                                        (goto-char (point-min))
-                                        (symex-mode-interface)
-                                        (display-buffer (current-buffer)
-                                                        '(display-buffer-in-direction
-                                                          (direction . below)
-                                                          (window-height . 0.3))))))
-                                   (t (message "unhandled response type: %s" (car response)))))
-
-                            (t
-                             (message "gptel-request failed with message: %s"
-                                      (plist-get info :status))))))))))
+                "A tool that allows editing source files in the current context by inserting content at specified positions.")))
 
 (pb/comment
  :coerce-non-utf-8-char-to-unicode
