@@ -2,7 +2,7 @@
 
 (setq warning-minimum-log-level :error)
 
-(setq max-mini-window-height 3)
+(setq max-mini-window-height 1)
 
 (setq user-script-dir
       (concat doom-user-dir "pb/"))

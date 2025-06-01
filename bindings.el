@@ -171,8 +171,11 @@
 
                       ;; gptel
 
-                      (:desc "gptel: goto chat"
-                             "s-q" #'gptel)
+                      (:desc "gptel: tool query"
+                             "s-q" (lambda ()
+                                     (interactive)
+                                     (pb-prompt/query+
+                                      (km :instructions (read-string ":?: ")))))
 
                       (:desc "gptel: menu"
                              "m" #'gptel-menu)
