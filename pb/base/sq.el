@@ -12,6 +12,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'seq)
 
 (defun sq/split (index seq)
   "Split the sequence SEQ at the given INDEX into two subsequences.
@@ -44,9 +45,21 @@
    END is the upper limit of the range (exclusive).
    STEP is the optional increment value (defaults to 1).
 
-   Returns a list of numbers from START up to but not including END."
-  (cl-loop for i from start below end by (or step 1)
-           collect i))
+   Returns a list of numbers from START up to but not including END.
+   Returns nil if START >= END with positive STEP, or if START <= END with negative STEP.
+   Returns nil if STEP is zero to avoid infinite loops."
+  (let ((step (or step 1)))
+    (cond
+     ;; Return nil for zero step to avoid infinite loops
+     ((zerop step) nil)
+     ;; Return nil for cases where the loop would not progress toward the boundary
+     ((and (> step 0) (>= start end)) nil)
+     ((and (< step 0) (<= start end)) nil)
+     ;; Normal case with proper direction
+     (t (cl-loop for i from start
+                 by step
+                 while (if (> step 0) (< i end) (> i end))
+                 collect i)))))
 
 (defun sq/butlast (lst)
   "Return a new list containing all elements of LST except the last one."
@@ -139,21 +152,96 @@
 (defun sq/test ()
   "Test."
   (cl-assert
-   (and (equal (sq/partition 2 2 '(1 2 3 4 5 6 7))
-               '((1 2) (3 4) (5 6)))
-        (equal (sq/partition 2 1 '(1 2 3 4))
-               '((1 2) (2 3) (3 4)))))
+   (and
+    ;; Basic partitioning with equal size and step
+    (equal (sq/partition 2 2 '(1 2 3 4 5 6 7))
+           '((1 2) (3 4) (5 6)))
+
+    ;; Overlapping partitioning (step < size)
+    (equal (sq/partition 2 1 '(1 2 3 4))
+           '((1 2) (2 3) (3 4)))
+
+    ;; Empty sequence
+    (equal (sq/partition 2 1 '())
+           '())
+
+    ;; Step larger than size
+    (equal (sq/partition 2 3 '(1 2 3 4 5 6 7 8))
+           '((1 2) (4 5)))
+
+    ;; Size equal to sequence length
+    (equal (sq/partition 5 5 '(1 2 3 4 5))
+           '((1 2 3 4 5)))
+
+    ;; Exact partitioning (multiple of size)
+    (equal (sq/partition 3 3 '(1 2 3 4 5 6 7 8 9))
+           '((1 2 3) (4 5 6) (7 8 9)))
+
+    ;; Size 1 (individual elements)
+    (equal (sq/partition 1 1 '(a b c d))
+           '((a) (b) (c) (d)))
+
+    ;; Working with vectors
+    (equal (sq/partition 2 2 [1 2 3 4 5 6])
+           '([1 2] [3 4] [5 6]))
+
+    ;; Working with strings
+    (equal (sq/partition 2 2 "abcdef")
+           '("ab" "cd" "ef"))))
 
   (cl-assert
-   (equal (sq/range 0 10 2)
-          '(0 2 4 6 8))
+   (and
+    ;; Basic positive step cases
+    (equal (sq/range 0 10 2)
+           '(0 2 4 6 8))
+    (equal (sq/range 0 10)
+           '(0 1 2 3 4 5 6 7 8 9))
 
-   (equal (sq/range 0 10)
-          '(0 1 2 3 4 5 6 7 8 9)))
+    ;; Negative step cases
+    (equal (sq/range 10 0 -2)
+           '(10 8 6 4 2))
+    (equal (sq/range 5 -5 -1)
+           '(5 4 3 2 1 0 -1 -2 -3 -4))
+
+    ;; Edge cases
+    (equal (sq/range 5 5) nil)         ;; Start equals end
+    (equal (sq/range 10 5) nil)        ;; Start greater than end with positive step
+    (equal (sq/range 5 10 -1) nil)     ;; Start less than end with negative step
+    (equal (sq/range 1 10 0) nil)      ;; Zero step
+
+    ;; Fractional step
+    (equal (sq/range 0 3 0.5)
+           '(0 0.5 1.0 1.5 2.0 2.5))
+
+    ;; Single element range
+    (equal (sq/range 5 6)
+           '(5))))
 
   (cl-assert
-   (equal (sq/split 3 '(1 2 3 4 5))
-          '((1 2 3)(4 5))))
+   (and
+    ;; Basic split in the middle
+    (equal (sq/split 3 '(1 2 3 4 5))
+           '((1 2 3) (4 5)))
+
+    ;; Split at the beginning
+    (equal (sq/split 0 '(1 2 3 4 5))
+           '(() (1 2 3 4 5)))
+
+    ;; Split at the end
+    (equal (sq/split 5 '(1 2 3 4 5))
+           '((1 2 3 4 5) ()))
+
+    ;; Split with different data types
+    (equal (sq/split 2 '("a" :b 3 'c))
+           '(("a" :b) (3 'c)))
+
+    ;; Split a vector
+    (equal (sq/split 2 [1 2 3 4])
+           '([1 2] [3 4]))
+
+    ;; Split a string
+    (equal (sq/split 3 "abcdef")
+           '("abc" "def"))))
 
   (cl-assert
    (equal (sq/butlast (sq/range 0 10))
