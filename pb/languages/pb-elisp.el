@@ -68,6 +68,67 @@
    (eval (read (pb-symex/current-as-string)))
    #'km/pp))
 
+(defun pb-elisp/capture-eval (code)
+  "Evaluate the Emacs Lisp string CODE and capture comprehensive execution information.
+   Returns a plist containing:
+   - :success - Boolean indicating if evaluation succeeded
+   - :result - The return value of the evaluation
+   - :output - Any content printed to the messages buffer (if not empty)
+   - :error - If an error occurred, a plist with :message and :backtrace
+   - :duration - Execution time in milliseconds"
+  (let ((messages-buffer (get-buffer-create "*Messages*"))
+        (temp-message-buffer (get-buffer-create " *temp-messages*"))
+        (backtrace-buffer (get-buffer-create "*Backtrace*"))
+        (start-time (current-time))
+        result success output error-msg backtrace)
+
+    ;; Save current message buffer content
+    (with-current-buffer messages-buffer
+      (let ((messages-content (buffer-string)))
+        (with-current-buffer temp-message-buffer
+          (erase-buffer)
+          (insert messages-content))))
+
+    ;; Clear messages buffer (using standard function that works with read-only buffer)
+    (with-current-buffer messages-buffer
+      (let ((inhibit-read-only t))
+        (erase-buffer)))
+
+    ;; Clear backtrace buffer
+    (with-current-buffer backtrace-buffer
+      (erase-buffer))
+
+    ;; Evaluate the code string
+    (condition-case err
+        (progn
+          (setq result (eval (read (concat "(progn " code ")"))))
+          (setq success t))
+      (error
+       (setq success nil)
+       (setq error-msg (error-message-string err))
+       ;; Get backtrace if available
+       (with-current-buffer backtrace-buffer
+         (setq backtrace (buffer-string)))))
+
+    ;; Capture messages output
+    (with-current-buffer messages-buffer
+      (setq output (buffer-string))
+      ;; Restore original messages
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert-buffer-substring temp-message-buffer)))
+
+    ;; Calculate duration
+    (let ((duration (float-time (time-subtract (current-time) start-time))))
+      ;; Return evaluation info as keyword map
+      (km :success success
+          :result result
+          :output (when (not (string-empty-p output)) output)
+          :error (when error-msg
+                   (km :message error-msg
+                       :backtrace (when (not (string-empty-p backtrace)) backtrace)))
+          :duration (* 1000 duration)))))
+
 (require 'treesit)
 
 (defun pb-elisp/treesit-parser-setup ()
