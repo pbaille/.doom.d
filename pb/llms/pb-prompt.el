@@ -131,7 +131,7 @@
                :major-mode (symbol-name major-mode)
                :point (point)
                :line-number (line-number-at-pos)
-               :selection (km/get selection :content))))
+               :selection (substring-no-properties (km/get selection :content)))))
 
        (defun pb-prompt/current-mode-km ()
          (cond ((eq 'org-mode major-mode)
@@ -919,8 +919,17 @@
                                                    (format "#+begin_src elisp\n%s\n#+end_src\n"
                                                            (concat "(:replace " (car args) ")")))
                                                   (t (format "#+begin_src elisp\n%s\n#+end_src\n"
-                                                             (pp-to-string (cons tool-name args)))))))
+                                                             (cons (intern (concat "tool:" tool-name)) args))))))
                                   (goto-char (point-min)))))
+                             ((eq 'tool-result (car response))
+                              (pb/let [(list tool args ret) (car (cdr response))]
+                                (with-current-buffer chat-buffer
+                                  (goto-char (point-max))
+                                  (insert "\n")
+                                  (save-excursion
+                                    (insert (format "#+begin_src elisp :results\n;; result:\n%s\n#+end_src\n"
+                                                    ret)))
+                                  (org-cycle))))
                              (t (message "unhandled response type: %s" (car response)))))
 
                      (defun pb-prompt/handle-string-response (response info chat-buffer)
@@ -932,12 +941,11 @@
                            (goto-char (point-max))
                            ;; Move current line to top of window
                            ;; (evil-scroll-line-to-top nil)
-                           (insert "\n\n*** >>")
+                           (insert "\n*** >>")
                            (insert "\n\n")
                            (insert response)
                            (insert "\n")
                            (goto-char (point-min))
-                           (org-mode)
                            ;; Check if buffer is not currently visible in any window
                            (unless (get-buffer-window (current-buffer))
                              (display-buffer (current-buffer)
@@ -945,23 +953,34 @@
                                                (direction . right)
                                                (window-height . 0.3))))))))
 
+              (defvar pb-prompt/response-format-instructions
+                "You are editing an org-mode buffer, you are very aware its tree structure.
+                 Your response should contain ONLY VALID ORG CONTENT, intended to ne inserted in the org file.
+                 For code snippets, use only org src block syntax, you should NEVER USE MARKDOWN.")
+
               (defun pb-prompt/query+ (&optional options)
 
                 (let ((gptel-use-tools t)
                       (gptel-max-tokens (or (km/get options :max-tokens) 32768)))
+
+                  (pb-style/set-local-fringe-face
+                   (pb-color (doom-color 'green)
+                             (desaturate 0.5)
+                             (darken 0.3)))
 
                   (let* ((chat-buffer (pb-prompt/ensure-chat-buffer))
                          (current-file (pb-misc/get-current-file))
 
                          (system-prompt (km :project-structure (pb-prompt/dir-km (projectile-project-root))
                                             :inherited-context (pb-prompt/context-km
-                                                                (pb-prompt/parent-context current-file))))
+                                                                (pb-prompt/parent-context current-file))
+                                            :response-format pb-prompt/response-format-instructions))
                          (prompt (km :current-file
                                      (pb-prompt/context-km (pb-prompt/file-context current-file))
                                      :current-buffer
                                      (pb-prompt/current-buffer-km)
-                                     :current-mode
-                                     (pb-prompt/current-mode-km)
+                                     ;; :current-mode
+                                     ;; (pb-prompt/current-mode-km)
                                      :instructions
                                      (km/get options :instructions))))
 
@@ -986,7 +1005,10 @@
                                            (pb-prompt/handle-list-response response info chat-buffer))
                                           (t
                                            (message "gptel-request failed with message: %s"
-                                                    (plist-get info :status))))))))))))
+                                                    (plist-get info :status))))
+                                    (if (string= "end_turn"
+                                                 (km/get info :stop-reason))
+                                        (pb-style/reset-local-fringe-face))))))))))
 
 (progn :browser
 
