@@ -247,7 +247,8 @@
 
        (map! (:prefix ("s-s" . "search")
                       (:desc "search file" "s-s" #'+default/search-buffer)
-                      (:desc "search symbol at point" "s" #'+vertico/search-symbol-at-point)
+                      (:desc "search symbol at point" "s-d" #'+vertico/search-symbol-at-point)
+                      (:desc "search project" "s" #'+default/search-project)
                       (:desc "search project" "p" #'+default/search-project)
                       (:desc "search replace thing at point" "r" #'pb-misc/query-replace-thing-at-point)
                       (:desc "search replace" "s-r" #'query-replace)
@@ -262,8 +263,10 @@
                       (:desc "copy file" "C" #'doom/copy-this-file)
                       (:desc "move file" "R" #'doom/move-this-file)
                       (:desc "find project file" "p" #'projectile-find-file)
+                      (:desc "find project file" "f" #'projectile-find-file)
                       (:desc "save file" "s-s" #'pb-misc/save-buffer)
-                      (:desc "delete file" "D" #'doom/delete-this-file)))
+                      (:desc "delete file" "D" #'doom/delete-this-file)
+                      (:desc "Yank filepath" "y" #'+default/yank-buffer-path)))
 
        (map! (:prefix ("s-d" . "dired")
                       (:desc "dired" "s-d" (lambda ()
@@ -278,6 +281,7 @@
                                                (dirvish (file-name-directory file))
                                                (dirvish-find-entry-a file))))
                       (:desc "sidebar" "s" #'dired-sidebar-toggle-sidebar)
+                      (:desc "sidebar" "s-s" #'dired-sidebar-toggle-sidebar)
                       (:desc "dired kill all" "s-k" #'pb-misc/kill-all-dired-buffers)))
 
        (map! (:prefix ("s-t" . "toggle")
@@ -300,7 +304,8 @@
 
 (progn :misc
 
-       (map! :ni "C-h" #'backward-char
+       (map! :niv "<f1>" #'ignore
+             :ni "C-h" #'backward-char
              :ni "C-j" #'evil-next-line
              :ni "C-k" #'evil-previous-line
              :ni "C-l" #'forward-char

@@ -10,7 +10,7 @@
 
         (defun pb-clojure-adaptive-fill-function ()
           "Clojure adaptive fill function.
-This only takes care of filling docstring correctly."
+           This only takes care of filling docstring correctly."
           (when (clojure-in-docstring-p)
             (pp "io")
             (make-string (save-excursion

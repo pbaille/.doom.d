@@ -86,3 +86,12 @@
                                          'elisp-shorthand-font-lock-face))))))
 
        (font-lock-add-keywords 'emacs-lisp-mode '((shorthands-font-lock-shorthands)) t))
+
+'(setq lsp-file-watch-ignored-directories
+       (append lsp-file-watch-ignored-directories
+               (list "[/\\\\]ios\\'"
+                     "[/\\\\]app\\'"
+                     "[/\\\\]\\.npm-cache\\'"
+                     "[/\\\\]\\.cljs_node_repl\\'"
+                     "[/\\\\]\\.terraform\\'"
+                     "[/\\\\]\\.venv\\'")))

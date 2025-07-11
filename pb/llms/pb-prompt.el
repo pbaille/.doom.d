@@ -809,19 +809,6 @@
                 (setq evil-symex-state-cursor `("cyan" box) )
                 (evil-refresh-cursor)))
 
-       (progn :buffers
-
-              (defun pb-prompt/ensure-chat-buffer ()
-                (let* ((buf (buffer-name (current-buffer)))
-                       (chat-buffer-name (concat "CHAT_" buf ".org"))
-                       (chat-buffer (get-buffer-create chat-buffer-name)))
-                  (with-current-buffer chat-buffer
-                    (when (= (point-min) (point-max))
-                      (insert (format "* %s\n\n" buf))
-                      (org-mode))
-                    (goto-char (point-max)))
-                  chat-buffer)))
-
        (defun pb-prompt/query-handler (res info)
          (pb-prompt/log-response-infos info)
          (add-to-list 'pb-prompt/history (kmq res info) )
@@ -892,15 +879,22 @@
               (require 'doom-keybinds)
               (map! :ni "C-<return>" (lambda () (interactive) (funcall pb-prompt/continuation)))
 
+              (progn :buffers
+
+                     (defun pb-prompt/ensure-chat-buffer ()
+                       (let* ((buf (buffer-name (current-buffer)))
+                              (chat-buffer-name (concat "CHAT_" buf ".org"))
+                              (chat-buffer (get-buffer-create chat-buffer-name)))
+                         (with-current-buffer chat-buffer
+                           (when (= (point-min) (point-max))
+                             (insert (format "* %s\n\n" buf))
+                             (org-mode))
+                           (goto-char (point-max)))
+                         chat-buffer)))
+
               (progn :handlers
 
-                     (defun pb-prompt/handle-list-response (response info chat-buffer)
-                       (add-to-list 'pb-prompt/history
-                                    (list (car response)
-                                          (seq-map (pb/fn [(list tool args)]
-                                                          (list (gptel-tool-name tool)
-                                                                args))
-                                                   (cdr response))))
+                     (defun pb-prompt/handle-list-response (response info)
                        (cond ((eq 'tool-call (car response))
                               (pb/let [(list tool args cb) (car (cdr response))]
                                 (setq-local pb-prompt/continuation
@@ -908,50 +902,68 @@
                                               (interactive)
                                               (funcall cb (apply (gptel-tool-function tool)
                                                                  args))))
-                                (with-current-buffer chat-buffer
-                                  (goto-char (point-max))
-                                  (insert (concat "\n*** Tool: " (gptel-tool-name tool) "\n\n"))
-                                  (insert (let ((tool-name (gptel-tool-name tool)))
-                                            (cond ((string= tool-name "eval_elisp")
-                                                   (format "#+begin_src elisp\n%s\n#+end_src\n"
-                                                           (car args)))
-                                                  ((string= tool-name "replace_expression")
-                                                   (format "#+begin_src elisp\n%s\n#+end_src\n"
-                                                           (concat "(:replace " (car args) ")")))
-                                                  (t (format "#+begin_src elisp\n%s\n#+end_src\n"
-                                                             (cons (intern (concat "tool:" tool-name)) args))))))
-                                  (goto-char (point-min)))))
+                                (goto-char (point-max))
+                                (when-let ((win (get-buffer-window (current-buffer))))
+                                  (with-selected-window win
+                                    (goto-char (point-max))
+                                    (evil-scroll-line-to-top nil)))
+                                (insert (concat "\n**** Tool: " (gptel-tool-name tool) "\n\n"))
+                                (insert (let ((tool-name (gptel-tool-name tool)))
+                                          (cond ((string= tool-name "eval_elisp")
+                                                 (format "#+begin_src elisp\n%s\n#+end_src\n"
+                                                         (car args)))
+                                                (t (format "#+begin_src elisp\n%s\n#+end_src\n"
+                                                           (cons (intern (concat "tool:" tool-name)) args))))))
+                                (goto-char (point-min))))
                              ((eq 'tool-result (car response))
                               (pb/let [(list tool args ret) (car (cdr response))]
-                                (with-current-buffer chat-buffer
-                                  (goto-char (point-max))
-                                  (insert "\n")
-                                  (save-excursion
-                                    (insert (format "#+begin_src elisp :results\n;; result:\n%s\n#+end_src\n"
-                                                    ret)))
-                                  (org-cycle))))
+                                (goto-char (point-max))
+                                (insert "\n")
+                                (save-excursion
+                                  (insert (format "#+begin_src elisp :results\n;; result:\n%s\n#+end_src\n"
+                                                  ret)))
+                                (org-cycle)))
                              (t (message "unhandled response type: %s" (car response)))))
 
-                     (defun pb-prompt/handle-string-response (response info chat-buffer)
-                       (add-to-list 'pb-prompt/history response)
+                     (defun pb-prompt/handle-string-response (response info)
                        (message "%s" response)
                        (let* ((posn (marker-position (plist-get info :position)))
                               (buf  (buffer-name (plist-get info :buffer))))
+                         (goto-char (point-max))
+                         (when-let ((win (get-buffer-window (current-buffer))))
+                           (with-selected-window win
+                             (goto-char (point-max))
+                             (evil-scroll-line-to-top nil)))
+                         (insert "\n*** >>")
+                         (insert "\n\n")
+                         (insert response)
+                         (insert "\n")
+                         (goto-char (point-min))
+                         ;; Check if buffer is not currently visible in any window
+                         (unless (get-buffer-window (current-buffer))
+                           (display-buffer (current-buffer)
+                                           '(display-buffer-in-direction
+                                             (direction . right)
+                                             (window-height . 0.3))))))
+
+                     (defun pb-prompt/chat-handler (chat-buffer)
+                       (lambda (response info)
                          (with-current-buffer chat-buffer
-                           (goto-char (point-max))
-                           ;; Move current line to top of window
-                           ;; (evil-scroll-line-to-top nil)
-                           (insert "\n*** >>")
-                           (insert "\n\n")
-                           (insert response)
-                           (insert "\n")
-                           (goto-char (point-min))
-                           ;; Check if buffer is not currently visible in any window
-                           (unless (get-buffer-window (current-buffer))
-                             (display-buffer (current-buffer)
-                                             '(display-buffer-in-direction
-                                               (direction . right)
-                                               (window-height . 0.3))))))))
+                           (print (km/get info :stop-reason))
+                           (cond ((null response)
+                                  (message "%s"
+                                           (km/pp (km :status (km/get info :http-status)
+                                                      :error (km/get info :error)))))
+                                 ((stringp response)
+                                  (pb-prompt/handle-string-response response info))
+                                 ((listp response)
+                                  (pb-prompt/handle-list-response response info))
+                                 (t
+                                  (message "gptel-request failed with message: %s"
+                                           (plist-get info :status))))
+                           (if (string= "end_turn"
+                                        (km/get info :stop-reason))
+                               (pb-style/reset-local-fringe-face))))))
 
               (defvar pb-prompt/response-format-instructions
                 "You are editing an org-mode buffer, you are very aware its tree structure.
@@ -961,54 +973,46 @@
               (defun pb-prompt/query+ (&optional options)
 
                 (let ((gptel-use-tools t)
-                      (gptel-max-tokens (or (km/get options :max-tokens) 32768)))
+                      (gptel-max-tokens (or (km/get options :max-tokens) 32768))
+                      (gptel-cache '(system tools)))
 
-                  (pb-style/set-local-fringe-face
-                   (pb-color (doom-color 'green)
-                             (desaturate 0.5)
-                             (darken 0.3)))
+                  (let* ((prompt (km/get options :prompt))
 
-                  (let* ((chat-buffer (pb-prompt/ensure-chat-buffer))
-                         (current-file (pb-misc/get-current-file))
+                         (chat-buffer (or (km/get options :chat-buffer)
+                                          (pb-prompt/ensure-chat-buffer)))
 
-                         (system-prompt (km :project-structure (pb-prompt/dir-km (projectile-project-root))
-                                            :inherited-context (pb-prompt/context-km
-                                                                (pb-prompt/parent-context current-file))
-                                            :response-format pb-prompt/response-format-instructions))
-                         (prompt (km :current-file
-                                     (pb-prompt/context-km (pb-prompt/file-context current-file))
-                                     :current-buffer
-                                     (pb-prompt/current-buffer-km)
-                                     ;; :current-mode
-                                     ;; (pb-prompt/current-mode-km)
-                                     :instructions
-                                     (km/get options :instructions))))
+                         (system-prompt (km/merge :response-format pb-prompt/response-format-instructions
+                                                  (when (km/get options :project-structure)
+                                                    (km :project-structure (pb-prompt/dir-km (projectile-project-root))))
+                                                  (when (km/get options :file-context)
+                                                    (let ((current-file (pb-misc/get-current-file)))
+                                                      (km :inherited-context (pb-prompt/context-km
+                                                                              (pb-prompt/parent-context current-file))
+                                                          :current-file
+                                                          (pb-prompt/context-km (pb-prompt/file-context current-file))
+                                                          :current-buffer
+                                                          (pb-prompt/current-buffer-km)
+                                                          ;; :current-mode
+                                                          ;; (pb-prompt/current-mode-km)
+                                                          :instructions
+                                                          (km/get options :instructions)))))))
 
-                    (with-current-buffer (get-buffer-create "QUERY+")
-                      (insert (km/pp (km :system system-prompt
-                                         :prompt prompt))))
-
-                    (setq-local pb-prompt/current-query
-                                (gptel-request (pb-prompt/mk prompt)
-                                  :system (pb-prompt/mk system-prompt)
-                                  :stream nil
-                                  :callback
-                                  (lambda (response info)
-                                    (print (km/get info :stop-reason))
-                                    (cond ((null response)
-                                           (message "%s"
-                                                    (km/pp (km :status (km/get info :http-status)
-                                                               :error (km/get info :error)))))
-                                          ((stringp response)
-                                           (pb-prompt/handle-string-response response info chat-buffer))
-                                          ((listp response)
-                                           (pb-prompt/handle-list-response response info chat-buffer))
-                                          (t
-                                           (message "gptel-request failed with message: %s"
-                                                    (plist-get info :status))))
-                                    (if (string= "end_turn"
-                                                 (km/get info :stop-reason))
-                                        (pb-style/reset-local-fringe-face))))))))))
+                    (with-current-buffer chat-buffer
+                      (pb-style/set-local-fringe-face
+                       (pb-color (doom-color 'green)
+                                 (desaturate 0.5)
+                                 (darken 0.3)))
+                      (goto-char (point-max))
+                      (insert "\n** ??\n\n")
+                      (insert prompt)
+                      (insert "\n")
+                      (setq-local pb-prompt/current-query
+                                  (gptel-request prompt
+                                    :system (pb-prompt/mk system-prompt)
+                                    :stream nil
+                                    :callback (pb-prompt/chat-handler chat-buffer)
+                                    :fsm (or ;; pb-prompt/current-query
+                                          (gptel-make-fsm))))))))))
 
 (progn :browser
 

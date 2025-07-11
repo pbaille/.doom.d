@@ -796,13 +796,77 @@
                                    (treesit-node-text name-node t)))
                            (is-var-def (member verb '(defvar defvar-local)))
                            (is-fun-def (eq verb 'defun)))
-                      (km/put base
-                              :verb verb
-                              :name name
-                              :short-name (tree-browser/remove-package-prefix name)
-                              :var-def is-var-def
-                              :fun-def is-fun-def)))
+                      (km/merge (km/put base
+                                        :verb verb
+                                        :var-def is-var-def
+                                        :fun-def is-fun-def)
+                                (when (or is-fun-def is-var-def)
+                                  (km :name name
+                                      :short-name (tree-browser/remove-package-prefix name))))))
                    (t base)))))
+
+       (defun tree-browser/file->node-tree (path)
+         "Create a node tree for a file at PATH using treesit.
+          Returns a tree structure or nil if the file cannot be parsed."
+         (when (and path (file-exists-p path))
+           (let ((buffer (find-file-noselect path)))
+             (with-current-buffer buffer
+               (prog1
+                   (when-let ((root (tree-browser/get-treesit-root)))
+                     (tree-browser/node-tree root))
+                 ;; Clean up the temporary buffer if we created one
+                 (unless (get-buffer-window buffer)
+                   (kill-buffer buffer)))))))
+
+       (defun tree-browser/definitions-nodes (node-tree)
+         "Walk the NODE-TREE and return a list of definition nodes.
+          Each returned node contains :name, :start, and :end properties.
+          Collects function and variable definitions from Lisp code."
+         (when node-tree
+           (let ((result nil))
+             ;; Check if current node is a definition
+             (when (and (km? node-tree)
+                        (or (km/get node-tree :fun-def)
+                            (km/get node-tree :var-def))
+                        (km/get node-tree :name)
+                        (km/get node-tree :start)
+                        (km/get node-tree :end))
+               (push (km :name (km/get node-tree :name)
+                         :start (km/get node-tree :start)
+                         :end (km/get node-tree :end)
+                         :type (if (km/get node-tree :fun-def) "function" "variable"))
+                     result))
+
+             ;; Recursively process children
+             (when-let ((children (and (km? node-tree) (km/get node-tree :children))))
+               (dolist (child children)
+                 (setq result (append (tree-browser/definitions-nodes child) result))))
+
+             ;; Return collected definitions
+             result)))
+
+       (defun tree-browser/file-definitions (path)
+         "Return list of function and variable definitions from file at PATH.
+          Each item contains :name, :start, :end and :type properties.
+          Returns nil if file cannot be parsed or has no definitions."
+         (tree-browser/definitions-nodes
+          (tree-browser/file->node-tree path)))
+
+       (defun tree-browser/dir-definitions (dir)
+         "Return all elisp function and variable definitions in DIR recursively.
+          Returns a list of nodes with :file and :definitions properties, where
+          :definitions contains detailed information about each definition."
+         (let ((result '()))
+           (dolist (file (directory-files-recursively dir "\\.el$"))
+             (when-let ((defs (tree-browser/file-definitions file)))
+               (setq result (cons (km :file file
+                                      :definitions defs)
+                                  result))))
+           result))
+
+       (pb/comment
+        (tree-browser/dir-definitions "/Users/pierrebaille/.doom.d/pb/modes")
+        (tree-browser/definitions-nodes (tree-browser/file->node-tree (buffer-file-name))))
 
        (progn :org
 
@@ -1051,7 +1115,8 @@
                 (when-let ((name (and (<= current-depth tree-browser/max-depth)
                                       (km? node)
                                       (or (km/get node :short-name)
-                                          (km/get node :name)))))
+                                          (km/get node :name)
+                                          (km/get node :verb)))))
                   ;; Insert the current node
                   (tree-browser/insert-line name depth path node)
 
@@ -1077,6 +1142,9 @@
                         (level (or (km/get node-data :level)
                                    1))
                         (default-face (list :inherit 'default :foreground (doom-darken (doom-color 'fg) 0.1)))
+                        (function-face (list :inherit 'default :foreground (doom-darken (doom-color 'violet) 0.15)))
+                        (variable-face (list :inherit 'default :foreground (doom-darken (doom-color 'magenta) 0.1)))
+                        (expression-face (list :inherit 'default :foreground (doom-darken (doom-color 'teal) 0.2)))
                         (code-face (list :inherit 'default :foreground (doom-color 'violet))))
                     (cond
                      ((string= type "source_file")
@@ -1084,11 +1152,11 @@
                      ((member type (list "section" "headline"))
                       (insert (propertize "■ " 'face (intern (format "outline-%d" (min level 8))))))
                      (is-var-def
-                      (insert (propertize "• " 'face default-face)))
+                      (insert (propertize "• " 'face variable-face)))
                      (is-fun-def
-                      (insert (propertize "λ " 'face default-face)))
+                      (insert (propertize "λ " 'face function-face)))
                      ((member type (list "special_form" "list" "function_definition"))
-                      (insert (propertize "• " 'face default-face)))
+                      (insert (propertize "e " 'face expression-face)))
                      ((string= type "src-block")
                       (insert (propertize "≡ " 'face code-face)))
                      (t

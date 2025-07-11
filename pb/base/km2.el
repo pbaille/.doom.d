@@ -47,29 +47,27 @@
 
 (defun km2/eq (a b)
   "Check if two keyword maps A and B are equal.
-Keyword maps are considered equal if they contain the same keys
-with the same associated values."
+   Keyword maps are considered equal if they contain the same keys
+   with the same associated values."
   (and (km2? a)
        (km2? b)
        (let ((keys1 (km2/keys a))
              (keys2 (km2/keys b)))
          (and (null (cl-set-difference keys1 keys2))
               (null (cl-set-difference keys2 keys1))
-              (cl-every (lambda (entry1)
-                          (let* ((key (car entry1))
-                                 (val1 (cdr entry1))
-                                 (val2 (plist-get (cdr b) key)))
-                            (if (km2? val1)
-                                (km2/eq val1 val2)
-                              (equal val1 val2))))
+              (cl-every (pb/fn [(cons key val1)]
+                               (let ((val2 (plist-get (cdr b) key)))
+                                 (if (km2? val1)
+                                     (km2/eq val1 val2)
+                                   (equal val1 val2))))
                         (km2/entries a))))))
 
 (defun km2/into (m entries)
   "Add some ENTRIES to M (plist/keyword-map)."
   (cl-reduce (lambda (m entry)
                (km2 (plist-put (cdr m)
-                              (car entry)
-                              (cdr entry))))
+                               (car entry)
+                               (cdr entry))))
              entries
              :initial-value (copy-tree m)))
 
@@ -92,9 +90,9 @@ with the same associated values."
                     (km2/entries b))))
 
 (km2/eq (km2/merge-with #'+
-                      (km2 :a 1 :b 2)
-                      (km2 :b 3 :c 4))
-       (km2 :a 1 :b 5 :c 4))
+                        (km2 :a 1 :b 2)
+                        (km2 :b 3 :c 4))
+        (km2 :a 1 :b 5 :c 4))
 
 (defun km2/map (m f)
   "Map F over M. F takes and return an entry (a cons of keyword and value)."
@@ -128,11 +126,11 @@ with the same associated values."
   "Get the value at PATH in the nested keyword map M."
   (cond ((null path) m)
         ((km2? m) (km2/get-in (plist-get (cdr m) (car path))
-                            (cdr path)))))
+                              (cdr path)))))
 
 (defun km2/get (m at)
   "Get the value at AT in the keyword map M.
-If AT is a list, get the value in a nested map."
+   If AT is a list, get the value in a nested map."
   (cond ((listp at) (km2/get-in m at))
         ((vectorp at) (km2/get-in m (append at ())))
         ((keywordp at) (plist-get (cdr m) at))))
@@ -145,26 +143,26 @@ If AT is a list, get the value in a nested map."
         ((listp m)
          (and (plist-member (cdr m) (car path))
               (km2/contains? (plist-get (cdr m) (car path))
-                            (cdr path))))))
+                             (cdr path))))))
 
 (defun km2/put-in (m path v)
   "Associate PATH in the nested keyword map M with value V."
   (cond ((null path) v)
         ((km2? m) (let ((p1 (car path)))
-                   (km2 (plist-put (cdr m) p1
-                                  (km2/put-in (or (plist-get (cdr m) p1)
-                                                 (km2 ()))
-                                             (cdr path)
-                                             v)))))))
+                    (km2 (plist-put (cdr m) p1
+                                    (km2/put-in (or (plist-get (cdr m) p1)
+                                                    (km2 ()))
+                                                (cdr path)
+                                                v)))))))
 
 (defun km2/put1 (m at v)
   "Put value V at AT in a copy of keyword map M.
-If AT is a list, put the value in a nested map."
+   If AT is a list, put the value in a nested map."
   (km2/put-in m
-             (cond ((listp at) at)
-                   ((vectorp at) (append at ()))
-                   ((keywordp at) (list at)))
-             v))
+              (cond ((listp at) at)
+                    ((vectorp at) (append at ()))
+                    ((keywordp at) (list at)))
+              v))
 
 (defun km2/put (m &rest xs)
   "Associates keys with values in keyword map M using XS."
@@ -177,24 +175,24 @@ If AT is a list, put the value in a nested map."
   "Update the value at PATH in the nested keyword map M by applying function F."
   (cond ((null path) (funcall f m))
         ((km2? m) (let ((p1 (car path)))
-                   (km2 (plist-put (cdr m) p1
-                                  (km2/upd-in (or (plist-get (cdr m) p1)
-                                                 (and (cdr path) (km2 ())))
-                                             (cdr path)
-                                             f)))))))
+                    (km2 (plist-put (cdr m) p1
+                                    (km2/upd-in (or (plist-get (cdr m) p1)
+                                                    (and (cdr path) (km2 ())))
+                                                (cdr path)
+                                                f)))))))
 
 (defun km2/upd1 (m at f)
   "Update value at AT in a copy of keyword map M by applying function F.
-If AT is a list, update the value in a nested map."
+   If AT is a list, update the value in a nested map."
   (km2/upd-in m
-             (cond ((listp at) at)
-                   ((vectorp at) (append at ()))
-                   ((keywordp at) (list at)))
-             f))
+              (cond ((listp at) at)
+                    ((vectorp at) (append at ()))
+                    ((keywordp at) (list at)))
+              f))
 
 (defun km2/upd (m &rest xs)
   "Update the keyword map M using XS.
-XS is a list alternating paths and update-fns."
+   XS is a list alternating paths and update-fns."
   (cl-reduce (lambda (m entry)
                (km2/upd1 m (car entry) (cadr entry)))
              (sq/partition 2 2 xs)
@@ -203,15 +201,15 @@ XS is a list alternating paths and update-fns."
 (defun km2/all-paths (m)
   "Transform M into an alist of path -> value."
   (cl-reduce (lambda (ret entry)
-                 (let ((k (car entry))
-                       (v (cdr entry)))
-                   (append ret
-                           (if (km2? v)
-                               (mapcar (lambda (e)
-                                         (cons (cons k (car e))
-                                               (cdr e)))
-                                       (km2/all-paths v))
-                             (list (cons (list k) v))))))
+               (let ((k (car entry))
+                     (v (cdr entry)))
+                 (append ret
+                         (if (km2? v)
+                             (mapcar (lambda (e)
+                                       (cons (cons k (car e))
+                                             (cdr e)))
+                                     (km2/all-paths v))
+                           (list (cons (list k) v))))))
              (km2/entries m)
              :initial-value ()))
 
