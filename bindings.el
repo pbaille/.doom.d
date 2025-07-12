@@ -215,7 +215,6 @@
                                (:desc "generate commit message" "m" #'pb-prompt/generate-commit-message))))
 
        (map! (:prefix ("s-c" . "prompt: context")
-                      (:desc "display" "C-e" #'pb-prompt/display-context)
                       (:desc "local context" "s-c" #'pb-prompt/browse-context-file)
                       (:prefix ("a" . "add")
                                (:desc "add buffer to context" "b" #'pb-prompt/add-buffer)
@@ -224,6 +223,8 @@
                                (:desc "add function to context" "l" #'pb-prompt/add-function)
                                (:desc "add selection to context" "s" #'pb-prompt/add-selection)
                                (:desc "add saved context" "c" #'pb-prompt/add-saved-context))
+
+                      (:desc "display" "C-e" #'pb-prompt/display-context)
 
                       (:desc "delete item" "d" #'pb-prompt/remove-context-item)
 
@@ -258,12 +259,12 @@
                       (:desc "search symbol" "s-e" (lambda () (interactive) (pb-misc/search-symbol :refresh)))))
 
        (map! (:prefix ("s-f" . "file")
-                      (:desc "find file" "s-f" #'find-file)
+                      (:desc "find project file" "s-f" (lambda () (interactive) (projectile-find-file t)))
+                      (:desc "find file" "f" #'find-file)
                       (:desc "recent file" "r" #'consult-recent-file)
                       (:desc "copy file" "C" #'doom/copy-this-file)
                       (:desc "move file" "R" #'doom/move-this-file)
                       (:desc "find project file" "p" #'projectile-find-file)
-                      (:desc "find project file" "f" #'projectile-find-file)
                       (:desc "save file" "s-s" #'pb-misc/save-buffer)
                       (:desc "delete file" "D" #'doom/delete-this-file)
                       (:desc "Yank filepath" "y" #'+default/yank-buffer-path)))
@@ -305,6 +306,7 @@
 (progn :misc
 
        (map! :niv "<f1>" #'ignore
+             :niv "<f2>" #'claude-code-transient
              :ni "C-h" #'backward-char
              :ni "C-j" #'evil-next-line
              :ni "C-k" #'evil-previous-line
@@ -348,6 +350,7 @@
       (:map org-mode-map
             "c p" #'org-pomodoro
             "S" #'org-insert-structure-template)
+
       (:map fennel-mode-map
             "r" #'pb-fennel/repl
             "q" #'pb-fennel/quit
@@ -379,6 +382,12 @@
        :n "<mouse-1>" (lambda () (interactive) (evil-normal-state 1))
        :n "s-i s-i" #'tree-browser/navigate-buffer
        :n "s-s s-i" (lambda () (interactive) (tree-browser/navigate-buffer) (tree-browser/live-search)))
+
+      (:map evil-markdown-mode-map
+       :nv "<return>" (lambda () (interactive) (cond ((or (eq major-mode 'markdown-mode)
+                                                          (eq major-mode 'gfm-mode))
+                                                      (markdown-view-mode))
+                                                     ((eq major-mode 'markdown-view-mode) (markdown-mode)))))
 
       (:map gptel-mode-map
        :i "C-e" #'gptel-send

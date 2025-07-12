@@ -387,15 +387,24 @@
    (markdown-markup-face           :foreground cyan)
    (markdown-link-face             :foreground orange)
    (markdown-link-title-face       :foreground yellow)
-   (markdown-header-face           :foreground red :inherit 'bold)
+   ;; (markdown-header-face           :foreground red :inherit 'bold)
    (markdown-header-delimiter-face :foreground red :inherit 'bold)
    (markdown-language-keyword-face :foreground orange)
    (markdown-markup-face           :foreground fg)
-   (markdown-bold-face             :foreground violet)
+   (markdown-bold-face             :foreground fg-alt)
+   (markdown-list-face             :inherit 'outline-4)
    (markdown-table-face            :foreground fg :background base1)
-   ((markdown-code-face &override) :foreground orange :background base1)
+   (markdown-code-face :foreground (doom-darken (doom-blend fg green 0.7)
+                                                0.2))
+   (markdown-header-delimiter-face :foreground "#616161" :height 0.9)
 
-;;;; rjsx-mode
+   (markdown-header-face-1        :inherit 'outline-1 :height 1.6)
+   (markdown-header-face-2        :inherit 'outline-2 :height 1.4)
+   (markdown-header-face-3        :inherit 'outline-3 :height 1.2)
+   (markdown-header-face-4        :inherit 'outline-4 :height 1.1)
+   (markdown-header-face-5        :inherit 'outline-5)
+   ;;;; rjsx-mode
+
    (rjsx-tag :foreground red)
    (rjsx-tag-bracket-face :foreground red)
    (rjsx-attr :foreground cyan :slant 'italic :weight 'medium)
