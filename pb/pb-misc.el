@@ -495,5 +495,74 @@
                   (describe-symbol selected-symbol)))
              (describe-symbol selected-symbol)))))
 
+(progn :workspaces
+
+       (defvar pb-misc/workspace-topbar-window nil
+         "Window used for displaying workspace information.")
+
+       (defun pb-misc/create-workspace-topbar ()
+         "Create a dedicated window for workspace information at the top of the current frame."
+         (interactive)
+         (when (and pb-misc/workspace-topbar-window
+                    (window-live-p pb-misc/workspace-topbar-window))
+           (delete-window pb-misc/workspace-topbar-window))
+
+         (let ((original-window (selected-window)))
+           ;; Create a window at the top of the frame using the current window
+           (setq pb-misc/workspace-topbar-window
+                 (split-window (frame-root-window) -2 'above))
+
+           (with-selected-window pb-misc/workspace-topbar-window
+             (switch-to-buffer (get-buffer-create "*Workspace-Topbar*"))
+             (setq mode-line-format nil)
+             (setq header-line-format nil)
+             (setq cursor-type nil)
+             (setq window-size-fixed 'height)
+             (erase-buffer)
+             (insert (format " Workspaces: %s"
+                             (if (fboundp '+workspace--tabline)
+                                 (+workspace--tabline)
+                               (progn (+workspace/display)
+                                      (+workspace--tabline)))))
+             (goto-char (point-min))
+             (set-window-dedicated-p (selected-window) t)
+             (set-window-parameter (selected-window) 'no-other-window t))
+
+           ;; Return to original window
+           (select-window original-window)))
+
+       '(pb-misc/create-workspace-topbar)
+
+       (defun pb-misc/update-workspace-topbar ()
+         "Update the workspace topbar content."
+         (when (and pb-misc/workspace-topbar-window
+                    (window-live-p pb-misc/workspace-topbar-window))
+           (with-selected-window pb-misc/workspace-topbar-window
+             (with-current-buffer "*Workspace-Topbar*"
+               (erase-buffer)
+               (insert (format " Workspaces: %s" (+workspace--tabline)))
+               (goto-char (point-min))))))
+
+       (defun pb-misc/remove-workspace-topbar ()
+         "Remove the workspace topbar window."
+         (interactive)
+         (when (and pb-misc/workspace-topbar-window
+                    (window-live-p pb-misc/workspace-topbar-window))
+           (delete-window pb-misc/workspace-topbar-window)
+           (setq pb-misc/workspace-topbar-window nil)))
+
+       '(pb-misc/remove-workspace-topbar)
+
+       (defun pb-misc/toggle-workspace-topbar ()
+         "Toggle the workspace topbar window."
+         (interactive)
+         (if (and pb-misc/workspace-topbar-window
+                  (window-live-p pb-misc/workspace-topbar-window))
+             (pb-misc/remove-workspace-topbar)
+           (pb-misc/create-workspace-topbar)))
+
+       '(pb-misc/toggle-workspace-topbar)
+       )
+
 (provide 'pb-misc)
 ;;; pb-misc.el ends here.

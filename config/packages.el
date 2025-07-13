@@ -338,7 +338,7 @@
   (setq claude-code-terminal-backend 'vterm)
 
   :bind-keymap
-  ("C-c c" . claude-code-command-map))
+  ("s-a" . claude-code-command-map))
 
 '(use-package codeium
    ;; if you use straight

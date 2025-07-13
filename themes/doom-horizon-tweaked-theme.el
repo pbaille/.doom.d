@@ -142,6 +142,9 @@
    (font-lock-regexp-grouping-backslash :foreground (doom-darken teal 0.4))
    (font-lock-regexp-grouping-construct :foreground (doom-blend orange red .7) :weight 'bold)
 
+   (+workspace-tab-selected-face :background bg :foreground fg-alt)
+   (+workspace-tab-face)
+
 ;;;; fringe
    (cider-fringe-good-face :foreground (doom-darken dark-blue 0.3))
 

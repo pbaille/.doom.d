@@ -46,6 +46,9 @@
 
        (map! (:prefix ("s-p" . "project")
 
+                      (:desc "display workspaces"
+                             "<tab>" #'pb-misc/toggle-workspace-topbar)
+
                       (:desc "switch persp"
                              "s-p" #'persp-switch)
 
@@ -294,6 +297,8 @@
                                (:desc "scratch file" "s" #'pb-meta/create-scratch-file)))))
 
 (progn :misc
+
+       
 
        (map! :niv "<f1>" #'ignore
              :niv "<f2>" #'claude-code-transient

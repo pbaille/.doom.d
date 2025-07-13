@@ -1174,7 +1174,7 @@
                                                 (list :inherit 'default :foreground (doom-darken (doom-color 'fg) 0.1)))
                                                ((string= type "src-block") code-face)
                                                (t 'default))
-                                        'mouse-face 'highlight
+                                        'mouse-face (list :foreground (doom-color 'fg-alt))
                                         'help-echo "Click to navigate to this node"))
 
                     (insert "\n")
