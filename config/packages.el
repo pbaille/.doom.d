@@ -76,7 +76,9 @@
                 ;; (diredfl-mode nil)
                 (dired-omit-mode)
                 ;; (nerd-icons-dired-mode)
-                (dired-sort-toggle-or-edit)))))
+                (dired-sort-toggle-or-edit)))
+    (add-hook 'dired-after-readin-hook
+              #'pb-dired/abbreviate-home-in-header)))
 
 (use-package dirvish
   :config

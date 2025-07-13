@@ -155,7 +155,7 @@
 
 ;;;; dired
    (diredfl-dir-name :foreground violet)
-   (diredfl-dir-heading :foreground teal :weight 'ultrabold :box `(:line-width 8 :color ,bg-alt))
+   (diredfl-dir-heading :inherit 'outline-3)
 
    (lsp-details-face :foreground hor-highlight-bright)
 
