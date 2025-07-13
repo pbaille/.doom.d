@@ -294,7 +294,12 @@
                       (:desc "goto main file" "m" #'pb-meta/goto-main-file)
                       (:prefix ("n" . "create")
                                (:desc "org file" "o" #'pb-meta/create-org-file)
-                               (:desc "scratch file" "s" #'pb-meta/create-scratch-file)))))
+                               (:desc "scratch file" "s" #'pb-meta/create-scratch-file))))
+
+       (map! (:prefix ("s-a" . "claude")
+                      (:desc "start" "a" #'pb-claude/start)
+                      (:desc "kill" "k" #'pb-claude/kill)
+                      (:desc "send expression" "e" #'pb-claude/send))))
 
 (progn :misc
 

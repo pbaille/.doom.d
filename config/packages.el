@@ -41,10 +41,6 @@
   (set-company-backend! 'org-mode nil)
   (setq company-idle-delay nil))
 
-'(use-package nerd-icons-dired
-   :hook
-   (dired-mode . nerd-icons-dired-mode))
-
 (use-package nerd-icons-ibuffer
   :ensure t
   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
@@ -73,7 +69,7 @@
               (lambda ()
                 (dired-omit-mode 1)
                 (dired-hide-details-mode 1)
-                ;; (nerd-icons-dired-mode)
+                (nerd-icons-dired-mode 1)
                 (dired-sort-toggle-or-edit)))
 
     (add-hook 'dired-after-readin-hook
@@ -94,8 +90,7 @@
 
 (use-package dired-sidebar
   :config
-  (add-hook 'dired-sidebar-mode-hook
-            'nerd-icons-dired-mode))
+  (setq dired-sidebar-theme 'nerd-icons))
 
 (use-package! vterm
   :config
