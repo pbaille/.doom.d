@@ -466,7 +466,9 @@
 
       (:map  dired-sidebar-mode-map
        :n "h" #'dired-sidebar-up-directory
-       :n "l" #'pb-dired/sidebar-dwim ;#'dired-sidebar-find-file
+       :n "C-l" #'pb-dired/sidebar-dwim ;#'dired-sidebar-find-file
+       :n "l" #'dired-sidebar-find-file
+       :n "s" #'pb-dired/show-file
        :n "q" #'dired-sidebar-hide-sidebar
        :n "<return>" #'pb-dired/sidebar-dwim
        :n "Q" #'pb-misc/kill-all-dired-buffers

@@ -333,13 +333,6 @@
   :bind-keymap
   ("C-c c" . claude-code-command-map))
 
-
-
-
-
-
-
-
 '(use-package codeium
    ;; if you use straight
    ;; :straight '(:type git :host github :repo "Exafunction/codeium.el")

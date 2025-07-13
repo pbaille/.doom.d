@@ -32,6 +32,17 @@
             (dired-sidebar-toggle-sidebar)
             (tree-browser/navigate-buffer)))))))
 
+(defun pb-dired/show-file ()
+  "Show the file at point in the adjacent window (right) without leaving the sidebar"
+  (interactive)
+  (when-let ((file (dired-get-file-for-visit)))
+    (save-selected-window
+      (windmove-right)
+      (if (file-directory-p file)
+          (dired file)
+        (switch-to-buffer (or (find-buffer-visiting file)
+                              (find-file-noselect file)))))))
+
 (defun pb-dired/sidebar-mouse-dwim (event)
   "Perform an action on mouse click in dired-sidebar."
   (interactive "e")
