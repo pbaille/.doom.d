@@ -15,7 +15,7 @@
 ;;      directory (for easy access to its source code).
 
 '(setq doom-leader-key "C-SPC"
-      doom-localleader-key "C-m")
+       doom-localleader-key "C-m")
 
 (doom! :input
        ;;chinese
@@ -71,7 +71,7 @@
        ;;word-wrap         ; soft wrapping with language-aware indent
 
        :emacs
-       (dired +dirvish +icons)             ; making dired pretty [functional]
+       (dired +icons)             ; making dired pretty [functional] +dirvish
        electric          ; smarter, keyword-based electric-indent
        ibuffer           ; interactive buffer management
        undo              ; persistent, smarter undo for your inevitable mistakes

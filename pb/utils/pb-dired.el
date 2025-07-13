@@ -43,14 +43,6 @@
         (switch-to-buffer (or (find-buffer-visiting file)
                               (find-file-noselect file)))))))
 
-(defun pb-dired/abbreviate-home-in-header ()
-  "Abbreviate /Users/pierrebaille to ~ in dired header line."
-  (when (derived-mode-p 'dired-mode)
-    (save-excursion
-      (goto-char (point-min))
-      (when (re-search-forward "^  /Users/pierrebaille" nil t)
-        (replace-match "  ~" nil nil)))))
-
 (defun pb-dired/sidebar-mouse-dwim (event)
   "Perform an action on mouse click in dired-sidebar."
   (interactive "e")

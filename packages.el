@@ -78,7 +78,7 @@
 
 (package! gleam-ts-mode)
 
-(package! claude-code)
+'(package! claude-code)
 
 ;; (package! diredfl :disable t)
 ;; (package! dired+)

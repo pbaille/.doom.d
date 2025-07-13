@@ -71,17 +71,22 @@
 
     (add-hook 'dired-mode-hook
               (lambda ()
-                ;; (setq dirvish-hide-details t)
-                ;; (dired-hide-details-mode 1)
-                ;; (diredfl-mode nil)
-                (dired-omit-mode)
+                (dired-omit-mode 1)
+                (dired-hide-details-mode 1)
                 ;; (nerd-icons-dired-mode)
                 (dired-sort-toggle-or-edit)))
+
     (add-hook 'dired-after-readin-hook
-              #'pb-dired/abbreviate-home-in-header)))
+              (lambda ()
+                (let ((inhibit-read-only t))
+                  (save-excursion
+                    (goto-char (point-min))
+                    (when (re-search-forward "^  /Users/pierrebaille\\(/\\|$\\)" nil t)
+                      (replace-match "  ~\\1" nil nil))))))))
 
 (use-package dirvish
   :config
+  (dirvish-override-dired-mode -1)
   (setq dirvish-hide-details t))
 
 (use-package embark
