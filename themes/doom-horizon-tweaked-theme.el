@@ -278,6 +278,8 @@
    (rainbow-delimiters-depth-5-face :foreground (doom-lighten base3 0.3))
    (rainbow-delimiters-depth-6-face :foreground (doom-lighten base3 0.3))
    (rainbow-delimiters-depth-7-face :foreground (doom-lighten base3 0.3))
+   (rainbow-delimiters-depth-8-face :foreground (doom-lighten base3 0.3))
+   (rainbow-delimiters-depth-9-face :foreground (doom-lighten base3 0.3))
 
 ;;;; org <built-in> <modes:org-mode>
    (org-archived                 :foreground doc-comments)
