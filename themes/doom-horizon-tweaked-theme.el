@@ -74,7 +74,8 @@
    (highlight      red)
    (vertical-bar   base0)
    (selection      violet)
-   (builtin        (doom-blend red violet 0.5))
+   (builtin (doom-lighten (doom-blend red green 0.6)
+                          0.1))
    (comments       (if doom-horizon-tweaked-brighter-comments magenta (doom-darken teal 0.4)))
    (doc-comments   (if doom-horizon-tweaked-brighter-comments magenta (doom-darken teal 0.4)))
    (constants      (doom-lighten (doom-blend red green 0.7)
@@ -120,7 +121,8 @@
   (((font-lock-comment-face &override)
     :slant 'italic
     :background (if doom-horizon-tweaked-comment-bg (doom-lighten bg 0.03)))
-   (highlight-quoted-symbol :foreground dark-blue)
+   (highlight-quoted-symbol :foreground (doom-lighten (doom-blend red green 0.4)
+                                                      0.1))
    (highlight-quoted-quote :foreground dark-blue)
    ;; (highlight-numbers-number :foreground dark-blue)
 
@@ -138,7 +140,9 @@
 
    (marginalia-documentation :foreground violet)
 
-   (clojure-keyword-face :inherit 'font-lock-builtin-face)
+   (clojure-keyword-face ; :inherit 'font-lock-builtin-face
+    :foreground (doom-lighten (doom-blend red green 0.6)
+                              0.1))
    (font-lock-regexp-grouping-backslash :foreground (doom-darken teal 0.4))
    (font-lock-regexp-grouping-construct :foreground (doom-blend orange red .7) :weight 'bold)
 
@@ -157,8 +161,8 @@
 
 
 ;;;; dired
-   (diredfl-dir-name :foreground violet)
-   (diredfl-dir-heading :inherit 'outline-3)
+   (diredfl-dir-name :foreground (doom-lighten (doom-blend red blue 0.7) 0.2))
+   (diredfl-dir-heading :inherit 'outline-1)
 
    (lsp-details-face :foreground hor-highlight-bright)
 
