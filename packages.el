@@ -78,28 +78,18 @@
 
 (package! gleam-ts-mode)
 
-'(package! claude-code)
+(package! clay)
+
+(package! eca :recipe (:host github :repo "editor-code-assistant/eca-emacs" :files ("*.el")))
 
 ;; (package! diredfl :disable t)
 ;; (package! dired+)
 
 (progn :not-used
-       '(package! codeium
-          :pin "b1fc085"
-          :recipe (:host github :repo "Exafunction/codeium.el"))
 
-       '(package! re-jump
-          :recipe (:local-repo "packages"
-                   :files ("re-jump.el")))
-
-       '(package! codeium :recipe (:host github :repo "Exafunction/codeium.el"))
-
-       '(package! gpt)
+       '(package! claude-code)
 
        '(package! centaur-tabs)
-
-       '(package! copilot
-          :recipe (:host github :repo "zerolfx/copilot.el" :files ("*.el" "dist")))
 
        '(package! rigpa
           :recipe (:host github :repo "countvajhula/rigpa"))
