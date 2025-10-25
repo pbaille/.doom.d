@@ -14,6 +14,7 @@
 (require 'evil)
 (require 'dired)
 (require 'dired-subtree)
+(require 'dired-sidebar)
 
 (defun pb-dired/sidebar-dwim ()
   "Visit the buffer on this line.
