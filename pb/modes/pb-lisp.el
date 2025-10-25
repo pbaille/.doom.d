@@ -211,7 +211,7 @@
 
        (defun pb-lisp/get-topmost-node (node)
          "Return the highest node in the tree starting from NODE.
-
+          
           The returned node is the highest possible node that has the same
           start position as NODE, but excludes the root source_file node."
          (let ((node-start-pos (treesit-node-start node))
@@ -1335,8 +1335,10 @@
 
               (defface pb-lisp/progn-keyword-face
                 `((t
-                   :foreground ,(pb-color (doom-color 'red) (desaturate .8) (darken 0.1))
-                   :weight bold))
+                   :foreground ,(doom-blend 'red 'blue 0.7)
+                   ;; (pb-color (doom-color 'red) (desaturate .8) (darken 0.1))
+                   :weight bold
+                   :height 1.2))
                 "Face for keywords in progn sections like (progn :keyword).")
 
               (defun pb-lisp/progn-keyword-matcher (limit)
