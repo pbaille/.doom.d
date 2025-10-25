@@ -52,8 +52,11 @@
   ;; Preserve the cursor position
   (mouse-set-point event)
   (print "pb-dired/mouse")
-  (pb-dired/sidebar-dwim)
-  )
+  (let ((file (dired-get-file-for-visit)))
+    (when file
+      (if (file-directory-p file)
+          (dired-subtree-toggle)
+        (pb-dired/show-file)))))
 
 (defun pb-dired/sidebar-close-all ()
   "Close all dired-sidebar buffers before exiting Emacs."

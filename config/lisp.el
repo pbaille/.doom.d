@@ -68,8 +68,7 @@
          (add-hook 'clojurescript-mode-hook #'rainbow-delimiters-mode)
          (setq lsp-lens-enable nil)
          (setq lsp-enable-symbol-highlighting nil)
-         (setq lsp-headerline-breadcrumb-enable nil)
-         '(copilot-mode nil)))
+         (setq lsp-headerline-breadcrumb-enable nil)))
 
 (use-package fennel-mode
 

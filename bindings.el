@@ -297,13 +297,19 @@
                                (:desc "scratch file" "s" #'pb-meta/create-scratch-file))))
 
        (map! (:prefix ("s-a" . "claude")
+                      ;; not convinced by claude code integration, let's try ECA
+                      (:desc "start" "s-a" #'eca-transient-menu)
+                      ;; (:desc "start" "s-a" #'pb-claude/dwim)
                       (:desc "start" "a" #'pb-claude/start)
                       (:desc "kill" "k" #'pb-claude/kill)
                       (:desc "send expression" "e" #'pb-claude/send))))
 
 (progn :misc
 
-       
+       (map! "C-s-h" #'windmove-left
+             "C-s-l" #'windmove-right
+             "C-s-j" #'windmove-down
+             "C-s-k" #'windmove-up)
 
        (map! :niv "<f1>" #'ignore
              :niv "<f2>" #'claude-code-transient
