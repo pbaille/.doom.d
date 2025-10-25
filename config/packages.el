@@ -24,7 +24,6 @@
   (setq lsp-ui-doc-show-with-mouse nil))
 
 (use-package lsp-modeline)
-(use-package clay)
 
 (use-package spacious-padding
   :config
@@ -44,9 +43,9 @@
   (set-company-backend! 'org-mode nil)
   (setq company-idle-delay nil))
 
-(use-package nerd-icons-ibuffer
-  :ensure t
-  :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
+;; (use-package nerd-icons-ibuffer
+;;   :ensure t
+;;   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 
 (use-package dired
   :commands (dired dired-jump)
@@ -80,8 +79,9 @@
                 (let ((inhibit-read-only t))
                   (save-excursion
                     (goto-char (point-min))
-                    (when (re-search-forward "^  /Users/pierrebaille\\(/\\|$\\)" nil t)
-                      (replace-match "  ~\\1" nil nil))))))))
+                    (when (re-search-forward "^  \\(/Users/pierrebaille\\)\\(.*:\\)$" nil t)
+                      (replace-match "  ~\\2" nil nil))
+                    ))))))
 
 (use-package dirvish
   :config
@@ -287,9 +287,9 @@
   (gptel-make-gemini "Gemini"
     :key pb/gemini-api-key :stream t))
 
-(use-package tide
-  :config
-  (setq tide-server-max-response-length 1000000))
+'(use-package tide
+   :config
+   (setq tide-server-max-response-length 1000000))
 
 (use-package mindstream
   :config
@@ -320,8 +320,7 @@
   ;; `variable-pitch' face supports it
   (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
   ;; Enable all Cascadia Code ligatures in programming modes
-  (ligature-set-ligatures 'prog-mode '("|||>" "<|||" "<==>" "<!--" "####" "~~>" "***" "||=" "||>"
-                                       ":::" "::=" "=:=" "===" "==>" "=!=" "=>>" "=<<" "=/=" "!=="
+  (ligature-set-ligatures 'prog-mode '("|||>" "<|||" "<==>" "<!--" "####" "=>>" "=<<" "=/=" "!=="
                                        "!!." ">=>" ">>=" ">>>" ">>-" ">->" "->>" "-->" "---" "-<<"
                                        "<~~" "<~>" "<*>" "<||" "<|>" "<$>" "<==" "<=>" "<=<" "<->"
                                        "<--" "<-<" "<<=" "<<-" "<<<" "<+>" "</>" "###" "#_(" "..<"
@@ -352,6 +351,8 @@
   :bind-keymap
   ("s-a" . claude-code-command-map))
 
-(use-package eca
-  :config
-  (setq eca-chat-use-side-window nil))
+'(use-package clay)
+
+'(use-package eca
+   :config
+   (setq eca-chat-use-side-window nil))
