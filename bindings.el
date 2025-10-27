@@ -422,7 +422,9 @@
        :n "s-s s-i" (lambda () (interactive) (tree-browser/navigate-buffer) (tree-browser/live-search)))
 
       (:map clojure-mode-map
-       :n "s-l" #'evil-pb-lisp-state)
+       :n "s-l" #'evil-pb-lisp-state
+       :niv "s-s l" #'consult-lsp-symbols
+       :niv "s-s s-l" #'consult-lsp-file-symbols)
 
       (:map cider-inspector-mode-map
        :n "j" #'cider-inspector-next-inspectable-object
