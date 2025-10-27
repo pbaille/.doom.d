@@ -134,6 +134,8 @@
                           ;; Neither buffer visits a file, so sort alphabetically.
                           (string-lessp (buffer-name a) (buffer-name b))))))))
 
+  (setq consult-narrow-key "/")
+
   (setq consult-project-function (lambda (_) (doom-project-root)))
 
   (setq consult--source-buffer
