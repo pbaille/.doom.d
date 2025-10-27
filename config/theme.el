@@ -19,13 +19,13 @@
 
 (progn :remove-magic-paren
        (turn-off-show-smartparens-mode)
-       (remove-hook 'prog-mode-hook
-                    #'rainbow-delimiters-mode)
-       (after! cc-mode
-         (remove-hook 'c-mode-common-hook #'rainbow-delimiters-mode))
-       (after! clojure-mode
-         (remove-hook 'clojure-mode-hook #'rainbow-delimiters-mode))
-       (remove-hook 'emacs-lisp-mode-hook #'rainbow-delimiters-mode))
+       '(remove-hook 'prog-mode-hook
+         #'rainbow-delimiters-mode)
+       '(after! cc-mode
+          (remove-hook 'c-mode-common-hook #'rainbow-delimiters-mode))
+       '(after! clojure-mode
+          (remove-hook 'clojure-mode-hook #'rainbow-delimiters-mode))
+       (add-hook 'emacs-lisp-mode-hook #'rainbow-delimiters-mode))
 
 (progn :colors
 
@@ -45,9 +45,9 @@
 ;; redefine brutally
 (defun spacious-padding-set-faces (&rest _)
   "Make window dividers invisible and add padding.
-Ignore any arguments.  This is useful to add the function to abnormal
-hooks that pass one or more arguments to it, such as
-`after-make-frame-functions'."
+   Ignore any arguments.  This is useful to add the function to abnormal
+   hooks that pass one or more arguments to it, such as
+   `after-make-frame-functions'."
   (let ((bg-main "#1a1c23")
         (fg-main (face-foreground 'default))
         custom--inhibit-theme-enable)
@@ -73,3 +73,5 @@ hooks that pass one or more arguments to it, such as
      `(,@(spacious-padding-set-window-divider 'window-divider bg-main))
      `(,@(spacious-padding-set-window-divider 'window-divider-first-pixel bg-main))
      `(,@(spacious-padding-set-window-divider 'window-divider-last-pixel bg-main)))))
+
+(spacious-padding-set-faces)
