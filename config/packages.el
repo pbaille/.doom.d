@@ -83,6 +83,18 @@
                       (replace-match "  ~\\2" nil nil))
                     ))))))
 
+(use-package nerd-icons-dired
+  :preface
+  (defun my/nerd-icons-icon-for-file (file)
+    (nerd-icons-icon-for-file file :height 0.9 :face '(:foreground "#575")))
+
+  (defun my/nerd-icons-icon-for-dir (dir)
+    (nerd-icons-icon-for-dir dir :height 0.9 :face '(:foreground "#575")))
+
+  :custom
+  (nerd-icons-dired-file-icon-function #'my/nerd-icons-icon-for-file)
+  (nerd-icons-dired-dir-icon-function #'my/nerd-icons-icon-for-dir))
+
 (use-package dirvish
   :config
   (dirvish-override-dired-mode -1)

@@ -18,6 +18,7 @@
   (setq doom-theme 'doom-horizon-tweaked))
 
 (progn :remove-magic-paren
+       
        (turn-off-show-smartparens-mode)
        '(remove-hook 'prog-mode-hook
          #'rainbow-delimiters-mode)

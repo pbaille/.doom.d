@@ -262,9 +262,12 @@
                       (:desc "search symbol" "s-e" (lambda () (interactive) (pb-misc/search-symbol :refresh)))))
 
        (map! (:prefix ("s-f" . "file")
-                      (:desc "find project file" "s-f" (lambda () (interactive) (projectile-find-file t)))
+                      (:desc "find project file refresh" "C-f" (lambda () (interactive) (projectile-find-file t)))
+                      (:desc "find project file" "s-f" #'projectile-find-file ;; #'pb-consult/consult-project-files
+                             )
                       (:desc "find file" "f" #'find-file)
                       (:desc "recent file" "r" #'consult-recent-file)
+                      (:desc "project recent file" "s-r" #'pb-consult/consult-project-recent-files)
                       (:desc "copy file" "C" #'doom/copy-this-file)
                       (:desc "move file" "R" #'doom/move-this-file)
                       (:desc "find project file" "p" #'projectile-find-file)
