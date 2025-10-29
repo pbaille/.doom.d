@@ -23,14 +23,14 @@
 
 (defun km* (xs)
   "Build a keyword map from XS.
-Throws an error if XS does not form a valid keyword map."
+   Throws an error if XS does not form a valid keyword map."
   (if (km? xs)
       xs
     (error (format "Bad argument to km: %s" xs))))
 
 (defun km (&rest xs)
   "Build a keyword map from XS.
-Throws an error if XS does not form a valid keyword map."
+   Throws an error if XS does not form a valid keyword map."
   (km* xs))
 
 (defun km/entries (m)
@@ -41,8 +41,8 @@ Throws an error if XS does not form a valid keyword map."
 
 (defun km/eq (km1 km2)
   "Check if two keyword maps KM1 and KM2 are equal.
-Keyword maps are considered equal if they contain the same keys
-with the same associated values."
+   Keyword maps are considered equal if they contain the same keys
+   with the same associated values."
   (and (km? km1)
        (km? km2)
        (let ((keys1 (km/keys km1))
@@ -128,7 +128,7 @@ with the same associated values."
 
 (defun km/get (m at)
   "Get the value at AT in the keyword map M.
-If AT is a list, get the value in a nested map."
+   If AT is a list, get the value in a nested map."
   (cond ((listp at) (km/get-in m at))
         ((vectorp at) (km/get-in m (append at ())))
         ((keywordp at) (plist-get m at))))
@@ -152,7 +152,7 @@ If AT is a list, get the value in a nested map."
 
 (defun km/put1 (m at v)
   "Put value V at AT in a copy of keyword map M.
-If AT is a list, put the value in a nested map."
+   If AT is a list, put the value in a nested map."
   (km/put-in m
              (cond ((listp at) at)
                    ((vectorp at) (append at ()))
@@ -176,7 +176,7 @@ If AT is a list, put the value in a nested map."
 
 (defun km/upd1 (m at f)
   "Update value at AT in a copy of keyword map M by applying function F.
-If AT is a list, update the value in a nested map."
+   If AT is a list, update the value in a nested map."
   (km/upd-in m
              (cond ((listp at) at)
                    ((vectorp at) (append at ()))
@@ -185,7 +185,7 @@ If AT is a list, update the value in a nested map."
 
 (defun km/upd (m &rest xs)
   "Update the keyword map M using XS.
-XS is a list alternating paths and update-fns."
+   XS is a list alternating paths and update-fns."
   (cl-reduce (lambda (m entry)
                (km/upd1 m (car entry) (cadr entry)))
              (sq/partition 2 2 xs)
@@ -194,15 +194,15 @@ XS is a list alternating paths and update-fns."
 (defun km/all-paths (m)
   "Transform M into an alist of path -> value."
   (cl-reduce (lambda (ret entry)
-                 (let ((k (car entry))
-                       (v (cdr entry)))
-                   (append ret
-                           (if (km? v)
-                               (mapcar (lambda (e)
-                                         (cons (cons k (car e))
-                                               (cdr e)))
-                                       (km/all-paths v))
-                             (list (cons (list k) v))))))
+               (let ((k (car entry))
+                     (v (cdr entry)))
+                 (append ret
+                         (if (km? v)
+                             (mapcar (lambda (e)
+                                       (cons (cons k (car e))
+                                             (cdr e)))
+                                     (km/all-paths v))
+                           (list (cons (list k) v))))))
              (km/entries m)
              :initial-value ()))
 
@@ -242,12 +242,16 @@ XS is a list alternating paths and update-fns."
                           entries
                           (concat "\n" indent "    "))
                          ")"))))
-            ((listp m)
+            ((proper-list-p m)
              (concat "("
                      (mapconcat (lambda (km) (km/pp km (1+ (or indentation-lvl 0))))
                                 m
                                 (concat "\n " indent))
                      ")"))
+            ((consp m)
+             (format "(%s . %s)" 
+                     (km/pp (car m) (+ (or indentation-lvl 0) 1))
+                     (km/pp (cdr m) (+ (or indentation-lvl 0) 1))))
             (t (prin1-to-string m)))))
 
        [:tests
@@ -275,8 +279,8 @@ XS is a list alternating paths and update-fns."
 
 (defmacro km/let (binding &rest body)
   "Let binding for keyword maps.
-BINDING specifies variables to be bound from a keyword map,
-and BODY is the code to execute in the context of those bindings."
+   BINDING specifies variables to be bound from a keyword map,
+   and BODY is the code to execute in the context of those bindings."
   (let* ((pat (car binding))
          (pat (if (equal :as (car pat))
                   (list (cadr pat) (cddr pat))
@@ -291,16 +295,16 @@ and BODY is the code to execute in the context of those bindings."
 
 (defmacro km/lambda (ks &rest body)
   "Define a function that takes a keyword map as its sole argument.
-KS specifies the expected keys, and BODY is the code to execute."
+   KS specifies the expected keys, and BODY is the code to execute."
   (let ((seed (gensym)))
     `(lambda (,seed)
        (km/let (,ks ,seed)
-                ,@body))))
+               ,@body))))
 
 (defmacro km/defun (name ks &rest body)
   "Define a named function that takes a keyword map as its sole argument.
-NAME is the function name, KS specifies the expected keys,
-and BODY is the code to execute."
+   NAME is the function name, KS specifies the expected keys,
+   and BODY is the code to execute."
   (let ((seed (gensym)))
     `(defun ,name (,seed)
        (km/let (,ks ,seed)
