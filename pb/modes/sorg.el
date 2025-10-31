@@ -102,6 +102,7 @@
         ((evil-normal-state-p) (evil-sorg-state))))
 
 (progn :pb-lisp-outside-of-blocks
+
        (defun sorg/pb-lisp-entry-hook-function ()
          (when (eq major-mode 'org-mode)
            (setq-local pb-lisp/enter-node-function
@@ -183,14 +184,14 @@
 
        (defun sorg/eval-block (elisp-str)
          "Evaluate the Emacs Lisp string ELISP-STR and return evaluation information as a keyword map.
-
+          
           The returned keyword map includes:
           - :success - Boolean indicating if evaluation completed without error
           - :result - The return value of the evaluated code
           - :output - Output captured from the message buffer
           - :error - Error message and backtrace if an error occurred
           - :duration - Time taken to evaluate the code in milliseconds
-
+          
           This function carefully manages the message buffer state, restoring it after execution."
          (let ((messages-buffer (get-buffer-create "*Messages*"))
                (temp-message-buffer (get-buffer-create " *temp-messages*"))
@@ -248,13 +249,13 @@
        (defun sorg/eval-current-block ()
          "Evaluate the current org source block if it contains Emacs Lisp code.
           Displays formatted results below the source block and returns evaluation data.
-
+          
           When executed on an elisp source block:
           1. Evaluates the code and collects results/output/errors
           2. Inserts formatted results after the block
           3. Removes any previous results from the same block
           4. Returns a keyword map with evaluation details
-
+          
           The returned keyword map includes:
           :success - t/nil indicating whether evaluation succeeded
           :result  - the actual return value from evaluation
@@ -575,12 +576,12 @@
          "Replace current org node with GPT model response.
           This function handles the response from a GPT model request and replaces
           the current org node with that response.
-
+          
           The function performs the following steps:
           1. Delete the content of the current org node
           2. Insert the model's response text in place of the original content
           3. Ensure proper formatting and indentation of the edited node
-
+          
           Parameters:
           - RES: The response text from the language model
           - INFO: A plist containing metadata about the request (provided by gptel)"
