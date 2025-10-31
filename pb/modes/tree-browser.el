@@ -800,9 +800,10 @@
                                         :verb verb
                                         :var-def is-var-def
                                         :fun-def is-fun-def)
-                                (when (or is-fun-def is-var-def)
-                                  (km :name name
-                                      :short-name (tree-browser/remove-package-prefix name))))))
+                                (if (or is-fun-def is-var-def)
+                                    (km :name name
+                                        :short-name (tree-browser/remove-package-prefix name))
+                                  (km :second-name name)))))
                    (t base)))))
 
        (defun tree-browser/file->node-tree (path)
@@ -1176,6 +1177,12 @@
                                                (t 'default))
                                         'mouse-face (list :foreground (doom-color 'fg-alt))
                                         'help-echo "Click to navigate to this node"))
+
+                    (when-let ((second-name (km/get node-data :second-name)))
+                      (insert "\n")
+                      (insert prefix)
+                      (insert (concat "  " (propertize second-name
+                                                       'face (list :foreground (doom-darken (doom-blend 'fg 'teal 0.5) 0.15))))))
 
                     (insert "\n")
 
