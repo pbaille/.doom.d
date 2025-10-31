@@ -43,9 +43,9 @@
   (set-company-backend! 'org-mode nil)
   (setq company-idle-delay nil))
 
-;; (use-package nerd-icons-ibuffer
-;;   :ensure t
-;;   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
+(use-package nerd-icons-ibuffer
+  :ensure t
+  :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 
 (use-package dired
   :commands (dired dired-jump)
@@ -86,10 +86,13 @@
 (use-package nerd-icons-dired
   :preface
   (defun my/nerd-icons-icon-for-file (file)
-    (nerd-icons-icon-for-file file :height 0.9 :face '(:foreground "#575")))
+    (nerd-icons-icon-for-file file :face (list :foreground (doom-blend "#535"
+                                                                       (doom-lighten 'base3 0.3)
+                                                                       0.4))))
 
   (defun my/nerd-icons-icon-for-dir (dir)
-    (nerd-icons-icon-for-dir dir :height 0.9 :face '(:foreground "#575")))
+    (nerd-icons-icon-for-dir dir ;:height 0.9
+                             :face '(:foreground "#575")))
 
   :custom
   (nerd-icons-dired-file-icon-function #'my/nerd-icons-icon-for-file)
