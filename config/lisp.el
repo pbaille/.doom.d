@@ -114,7 +114,13 @@
                                         ; ("C-d" . +lookup/documentation )
           ("g d" . pb-symex/lookup-definition)
           ("g r" . pb-symex/lookup-references)
-          ("g h" . recenter)
+          ("g h" . evil-first-non-blank)
+          ("g H" . evil-beginning-of-line)
+          ("g l" . evil-end-of-line)
+          ("g k" . evil-window-top)
+          ("g j" . evil-window-bottom)
+          ("g m" . evil-window-middle)
+                                        ;("g h" . recenter)
 
           ;; nav
           ("M-k" . scroll-up-with-cursor) ;; symex-goto-lowest
@@ -164,10 +170,14 @@
           ("C-j" . pb-symex/next-line) ;; replace symex-climb-branch
           ("C-l" . evil-forward-char)
           ("C-h" . evil-backward-char)
-          ("g j" . evil-scroll-line-to-top)
-          ("g k" . evil-scroll-line-to-bottom)
+          ("g J" . evil-scroll-line-to-bottom)
+          ("g K" . evil-scroll-line-to-top)
+          ("g M" . recenter)
           ("C-S-j" . evil-scroll-line-up)
           ("C-S-k" . evil-scroll-line-down)
+          ;; restore basic evil moves
+          ("C-f" . evil-scroll-page-down)
+          ("C-b" . evil-scroll-page-up)
 
 
           ;; indent, tidy

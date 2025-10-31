@@ -342,9 +342,13 @@
        (map! :n "g f" #'dired-sidebar-jump-to-sidebar
              :n "g b" #'pb-ibuffer/sidebar-focus)
 
-       (map! :n "g j" #'evil-scroll-line-to-top
-             :n "g k" #'evil-scroll-line-to-bottom
-             :n "g C-h" #'pb-misc/scroll-to-leftmost))
+       (map! :n "g l" #'evil-end-of-line
+             :n "g h" #'evil-first-non-blank
+             :n "g j" #'evil-window-bottom
+             :n "g k" #'evil-window-top
+             :n "g S-k" #'evil-scroll-line-to-top
+             :n "g S-j" #'evil-scroll-line-to-bottom
+             :n "g S-h" #'pb-misc/scroll-to-leftmost))
 
 (map! :leader
 
