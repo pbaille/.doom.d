@@ -426,7 +426,7 @@
        :n "s-j b" #'tree-browser/navigate-buffer
        :n "s-l" #'evil-pb-lisp-state
        :n "s-i s-i" #'tree-browser/navigate-buffer
-       :n "s-s s-i" (lambda () (interactive) (tree-browser/navigate-buffer) (tree-browser/live-search)))
+       :n "s-s s-i" #'tree-browser/navigate-and-search-buffer)
 
       (:map clojure-mode-map
        :n "s-l" #'evil-pb-lisp-state
