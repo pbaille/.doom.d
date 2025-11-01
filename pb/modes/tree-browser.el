@@ -751,16 +751,19 @@
            (when-let ((parser (car (treesit-parser-list))))
              (treesit-parser-root-node parser))))
 
+       (defun tree-browser/package-prefixed? (name)
+         "Return non-nil if NAME starts with the current file's package prefix."
+         (when-let ((file-name (when (buffer-file-name)
+                                 (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))))
+           (string-prefix-p file-name name)))
+
        (defun tree-browser/remove-package-prefix (name)
-         (if-let ((file-name (when (buffer-file-name)
-                               (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))))
-             (if (string-prefix-p file-name name)
-                 (if (and file-name
-                          (> (length name) (length file-name))
-                          (string-prefix-p file-name name))
-                     (substring name (1+ (length file-name)))
-                   name)
-               name)
+         (if (tree-browser/package-prefixed? name)
+             (let ((file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name)))))
+               (if (and (> (length name) (length file-name))
+                        (char-equal (aref name (length file-name)) ?/))
+                   (substring name (1+ (length file-name)))
+                 name))
            name))
 
        (defun tree-browser/node-tree (node &optional level)
@@ -792,8 +795,10 @@
                     (let* ((name-node (treesit-node-child node 2))
                            (verb-node (treesit-node-child node 1))
                            (verb (when verb-node (intern (treesit-node-text verb-node t))))
-                           (name (when (string= "symbol" (treesit-node-type name-node))
-                                   (treesit-node-text name-node t)))
+                           (name (when (member (treesit-node-type name-node) '("symbol" "quote"))
+                                   (if (string= (treesit-node-type name-node) "quote")
+                                       (treesit-node-text (treesit-node-child name-node 1) t)
+                                     (treesit-node-text name-node t))))
                            (is-var-def (member verb '(defvar defvar-local)))
                            (is-fun-def (eq verb 'defun)))
                       (km/merge (km/put base
@@ -803,7 +808,8 @@
                                 (if (or is-fun-def is-var-def)
                                     (km :name name
                                         :short-name (tree-browser/remove-package-prefix name))
-                                  (km :second-name name)))))
+                                  (km :package-prefixed? (tree-browser/package-prefixed? name)
+                                      :second-name (tree-browser/remove-package-prefix name))))))
                    (t base)))))
 
        (defun tree-browser/file->node-tree (path)
@@ -1181,8 +1187,10 @@
                     (when-let ((second-name (km/get node-data :second-name)))
                       (insert "\n")
                       (insert prefix)
-                      (insert (concat "  " (propertize second-name
-                                                       'face (list :foreground (doom-darken (doom-blend 'fg 'teal 0.5) 0.15))))))
+                      (insert (propertize (if (km/get node-data :package-prefixed?)
+                                              (concat "  /" second-name)
+                                            (concat "  " second-name))
+                                          'face (list :foreground (doom-darken (doom-blend 'fg 'teal 0.5) 0.15)))))
 
                     (insert "\n")
 
