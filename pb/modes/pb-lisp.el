@@ -661,6 +661,9 @@
                    (indent-region-end (max end-point sibling-end)))
                (indent-region indent-region-start indent-region-end))
 
+             ;; Reset current-node to force fresh node lookup after swap
+             (setq-local pb-lisp/current-node nil)
+
              (cond ((eq direction 'next) (pb-lisp/goto-next-sibling))
                    ((eq direction 'prev) (goto-char sibling-start) (pb-lisp/update-overlay))))))
 
@@ -738,7 +741,9 @@
                                    (treesit-node-start parent))
                                   (t start))))
            ;; Kill the region (adds to kill ring)
+
            (kill-region start end)
+           (setq-local pb-lisp/current-node nil)
            (cond
             (next-sibling
              ;; Delete forward whitespace
@@ -750,6 +755,7 @@
              (while (and (> (point) (point-min))
                          (progn (backward-char) (looking-at-p "\\s-")))
                (delete-char 1))))
+
            (goto-char target-pos)
            (pb-lisp/indent-parent-node)))
 
@@ -759,7 +765,9 @@
                                             (yank))
                                           (point))))
            (pb-lisp/set-selection (cons (point) end-point))
-           (pb-lisp/indent-parent-node)))
+           (pb-lisp/indent-parent-node)
+           ;; Reset current-node after all operations to ensure fresh lookup on next command
+           (setq-local pb-lisp/current-node nil)))
 
        (defun pb-lisp/yank-after ()
          "Yank clipboard contents after the current node."
@@ -798,6 +806,8 @@
            (delete-region start end)
            (goto-char start)
            (pb-lisp/indent-parent-node)
+           ;; Reset current-node after all operations to ensure fresh lookup on next command
+           (setq-local pb-lisp/current-node nil)
            (evil-insert-state 1)))
 
        (defun pb-lisp/insert-after ()
@@ -886,7 +896,9 @@
              (goto-char start)
              (insert "("))
            (pb-lisp/indent-parent-node)
-           (goto-char start)))
+           (goto-char start)
+           ;; Reset current-node after all operations to ensure fresh lookup on next command
+           (setq-local pb-lisp/current-node nil)))
 
        (defun pb-lisp/raise-node ()
          "Replace the parent node with the current node."
@@ -923,6 +935,8 @@
                    (goto-char start)
                    (insert content)
                    (indent-region start (+ start (length content)))
+                   ;; Reset current-node to force fresh node lookup after splicing
+                   (setq-local pb-lisp/current-node nil)
                    (pb-lisp/set-selection (cons start (+ start (length content))))))
              (message "Cannot splice - node must have children"))))
 
@@ -932,7 +946,9 @@
          (let* ((start (pb-lisp/selection-start)))
            (goto-char start)
            (insert "\n")
-           (pb-lisp/indent-parent-node)))
+           (pb-lisp/indent-parent-node)
+           ;; Reset current-node after all operations to ensure fresh lookup on next command
+           (setq-local pb-lisp/current-node nil)))
 
        (defun pb-lisp/move-node-up-one-line ()
          "Move the current node or selection up one line."
@@ -957,7 +973,9 @@
                (progn
                  (delete-indentation)
                  (forward-char 1)))
-             (pb-lisp/indent-parent-node)))))
+             (pb-lisp/indent-parent-node)
+             ;; Reset current-node after all operations to ensure fresh lookup on next command
+             (setq-local pb-lisp/current-node nil)))))
 
 (progn :evaluation
 
