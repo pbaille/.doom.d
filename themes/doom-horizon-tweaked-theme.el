@@ -394,13 +394,16 @@
 
 ;;;; markdown-mode
    (markdown-markup-face           :foreground cyan)
-   (markdown-link-face             :foreground orange)
+   (markdown-link-face             :foreground (doom-darken (doom-blend fg blue 0.7)
+                                                            0.2))
+   (markdown-pre-face             :foreground (doom-darken (doom-blend fg green 0.7)
+                                                           0.2))
    (markdown-link-title-face       :foreground yellow)
    ;; (markdown-header-face           :foreground red :inherit 'bold)
    (markdown-header-delimiter-face :foreground red :inherit 'bold)
    (markdown-language-keyword-face :foreground orange)
    (markdown-markup-face           :foreground fg)
-   (markdown-bold-face             :foreground fg-alt)
+   (markdown-bold-face             :foreground fg :weight 'bold)
    (markdown-list-face             :inherit 'outline-4)
    (markdown-table-face            :foreground fg :background base1)
    (markdown-code-face :foreground (doom-darken (doom-blend fg green 0.7)

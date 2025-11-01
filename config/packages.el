@@ -370,6 +370,6 @@
 
 '(use-package clay)
 
-'(use-package eca
-   :config
-   (setq eca-chat-use-side-window nil))
+(use-package eca
+  :config
+  (setq eca-chat-use-side-window nil))
