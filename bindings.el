@@ -315,11 +315,13 @@
              "C-s-k" #'windmove-up)
 
        (map! :niv "<f1>" #'ignore
-             :niv "<f2>" #'claude-code-transient
+
+             ;; basic moves with control
              :ni "C-h" #'backward-char
              :ni "C-j" #'evil-next-line
              :ni "C-k" #'evil-previous-line
              :ni "C-l" #'forward-char
+
              :n "M-C-j" (lambda () (interactive) (evil-insert-newline-above) (evil-next-line))
              :n "M-C-k" (lambda () (interactive) (delete-indentation))
 
@@ -327,6 +329,7 @@
              :i "C-S-h" #'paredit-backward-delete
              :i "C-S-l" #'paredit-forward-delete
              ;; :i "C-w" #'pb-misc/insert-open-paren
+
              :i "TAB" #'consult-company
              :i "M-v" #'consult-yank-from-kill-ring
              :i "s-c" #'copy-region-as-kill)
@@ -339,13 +342,20 @@
              :i "s-4" #'+workspace/switch-to-3
              :i "s-5" #'+workspace/switch-to-4)
 
-       (map! :n "g f" #'dired-sidebar-jump-to-sidebar
-             :n "g b" #'pb-ibuffer/sidebar-focus)
+       (map! :n "z J" #'evil-scroll-line-to-bottom
+             :n "z K" #'evil-scroll-line-to-top)
 
+       (map! :n "g f" #'dired-sidebar-jump-to-sidebar
+             :n "g b" #'pb-ibuffer/sidebar-focus
+             :n "g r" #'+lookup/references)
+       
        (map! :n "g l" #'evil-end-of-line
              :n "g h" #'evil-first-non-blank
+             :n "g H" #'evil-beginning-of-line
+
              :n "g j" #'evil-window-bottom
              :n "g k" #'evil-window-top
+             :n "g m" #'evil-window-middle
              :n "g S-k" #'evil-scroll-line-to-top
              :n "g S-j" #'evil-scroll-line-to-bottom
              :n "g S-h" #'pb-misc/scroll-to-leftmost))
@@ -394,7 +404,7 @@
        :ni "s-l" #'symex-mode-interface
        :n "<mouse-1>" (lambda () (interactive) (evil-normal-state 1))
        :n "s-i s-i" #'tree-browser/navigate-buffer
-       :n "s-s s-i" (lambda () (interactive) (tree-browser/navigate-buffer) (tree-browser/live-search)))
+       :n "s-s s-i" #'tree-browser/navigate-and-search-buffer)
 
       (:map evil-markdown-mode-map
        :nv "<return>" (lambda () (interactive) (cond ((or (eq major-mode 'markdown-mode)
