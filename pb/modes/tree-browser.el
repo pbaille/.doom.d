@@ -276,6 +276,9 @@
        (defvar-local tree-browser/original-data nil
          "Original tree data before filtering.")
 
+       (defvar-local tree-browser/highlight-overlay nil
+         "Overlay used to highlight the current node in the tree browser.")
+
        (defun tree-browser/filter-tree (tree search-term)
          "Filter TREE to include only nodes that match SEARCH-TERM or their ancestors.
           Returns the filtered tree structure."
@@ -327,6 +330,13 @@
                         (unless tree-browser/original-data
                           (setq-local tree-browser/original-data tree-browser/data))
 
+                        ;; Setup navigation keybindings in minibuffer
+                        (let ((map (make-sparse-keymap)))
+                          (set-keymap-parent map (current-local-map))
+                          (define-key map (kbd "C-j") 'tree-browser/search-next-match)
+                          (define-key map (kbd "C-k") 'tree-browser/search-prev-match)
+                          (use-local-map map))
+
                         ;; Setup live updating
                         (add-hook 'post-command-hook 'tree-browser/live-update-filter nil t))
                       minibuffer-setup-hook))
@@ -347,14 +357,18 @@
                     (setq-local tree-browser/original-data nil)
                     (setq-local tree-browser/search-term nil)
                     (tree-browser/refresh)
+                    (tree-browser/remove-highlight)
                     (message "Search aborted")
                     ;; Use tree-browser/quit instead of manual buffer/window management
                     (tree-browser/quit))))
 
-             ;; Cleanup hook when done (happens regardless of completion or abort)
+             ;; Cleanup hook and highlight when done (happens regardless of completion or abort)
              (when (active-minibuffer-window)
                (with-current-buffer (window-buffer (active-minibuffer-window))
-                 (remove-hook 'post-command-hook 'tree-browser/live-update-filter t))))
+                 (remove-hook 'post-command-hook 'tree-browser/live-update-filter t)))
+             
+             ;; Remove highlight after search completes
+             (tree-browser/remove-highlight))
 
            ;; Only process search results if search wasn't aborted
            (unless was-aborted
@@ -377,7 +391,9 @@
                ;; Apply filter with current input
                (if (string-empty-p current-input)
                    ;; Show original data if search is empty
-                   (setq-local tree-browser/data tree-browser/original-data)
+                   (progn
+                     (setq-local tree-browser/data tree-browser/original-data)
+                     (tree-browser/remove-highlight))
                  ;; Otherwise filter the tree
                  (let ((filtered-tree (tree-browser/filter-tree
                                        tree-browser/original-data
@@ -387,7 +403,58 @@
                      (setq-local tree-browser/max-depth 99))))
 
                ;; Refresh display
-               (tree-browser/refresh))))))
+               (tree-browser/refresh)
+               
+               ;; Highlight current line if we have search results
+               (unless (string-empty-p current-input)
+                 (tree-browser/highlight-current-line))))))
+
+       (defun tree-browser/highlight-current-line ()
+         "Highlight the current line in the tree browser."
+         (when (derived-mode-p 'tree-browser/mode)
+           ;; Remove existing highlight
+           (when tree-browser/highlight-overlay
+             (delete-overlay tree-browser/highlight-overlay))
+           
+           ;; Create new highlight overlay
+           (let ((start (line-beginning-position))
+                 (end (1+ (line-end-position))))
+             (setq tree-browser/highlight-overlay (make-overlay start end))
+             (overlay-put tree-browser/highlight-overlay 'face 
+                          '(:inherit hl-line :extend t))
+             (overlay-put tree-browser/highlight-overlay 'priority 100))))
+
+       (defun tree-browser/remove-highlight ()
+         "Remove the current line highlight in the tree browser."
+         (when tree-browser/highlight-overlay
+           (delete-overlay tree-browser/highlight-overlay)
+           (setq tree-browser/highlight-overlay nil)))
+
+       (defun tree-browser/search-next-match ()
+         "Navigate to the next matched node in the tree browser during live search."
+         (interactive)
+         (with-selected-window (minibuffer-selected-window)
+           (when (derived-mode-p 'tree-browser/mode)
+             (forward-line 1)
+             (back-to-indentation)
+             (tree-browser/highlight-current-line)
+             (when tree-browser/narrow-mode
+               (tree-browser/apply-narrowing-at-point))
+             (when tree-browser/follow-mode
+               (tree-browser/sync-source-with-tree)))))
+
+       (defun tree-browser/search-prev-match ()
+         "Navigate to the previous matched node in the tree browser during live search."
+         (interactive)
+         (with-selected-window (minibuffer-selected-window)
+           (when (derived-mode-p 'tree-browser/mode)
+             (forward-line -1)
+             (back-to-indentation)
+             (tree-browser/highlight-current-line)
+             (when tree-browser/narrow-mode
+               (tree-browser/apply-narrowing-at-point))
+             (when tree-browser/follow-mode
+               (tree-browser/sync-source-with-tree))))))
 
 (progn :actions
 
@@ -562,6 +629,8 @@
          "Quit the tree browser."
          (interactive)
          (let ((buf (current-buffer)))
+           ;; Clean up highlight overlay before quitting
+           (tree-browser/remove-highlight)
            (if tree-browser/source-buffer
                (progn (quit-window)
                       (kill-buffer buf)
@@ -1441,7 +1510,17 @@
 
           ;; Fallback for unsupported buffers
           (t
-           (message "Tree browser is not supported for this buffer type")))))
+           (message "Tree browser is not supported for this buffer type"))))
+
+       (defun tree-browser/navigate-and-search-buffer ()
+         "Navigate to the tree browser for the current buffer and immediately start live search."
+         (interactive)
+         (tree-browser/navigate-buffer)
+         ;; Wait for the tree browser to be created and displayed
+         (run-with-idle-timer 0.1 nil
+                              (lambda ()
+                                (when (derived-mode-p 'tree-browser/mode)
+                                  (tree-browser/live-search))))))
 
 (progn :bindings
        (when (featurep 'evil)
