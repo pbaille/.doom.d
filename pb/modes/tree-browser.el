@@ -375,8 +375,7 @@
              ;; Handle empty search term (clear search)
              (if (string-empty-p tree-browser/search-term)
                  (tree-browser/clear-search)
-               (message "Showing matches for \"%s\" (press / to change, ESC to clear)"
-                        tree-browser/search-term)))))
+               (tree-browser/goto-source t)))))
 
        (defun tree-browser/live-update-filter ()
          "Update the tree browser filter based on current minibuffer content.
