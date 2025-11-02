@@ -484,11 +484,16 @@
            (pb-lisp/goto-node child "No child node found")))
 
        (defun pb-lisp/goto-next-line ()
-         "Move cursor to the next line, disabling overlay and resetting current-node."
+         "Move cursor to the next line, disabling overlay and resetting current-node.
+          Skips empty lines."
          (interactive)
          (let* ((current-pos (point))
                 (column (current-column)))
            (forward-line 1)
+           ;; Skip empty lines
+           (while (and (not (eobp))
+                       (looking-at-p "^[[:space:]]*$"))
+             (forward-line 1))
            (when (eq (point) current-pos) ; If we're at the end of the buffer
              (goto-char (point-max)))
            (setq-local pb-lisp/current-node nil) ; Reset current node
@@ -498,11 +503,16 @@
            (pb-lisp/update-overlay)))
 
        (defun pb-lisp/goto-previous-line ()
-         "Move cursor to the previous line, disabling overlay and resetting current-node."
+         "Move cursor to the previous line, disabling overlay and resetting current-node.
+          Skips empty lines."
          (interactive)
          (let* ((current-pos (point))
                 (column (current-column)))
            (forward-line -1)
+           ;; Skip empty lines
+           (while (and (not (bobp))
+                       (looking-at-p "^[[:space:]]*$"))
+             (forward-line -1))
            (when (eq (point) current-pos) ; If we're at the beginning of the buffer
              (goto-char (point-min)))
            (setq-local pb-lisp/current-node nil) ; Reset current node
@@ -510,6 +520,66 @@
            (move-to-column column)
            (goto-char (car (pb-lisp/get-current-node-bounds)))
            (pb-lisp/update-overlay)))
+
+       (defun pb-lisp/goto-next-visible-node ()
+         "Move to the next visible node spatially (forward in buffer).
+          Performs a depth-first traversal: first child, then next sibling,
+          then parent's next sibling."
+         (interactive)
+         (when (treesit-parser-list)
+           (let* ((current-node (pb-lisp/get-current-node))
+                  (first-child (treesit-node-child current-node 0 t))
+                  (next-node nil))
+             ;; Try to go to first child
+             (if first-child
+                 (setq next-node first-child)
+               ;; Otherwise try next sibling, or parent's next sibling
+               (let ((node current-node))
+                 (while (and node (not next-node))
+                   (let ((next-sibling (treesit-node-next-sibling node t)))
+                     (if next-sibling
+                         (setq next-node next-sibling)
+                       ;; Move up to parent and try again
+                       (setq node (treesit-node-parent node)))))))
+             ;; Go to the found node
+             (if next-node
+                 (progn
+                   (setq-local pb-lisp/current-node nil)
+                   (goto-char (treesit-node-start next-node))
+                   (goto-char (car (pb-lisp/get-current-node-bounds)))
+                   (pb-lisp/update-overlay))
+               (message "No next visible node")))))
+
+       (defun pb-lisp/goto-previous-visible-node ()
+         "Move to the previous visible node spatially (backward in buffer).
+          Performs a reverse depth-first traversal: previous sibling's last descendant,
+          or parent if no previous sibling."
+         (interactive)
+         (when (treesit-parser-list)
+           (let* ((current-node (pb-lisp/get-current-node))
+                  (prev-sibling (treesit-node-prev-sibling current-node t))
+                  (prev-node nil))
+             ;; If there's a previous sibling, go to its last descendant
+             (if prev-sibling
+                 (progn
+                   (setq prev-node prev-sibling)
+                   ;; Navigate to the deepest last child
+                   (let ((last-child (treesit-node-child prev-node (1- (treesit-node-child-count prev-node t)) t)))
+                     (while last-child
+                       (setq prev-node last-child)
+                       (let ((count (treesit-node-child-count prev-node t)))
+                         (setq last-child (and (> count 0)
+                                               (treesit-node-child prev-node (1- count) t)))))))
+               ;; Otherwise go to parent
+               (setq prev-node (treesit-node-parent current-node)))
+             ;; Go to the found node
+             (if prev-node
+                 (progn
+                   (setq-local pb-lisp/current-node nil)
+                   (goto-char (treesit-node-start prev-node))
+                   (goto-char (car (pb-lisp/get-current-node-bounds)))
+                   (pb-lisp/update-overlay))
+               (message "No previous visible node")))))
 
        (defun pb-lisp/goto-next-sibling-scrolling ()
          "Goto to next sibling, scrolling buffer to keep cursor at the same vertical position in window."
@@ -1216,20 +1286,28 @@
                (kbd "<tab>") #'pb-lisp/indent-current-node
                (kbd "<return>") #'pb-lisp/move-node-down-one-line
                (kbd "S-<return>") #'pb-lisp/move-node-up-one-line
-               "h" #'pb-lisp/goto-prev-sibling
-               "l" #'pb-lisp/goto-next-sibling
-               "j" #'pb-lisp/enter-node
-               "k" #'pb-lisp/goto-parent
+               
+               ;; tree navigation
+               "C-h" #'pb-lisp/goto-prev-sibling
+               "C-l" #'pb-lisp/goto-next-sibling
+               "C-j" #'pb-lisp/enter-node
+               "C-k" #'pb-lisp/goto-parent
+               
                ;; sibling moves, fixed cursor
                (kbd "C-S-l") #'pb-lisp/goto-next-sibling-scrolling
                (kbd "C-S-h") #'pb-lisp/goto-previous-sibling-scrolling
-               ;; first and last
-               (kbd "C-l") #'pb-lisp/goto-last-sibling
-               (kbd "C-h") #'pb-lisp/goto-first-sibling
-               ;; line moves
-               (kbd "C-j") #'pb-lisp/goto-next-line
-               (kbd "C-k") #'pb-lisp/goto-previous-line
 
+               ;; first and last
+               ;; (kbd "C-l") #'pb-lisp/goto-last-sibling
+               ;; (kbd "C-h") #'pb-lisp/goto-first-sibling
+
+               ;; spacial moves
+               (kbd "j") #'pb-lisp/goto-next-line
+               (kbd "k") #'pb-lisp/goto-previous-line 
+               (kbd "l") #'pb-lisp/goto-next-visible-node ;#'pb-lisp/goto-last-sibling
+               (kbd "h") #'pb-lisp/goto-previous-visible-node ;#'pb-lisp/goto-first-sibling
+
+               ;; selection shrink/extend
                "L" #'pb-lisp/extend-selection-to-next-sibling
                "H" #'pb-lisp/extend-selection-to-prev-sibling
                "J" #'pb-lisp/shrink-selection-from-beg
