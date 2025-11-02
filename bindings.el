@@ -314,6 +314,11 @@
              "C-s-j" #'windmove-down
              "C-s-k" #'windmove-up)
 
+       (map! "C-s-S-h" #'shrink-window-horizontally
+             "C-s-S-l" #'enlarge-window-horizontally
+             "C-s-S-j" #'enlarge-window
+             "C-s-S-k" #'shrink-window)
+
        (map! :niv "<f1>" #'ignore
 
              ;; basic moves with control

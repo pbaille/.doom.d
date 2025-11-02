@@ -121,6 +121,7 @@
            new-window))
 
        (progn :window-resizing
+
               (defun pb-misc/increase-window-width ()
                 "Increase the width of the current window by half its current width.
                  This function enlarges the window horizontally, making it wider
@@ -227,7 +228,7 @@
           The scratch buffer will use the same major mode as the current buffer.
           For Emacs Lisp buffers, it will automatically insert a lexical binding header,
           disable flycheck and enable symex-mode.
-
+          
           When optional argument SPLIT is non-nil, it will split the window
           and display the scratch buffer in the new window."
          (interactive)
