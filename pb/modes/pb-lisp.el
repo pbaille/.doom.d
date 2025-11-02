@@ -486,24 +486,30 @@
        (defun pb-lisp/goto-next-line ()
          "Move cursor to the next line, disabling overlay and resetting current-node."
          (interactive)
-         (let ((current-pos (point)))
+         (let* ((current-pos (point))
+                (column (current-column)))
            (forward-line 1)
            (when (eq (point) current-pos) ; If we're at the end of the buffer
              (goto-char (point-max)))
            (setq-local pb-lisp/current-node nil) ; Reset current node
-           (pb-lisp/delete-overlay)              ; Remove highlighting
-           (back-to-indentation)))
+           ;; Go to the beginning of the line and move to the specified column position
+           (move-to-column column)
+           (goto-char (car (pb-lisp/get-current-node-bounds)))
+           (pb-lisp/update-overlay)))
 
        (defun pb-lisp/goto-previous-line ()
          "Move cursor to the previous line, disabling overlay and resetting current-node."
          (interactive)
-         (let ((current-pos (point)))
+         (let* ((current-pos (point))
+                (column (current-column)))
            (forward-line -1)
            (when (eq (point) current-pos) ; If we're at the beginning of the buffer
              (goto-char (point-min)))
            (setq-local pb-lisp/current-node nil) ; Reset current node
-           (pb-lisp/delete-overlay)              ; Remove highlighting
-           (back-to-indentation)))
+           ;; Go to the beginning of the line and move to the specified column position
+           (move-to-column column)
+           (goto-char (car (pb-lisp/get-current-node-bounds)))
+           (pb-lisp/update-overlay)))
 
        (defun pb-lisp/goto-next-sibling-scrolling ()
          "Goto to next sibling, scrolling buffer to keep cursor at the same vertical position in window."
