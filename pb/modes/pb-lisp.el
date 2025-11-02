@@ -172,7 +172,8 @@
                         (forward-line 1)
                         ;; Process each line except the first
                         (while (< (point) end)
-                          (let* ((line-start (+ column (line-beginning-position)))
+                          (let* ((line-start (min (+ column (line-beginning-position))
+                                                  (save-excursion (back-to-indentation) (point))))
                                  (line-end (min (line-end-position) end))
                                  (line-empty (looking-at-p "[ \t]*$"))
                                  (line-overlay (when (and (not line-empty) (< line-start line-end))
