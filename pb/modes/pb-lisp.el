@@ -186,13 +186,17 @@
 
 (progn :fringe
 
+       (defvar pb-lisp/fringe-enabled nil)
+
        (defun pb-lisp/set-local-fringe-face ()
-         (face-remap-add-relative 'fringe :background pb-lisp/overlay-background-color)
-         (flycheck-refresh-fringes-and-margins))
+         (when pb-lisp/fringe-enabled
+           (face-remap-add-relative 'fringe :background pb-lisp/overlay-background-color)
+           (flycheck-refresh-fringes-and-margins)))
 
        (defun pb-lisp/reset-local-fringe-face ()
-         (face-remap-add-relative 'fringe :background (face-attribute 'default :background))
-         (flycheck-refresh-fringes-and-margins))
+         (when pb-lisp/fringe-enabled
+           (face-remap-add-relative 'fringe :background (face-attribute 'default :background))
+           (flycheck-refresh-fringes-and-margins)))
 
        (pb/comment (pb-lisp/reset-local-fringe-face)
                    (pb-lisp/set-local-fringe-face)))
@@ -1287,11 +1291,17 @@
                (kbd "<return>") #'pb-lisp/move-node-down-one-line
                (kbd "S-<return>") #'pb-lisp/move-node-up-one-line
                
+               ;; spacial moves
+               "j" #'pb-lisp/goto-next-line
+               "k" #'pb-lisp/goto-previous-line 
+               "l" #'pb-lisp/goto-next-visible-node 
+               "h" #'pb-lisp/goto-previous-visible-node 
+
                ;; tree navigation
-               "C-h" #'pb-lisp/goto-prev-sibling
-               "C-l" #'pb-lisp/goto-next-sibling
-               "C-j" #'pb-lisp/enter-node
-               "C-k" #'pb-lisp/goto-parent
+               (kbd "C-h") #'pb-lisp/goto-prev-sibling
+               (kbd "C-l") #'pb-lisp/goto-next-sibling
+               (kbd "C-j") #'pb-lisp/enter-node
+               (kbd "C-k") #'pb-lisp/goto-parent
                
                ;; sibling moves, fixed cursor
                (kbd "C-S-l") #'pb-lisp/goto-next-sibling-scrolling
@@ -1300,13 +1310,7 @@
                ;; first and last
                ;; (kbd "C-l") #'pb-lisp/goto-last-sibling
                ;; (kbd "C-h") #'pb-lisp/goto-first-sibling
-
-               ;; spacial moves
-               (kbd "j") #'pb-lisp/goto-next-line
-               (kbd "k") #'pb-lisp/goto-previous-line 
-               (kbd "l") #'pb-lisp/goto-next-visible-node ;#'pb-lisp/goto-last-sibling
-               (kbd "h") #'pb-lisp/goto-previous-visible-node ;#'pb-lisp/goto-first-sibling
-
+               
                ;; selection shrink/extend
                "L" #'pb-lisp/extend-selection-to-next-sibling
                "H" #'pb-lisp/extend-selection-to-prev-sibling
