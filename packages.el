@@ -31,9 +31,10 @@
   :recipe (:local-repo "/Users/pierrebaille/Code/forks/modus-themes"
            :files ("*.el")))
 (package! dired-sidebar)
-;; (package! nerd-icons-dired)
+(package! nerd-icons-dired)
 (package! spacious-padding)
-(package! nerd-icons-ibuffer) ;; replace keywords or regular expression with SVG tags.
+(package! nerd-icons-ibuffer)
+(package! rainbow-delimiters)
 
 ;; org
 (package! svg-tag-mode)
@@ -81,6 +82,8 @@
 (package! clay)
 
 (package! eca :recipe (:host github :repo "editor-code-assistant/eca-emacs" :files ("*.el")))
+
+(package! ibuffer-sidebar)
 
 ;; (package! diredfl :disable t)
 ;; (package! dired+)
