@@ -12,6 +12,7 @@
 (require 'pb-format)
 (require 'pb-meta)
 (require 'pb-window)
+(require 'pb-consult)
 
 (print "pb-utils loaded")
 
