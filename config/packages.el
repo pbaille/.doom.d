@@ -108,7 +108,31 @@
 
 (use-package dired-sidebar
   :config
-  (setq dired-sidebar-theme 'nerd-icons))
+  (setq dired-sidebar-theme 'nerd-icons)
+  
+  ;; Ensure nerd-icons-dired-mode is always enabled in dired-sidebar buffers
+  (add-hook 'dired-sidebar-mode-hook
+            (lambda ()
+              (nerd-icons-dired-mode 1)))
+  
+  ;; Refresh icons after certain operations that might cause them to disappear
+  (advice-add 'dired-sidebar-refresh :after
+              (lambda (&rest _)
+                (when (derived-mode-p 'dired-sidebar-mode)
+                  (nerd-icons-dired-mode 1))))
+  
+  ;; Fix icons disappearing in expanded nested directories (dired-subtree)
+  (advice-add 'dired-subtree-insert :after
+              (lambda (&rest _)
+                (when (and (derived-mode-p 'dired-mode)
+                           (bound-and-true-p nerd-icons-dired-mode))
+                  (nerd-icons-dired--refresh))))
+  
+  (advice-add 'dired-subtree-remove :after
+              (lambda (&rest _)
+                (when (and (derived-mode-p 'dired-mode)
+                           (bound-and-true-p nerd-icons-dired-mode))
+                  (nerd-icons-dired--refresh)))))
 
 (use-package! vterm
   :config

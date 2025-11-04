@@ -77,7 +77,11 @@
 (defun pb-dired/sidebar-reset ()
   (interactive)
   (pb-misc/kill-all-dired-buffers)
-  (dired-sidebar-toggle-sidebar))
+  (dired-sidebar-toggle-sidebar)
+  ;; Ensure icons are displayed after reset
+  (when (and (derived-mode-p 'dired-sidebar-mode)
+             (fboundp 'nerd-icons-dired-mode))
+    (nerd-icons-dired-mode 1)))
 
 (advice-add #'dired-sidebar-mouse-subtree-cycle-or-find-file :override #'pb-dired/sidebar-mouse-dwim)
 
