@@ -245,8 +245,14 @@
 
 
 ;;;; magit
-   (magit-section-heading :foreground violet)
-   (magit-branch-remote   :foreground orange)
+   (magit-section-heading :foreground red :weight 'bold)
+   (magit-branch-remote   :foreground teal)
+   (magit-branch-local   :foreground (doom-blend green teal 0.5))
+   (magit-filename   :foreground fg)
+   (magit-diff-hunk-heading-highlight :background (doom-lighten
+                                                   (doom-darken
+                                                    (doom-blend violet blue 0.3) 0.5)
+                                                   0.2))
    (magit-diff-removed  :foreground (doom-blend red magenta 0.6) :background (doom-blend magenta bg 0.05))
    (magit-diff-added  :foreground (doom-blend green blue 0.4) :background (doom-blend blue bg 0.05))
    (diff-refine-removed  :foreground (doom-blend red magenta 0.6) :weight 'semibold :background (doom-blend magenta bg 0.12))
