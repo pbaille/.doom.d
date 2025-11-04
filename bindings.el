@@ -301,11 +301,14 @@
 
        (map! (:prefix ("s-a" . "claude")
                       ;; not convinced by claude code integration, let's try ECA
-                      (:desc "start" "s-a" #'eca-transient-menu)
+                      (:desc "start" "s-a" #'eca)
+                      (:desc "menu" "m" #'eca-transient-menu)
+                      (:desc "stop" "q" #'eca-stop)
                       ;; (:desc "start" "s-a" #'pb-claude/dwim)
-                      (:desc "start" "a" #'pb-claude/start)
-                      (:desc "kill" "k" #'pb-claude/kill)
-                      (:desc "send expression" "e" #'pb-claude/send))))
+                      ;; (:desc "start" "a" #'pb-claude/start)
+                      ;; (:desc "kill" "k" #'pb-claude/kill)
+                      ;; (:desc "send expression" "e" #'pb-claude/send)
+                      )))
 
 (progn :misc
 
