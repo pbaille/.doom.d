@@ -138,8 +138,6 @@
    ((line-number-current-line &override) :foreground hor-highlight-brighter)
    (tooltip :background base0 :foreground fg)
 
-   (marginalia-documentation :foreground violet)
-
    (clojure-keyword-face ; :inherit 'font-lock-builtin-face
     :foreground (doom-lighten (doom-blend red green 0.6)
                               0.1))
@@ -148,6 +146,21 @@
 
    (+workspace-tab-selected-face :background bg :foreground fg-alt)
    (+workspace-tab-face)
+
+;;;; marginalia
+   (marginalia-documentation :foreground (doom-blend violet bg 0.7))
+   (marginalia-mode :foreground (doom-blend red green 0.6))
+   (marginalia-modified :foreground (doom-blend bg fg 0.7))
+   (marginalia-file-owner :foreground (doom-blend bg fg 0.7))
+   (marginalia-size :foreground (doom-blend bg fg 0.8))
+   (marginalia-date :foreground (doom-blend bg fg 0.6) )
+   (marginalia-file-priv-no :foreground (doom-blend bg fg 0.7))
+   (marginalia-file-priv-read :foreground (doom-blend bg fg 0.5))
+   (marginalia-file-priv-write :foreground (doom-blend bg fg 0.5))
+   (marginalia-file-priv-exec :foreground (doom-blend bg fg 0.5))
+
+   (consult-file :foreground fg)
+   
 
 ;;;; fringe
    (cider-fringe-good-face :foreground (doom-darken dark-blue 0.3))
@@ -202,8 +215,9 @@
    (vertico-current :background (doom-darken (doom-blend base1 violet 0.85)
                                              0.1))
    (vertico-multiline :foreground magenta)
-   (vertico-group-title :foreground magenta)
-   (vertico-group-separator :foreground magenta :strike-through t)
+   (vertico-group-title :foreground (doom-lighten (doom-blend red blue 0.7) 0.2))
+   (vertico-group-separator :foreground (doom-lighten (doom-blend red blue 0.7) 0.2)
+                            :strike-through t)
 
    ;;;; elscreen
    (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
@@ -425,6 +439,7 @@
 ;;;; web-mode
    (web-mode-html-tag-bracket-face :foreground red)
    (web-mode-html-tag-face         :foreground red)
-   (web-mode-html-attr-name-face   :foreground orange)))
+   (web-mode-html-attr-name-face   :foreground orange))
+  )
 
 ;;; doom-horizon-tweaked-theme.el ends here
