@@ -114,7 +114,7 @@
        (map! (:prefix ("s-j" . "buffers")
 
                       (:desc "project buffer"
-                             "s-j" #'consult-project-buffer)
+                             "s-j" #'pb-consult/project-buffer)
 
                       (:desc "consult buffer"
                              "j" #'consult-buffer)
