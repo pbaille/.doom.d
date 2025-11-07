@@ -142,3 +142,5 @@
          (interactive)
          (consult--with-project
            (consult-buffer '(pb-consult/source-project-buffer)))))
+
+(provide 'pb-consult)

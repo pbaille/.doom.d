@@ -86,9 +86,9 @@
    (operators      teal)
    (type           (doom-lighten (doom-blend orange red 0.85)
                                  0.35))
-   (strings        (doom-blend (doom-lighten yellow 0.2)
+   (strings        (doom-blend (doom-lighten (doom-blend green yellow 0.05) 0.2)
                                bg
-                               0.9))
+                               0.8))
    (variables      (doom-blend (doom-lighten red 0.1)
                                violet
                                .9))
